@@ -237,7 +237,7 @@
       </section>
 
       <section class="controls">
-        <p class="note">站上云朵后用方向键开云飞。地面按下钻土，土里方向键移动拿金币；上键回到地面。</p>
+        <p class="note">站上云朵后按回车启动，再用方向键开云飞。地面按下钻土，土里方向键移动拿金币；上键回到地面。</p>
         <button id="reset" type="button">重新开始</button>
       </section>
     </main>
@@ -287,6 +287,7 @@
         },
         coins: [],
         clouds: [],
+        standingCloudId: null,
         activeCloudId: null,
         nextCloudId: 1,
         nextCloudX: 240,
@@ -387,6 +388,7 @@
         if (p.buried) return;
         if (p.onGround) {
           state.activeCloudId = null;
+          state.standingCloudId = null;
           p.vy = -power;
           p.onGround = false;
         }
@@ -458,11 +460,18 @@
         return state.clouds.find((cloud) => cloud.id === state.activeCloudId);
       }
 
+      function startDrivingCloud() {
+        if (bakery.inside || state.player.buried || state.standingCloudId === null) return;
+        state.activeCloudId = state.standingCloudId;
+        showFlash("开云");
+      }
+
       function burrow() {
         const p = state.player;
         const onSoil = Math.abs(p.y + p.h - world.ground) < 5;
         if (bakery.inside || p.buried || !p.onGround || state.activeCloudId !== null || !onSoil) return;
         state.activeCloudId = null;
+        state.standingCloudId = null;
         p.buried = true;
         p.x += 8;
         p.y = world.ground + 46;
@@ -559,6 +568,7 @@
           p.vy = 0;
           p.onGround = true;
           state.activeCloudId = null;
+          state.standingCloudId = null;
         } else {
           p.vy += gravity * dt;
           p.y += p.vy * dt;
@@ -569,15 +579,18 @@
           p.vy = 0;
           p.onGround = true;
           state.activeCloudId = null;
+          state.standingCloudId = null;
         }
 
         const playerRect = { x: p.x, y: p.y, w: p.w, h: p.buried ? 20 : p.h };
         if (!p.buried) {
+          state.standingCloudId = state.activeCloudId;
           for (const cloud of state.clouds) {
             const wasBelow = p.y >= cloud.y + cloud.h - 8;
             const bumping = p.vy < 0 && wasBelow && rectsOverlap(playerRect, cloud);
             if (bumping) {
               state.activeCloudId = null;
+              state.standingCloudId = null;
               p.y = cloud.y + cloud.h + 2;
               p.vy = 220;
             }
@@ -585,7 +598,7 @@
             const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
             if (landing) {
               cloud.visited = true;
-              state.activeCloudId = cloud.id;
+              state.standingCloudId = cloud.id;
               p.y = cloud.y - p.h;
               p.vy = 0;
               p.onGround = true;
@@ -625,8 +638,9 @@
         ctx.save();
         ctx.translate(cloud.x - cameraX, cloud.y);
         const isDriven = cloud.id === state.activeCloudId;
+        const isStanding = cloud.id === state.standingCloudId;
         ctx.fillStyle = isDriven ? "#fff6c8" : "#fffdf5";
-        ctx.strokeStyle = isDriven ? "#d99b35" : "#86b9cf";
+        ctx.strokeStyle = isDriven ? "#d99b35" : isStanding ? "#3e9abd" : "#86b9cf";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.ellipse(26, 23, 27, 18, 0, 0, Math.PI * 2);
@@ -801,11 +815,14 @@
 
       window.addEventListener("resize", resize);
       window.addEventListener("keydown", (event) => {
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter"].includes(event.code)) {
           event.preventDefault();
         }
         keys.add(event.code);
         if (event.repeat) return;
+        if (!bakery.inside && event.code === "Enter") {
+          startDrivingCloud();
+        }
         if (!bakery.inside && event.code === "ArrowUp" && enterBakeryIfNeeded()) {
           enterBakery();
         }
