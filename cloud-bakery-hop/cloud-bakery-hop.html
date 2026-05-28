@@ -226,7 +226,7 @@
         <h1>云朵面包店</h1>
         <div class="stats" aria-live="polite">
           <div class="stat"><span>金币</span><strong id="coins">0</strong></div>
-          <div class="stat"><span>云朵</span><strong id="clouds">0/7</strong></div>
+          <div class="stat"><span>云朵</span><strong id="clouds">0/∞</strong></div>
           <div class="stat"><span>面包</span><strong id="bread">0</strong></div>
           <div class="stat"><span>等级</span><strong id="level">1</strong></div>
         </div>
@@ -237,7 +237,7 @@
       </section>
 
       <section class="controls">
-        <p class="note">户外：任意字母或空格跳，门口按上进店。店里：方向键移动，柜台按上用 3 金币买面包，按字母或空格吃面包升级。</p>
+        <p class="note">站上云朵后用方向键开云飞。地面按下钻土，土里方向键移动拿金币；上键回到地面。</p>
         <button id="reset" type="button">重新开始</button>
       </section>
     </main>
@@ -287,6 +287,9 @@
         },
         coins: [],
         clouds: [],
+        activeCloudId: null,
+        nextCloudId: 1,
+        nextCloudX: 240,
         score: 0,
         bread: 0,
         level: 1,
@@ -295,26 +298,13 @@
       let state = startState();
 
       function buildWorld() {
-        state.clouds = [
-          { x: 250, y: 500, w: 162, h: 34, active: true, visited: false },
-          { x: 380, y: 438, w: 166, h: 34, active: true, visited: false },
-          { x: 512, y: 376, w: 170, h: 34, active: true, visited: false },
-          { x: 646, y: 314, w: 170, h: 34, active: true, visited: false },
-          { x: 780, y: 252, w: 174, h: 34, active: true, visited: false },
-          { x: 950, y: 252, w: 174, h: 34, active: true, visited: false },
-          { x: 1120, y: 252, w: 170, h: 34, active: true, visited: false },
-        ];
-
         state.coins = [
           ...makeCoinLine(150, 1040, world.ground - 42, 16, 56),
-          ...makeCoinLine(280, 340, 454, 3, 34),
-          ...makeCoinLine(414, 500, 392, 3, 34),
-          ...makeCoinLine(548, 638, 330, 3, 34),
-          ...makeCoinLine(682, 772, 268, 3, 34),
-          ...makeCoinLine(822, 1094, 206, 7, 44),
-          ...makeCoinLine(1160, 1248, 206, 3, 34),
           ...makeCoinLine(1292, 1532, world.ground - 44, 5, 54),
+          ...makeCoinLine(180, 1540, world.ground + 74, 18, 78),
+          ...makeCoinLine(250, 1600, world.ground + 118, 17, 84),
         ];
+        ensureWorldAhead(2400);
       }
 
       function makeCoinLine(startX, endX, y, count, step) {
@@ -325,6 +315,37 @@
           got: false,
           respawn: 0,
         })).filter((coin) => coin.x <= endX);
+      }
+
+      function makeCloud(x) {
+        const index = state.nextCloudId;
+        const ySteps = [500, 438, 376, 314, 252, 196, 260, 342];
+        const cloud = {
+          id: state.nextCloudId,
+          x,
+          y: ySteps[(index - 1) % ySteps.length],
+          w: 164 + (index % 3) * 10,
+          h: 34,
+          vx: 0,
+          vy: 0,
+          active: true,
+          visited: false,
+        };
+        state.nextCloudId += 1;
+        return cloud;
+      }
+
+      function ensureWorldAhead(targetX) {
+        while (state.nextCloudX < targetX) {
+          const cloud = makeCloud(state.nextCloudX);
+          state.clouds.push(cloud);
+          state.coins.push(...makeCoinLine(cloud.x + 38, cloud.x + cloud.w - 30, cloud.y - 46, 3, 38));
+          if (cloud.id % 2 === 0) {
+            state.coins.push(...makeCoinLine(cloud.x + 8, cloud.x + 240, world.ground + 92, 4, 72));
+          }
+          state.nextCloudX += 146 + (cloud.id % 4) * 18;
+        }
+        world.w = Math.max(world.w, targetX + 520, bakery.x + bakery.w + 180);
       }
 
       function resize() {
@@ -356,7 +377,7 @@
 
       function updateStats() {
         coinText.textContent = state.score;
-        cloudText.textContent = `${state.clouds.filter((cloud) => cloud.visited).length}/${state.clouds.length}`;
+        cloudText.textContent = `${state.clouds.filter((cloud) => cloud.visited).length}/∞`;
         breadText.textContent = state.bread;
         levelText.textContent = state.level;
       }
@@ -365,6 +386,7 @@
         const p = state.player;
         if (p.buried) return;
         if (p.onGround) {
+          state.activeCloudId = null;
           p.vy = -power;
           p.onGround = false;
         }
@@ -432,10 +454,75 @@
         showFlash(`升级 ${state.level}`);
       }
 
+      function activeCloud() {
+        return state.clouds.find((cloud) => cloud.id === state.activeCloudId);
+      }
+
+      function burrow() {
+        const p = state.player;
+        const onSoil = Math.abs(p.y + p.h - world.ground) < 5;
+        if (bakery.inside || p.buried || !p.onGround || state.activeCloudId !== null || !onSoil) return;
+        state.activeCloudId = null;
+        p.buried = true;
+        p.x += 8;
+        p.y = world.ground + 46;
+        p.vx = 0;
+        p.vy = 0;
+        showFlash("钻土");
+      }
+
+      function leaveSoil() {
+        const p = state.player;
+        p.buried = false;
+        p.y = world.ground - p.h;
+        p.vx = 0;
+        p.vy = 0;
+        p.onGround = true;
+        showFlash("出土");
+      }
+
       function handleInput(dt) {
         const p = state.player;
         const speed = bakery.inside ? 265 : 230;
         let move = 0;
+        const cloud = activeCloud();
+        if (p.buried) {
+          const digSpeed = 220;
+          if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
+          if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
+          p.x += move * digSpeed * dt;
+          if (move !== 0) p.facing = move;
+          if (keys.has("ArrowDown")) p.y += digSpeed * dt;
+          if (keys.has("ArrowUp")) p.y -= digSpeed * dt;
+          p.y = Math.max(world.ground + 18, Math.min(world.h - 42, p.y));
+          if (keys.has("ArrowUp") && p.y <= world.ground + 20) leaveSoil();
+          return;
+        }
+        if (cloud && !bakery.inside) {
+          const cloudSpeed = 250;
+          let cloudMoveX = 0;
+          let cloudMoveY = 0;
+          if (keys.has("ArrowLeft") || keys.has("KeyA")) cloudMoveX -= 1;
+          if (keys.has("ArrowRight") || keys.has("KeyD")) cloudMoveX += 1;
+          if (keys.has("ArrowUp")) cloudMoveY -= 1;
+          if (keys.has("ArrowDown")) cloudMoveY += 1;
+          const oldX = cloud.x;
+          const oldY = cloud.y;
+          cloud.vx = cloudMoveX * cloudSpeed;
+          cloud.vy = cloudMoveY * cloudSpeed;
+          cloud.x += cloud.vx * dt;
+          cloud.y += cloud.vy * dt;
+          cloud.x = Math.max(24, Math.min(world.w - cloud.w - 24, cloud.x));
+          cloud.y = Math.max(92, Math.min(world.ground - 74, cloud.y));
+          p.x += cloud.x - oldX;
+          p.y += cloud.y - oldY;
+          p.y = cloud.y - p.h;
+          p.vx = cloud.vx;
+          p.vy = 0;
+          p.onGround = true;
+          if (cloudMoveX !== 0) p.facing = cloudMoveX;
+          return;
+        }
         if (bakery.inside) {
           if (keys.has("ArrowLeft")) move -= 1;
           if (keys.has("ArrowRight")) move += 1;
@@ -443,6 +530,7 @@
         } else {
           if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
           if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
+          if (keys.has("ArrowDown")) burrow();
         }
         if (!p.buried) {
           p.vx = move * speed;
@@ -456,6 +544,8 @@
         flashTime = Math.max(0, flashTime - dt);
         if (flashTime === 0) flash = "";
         p.invincible = Math.max(0, p.invincible - dt);
+        const visibleWorldWidth = canvas.clientWidth / viewScale();
+        ensureWorldAhead(cameraX + visibleWorldWidth + 1200);
         handleInput(dt);
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
@@ -465,35 +555,41 @@
           p.vy = 0;
           p.onGround = true;
         } else if (p.buried) {
-          p.y = world.ground - 23;
+          p.y = Math.max(world.ground + 18, Math.min(world.h - 42, p.y));
           p.vy = 0;
           p.onGround = true;
+          state.activeCloudId = null;
         } else {
           p.vy += gravity * dt;
           p.y += p.vy * dt;
         }
 
-        if (p.y + p.h >= world.ground) {
+        if (!p.buried && p.y + p.h >= world.ground) {
           p.y = world.ground - p.h;
           p.vy = 0;
           p.onGround = true;
+          state.activeCloudId = null;
         }
 
         const playerRect = { x: p.x, y: p.y, w: p.w, h: p.buried ? 20 : p.h };
-        for (const cloud of state.clouds) {
-          const wasBelow = p.y >= cloud.y + cloud.h - 8;
-          const bumping = p.vy < 0 && wasBelow && rectsOverlap(playerRect, cloud);
-          if (bumping) {
-            p.y = cloud.y + cloud.h + 2;
-            p.vy = 220;
-          }
-          const softCloudTop = { x: cloud.x - 20, y: cloud.y, w: cloud.w + 40, h: cloud.h };
-          const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
-          if (landing) {
-            cloud.visited = true;
-            p.y = cloud.y - p.h;
-            p.vy = 0;
-            p.onGround = true;
+        if (!p.buried) {
+          for (const cloud of state.clouds) {
+            const wasBelow = p.y >= cloud.y + cloud.h - 8;
+            const bumping = p.vy < 0 && wasBelow && rectsOverlap(playerRect, cloud);
+            if (bumping) {
+              state.activeCloudId = null;
+              p.y = cloud.y + cloud.h + 2;
+              p.vy = 220;
+            }
+            const softCloudTop = { x: cloud.x - 20, y: cloud.y, w: cloud.w + 40, h: cloud.h };
+            const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
+            if (landing) {
+              cloud.visited = true;
+              state.activeCloudId = cloud.id;
+              p.y = cloud.y - p.h;
+              p.vy = 0;
+              p.onGround = true;
+            }
           }
         }
 
@@ -521,7 +617,6 @@
           }
         }
 
-        const visibleWorldWidth = canvas.clientWidth / viewScale();
         cameraX = Math.max(0, Math.min(world.w - visibleWorldWidth, p.x - visibleWorldWidth * 0.42));
         updateStats();
       }
@@ -529,8 +624,9 @@
       function drawCloud(cloud) {
         ctx.save();
         ctx.translate(cloud.x - cameraX, cloud.y);
-        ctx.fillStyle = cloud.active ? "#fffdf5" : "rgba(255, 255, 255, 0.52)";
-        ctx.strokeStyle = cloud.active ? "#86b9cf" : "rgba(111, 148, 163, 0.42)";
+        const isDriven = cloud.id === state.activeCloudId;
+        ctx.fillStyle = isDriven ? "#fff6c8" : "#fffdf5";
+        ctx.strokeStyle = isDriven ? "#d99b35" : "#86b9cf";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.ellipse(26, 23, 27, 18, 0, 0, Math.PI * 2);
@@ -596,10 +692,12 @@
         if (p.buried) {
           ctx.fillStyle = "rgba(98, 66, 44, 0.38)";
           ctx.beginPath();
-          ctx.ellipse(x + p.w / 2, world.ground - 8, 34, 13, 0, 0, Math.PI * 2);
+          ctx.ellipse(x + p.w / 2, p.y + 28, 34, 13, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = "#287990";
-          ctx.fillRect(x + 7, world.ground - 29, p.w - 14, 14);
+          ctx.fillRect(x + 7, p.y + 8, p.w - 14, 18);
+          ctx.fillStyle = "#f5c84c";
+          ctx.fillRect(x + 14, p.y + 1, p.w - 28, 8);
           return;
         }
         ctx.fillStyle = "#48a7c6";
@@ -711,6 +809,9 @@
         if (!bakery.inside && event.code === "ArrowUp" && enterBakeryIfNeeded()) {
           enterBakery();
         }
+        if (!bakery.inside && event.code === "ArrowDown") {
+          burrow();
+        }
         if (bakery.inside && event.code === "ArrowUp" && playerAtCounter()) {
           buyBread();
         }
@@ -734,6 +835,9 @@
             enterBakery();
           } else if (action === "up" && bakery.inside && playerAtCounter()) {
             buyBread();
+          } else if (action === "down" && !bakery.inside && state.activeCloudId === null) {
+            burrow();
+            keys.add(map[action]);
           } else {
             keys.add(map[action]);
           }
