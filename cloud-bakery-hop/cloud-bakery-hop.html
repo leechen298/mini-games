@@ -226,9 +226,9 @@
         <h1>云朵面包店</h1>
         <div class="stats" aria-live="polite">
           <div class="stat"><span>金币</span><strong id="coins">0</strong></div>
-          <div class="stat"><span>云朵</span><strong id="clouds">0/5</strong></div>
+          <div class="stat"><span>云朵</span><strong id="clouds">0/7</strong></div>
           <div class="stat"><span>面包</span><strong id="bread">0</strong></div>
-          <div class="stat"><span>被撞</span><strong id="bumps">0</strong></div>
+          <div class="stat"><span>等级</span><strong id="level">1</strong></div>
         </div>
       </section>
 
@@ -237,7 +237,7 @@
       </section>
 
       <section class="controls">
-        <p class="note">户外：任意字母或空格跳。面包店：方向键移动，下键钻土，上键出来或跳。</p>
+        <p class="note">户外：任意字母或空格跳，门口按上进店。店里：方向键移动，柜台按上用 3 金币买面包，按字母或空格吃面包升级。</p>
         <button id="reset" type="button">重新开始</button>
       </section>
     </main>
@@ -258,7 +258,7 @@
       const coinText = document.querySelector("#coins");
       const cloudText = document.querySelector("#clouds");
       const breadText = document.querySelector("#bread");
-      const bumpText = document.querySelector("#bumps");
+      const levelText = document.querySelector("#level");
       const resetButton = document.querySelector("#reset");
 
       const keys = new Set();
@@ -286,10 +286,9 @@
         },
         coins: [],
         clouds: [],
-        spikes: [],
         score: 0,
         bread: 0,
-        bumps: 0,
+        level: 1,
       });
 
       let state = startState();
@@ -301,6 +300,8 @@
           { x: 512, y: 376, w: 170, h: 34, active: true, visited: false },
           { x: 646, y: 314, w: 170, h: 34, active: true, visited: false },
           { x: 780, y: 252, w: 174, h: 34, active: true, visited: false },
+          { x: 950, y: 252, w: 174, h: 34, active: true, visited: false },
+          { x: 1120, y: 252, w: 170, h: 34, active: true, visited: false },
         ];
 
         state.coins = [
@@ -309,13 +310,8 @@
           { x: 600, y: 330, r: 13, got: false },
           { x: 736, y: 268, r: 13, got: false },
           { x: 870, y: 206, r: 13, got: false },
-          { x: 1356, y: 246, r: 13, got: false },
-          { x: 1518, y: 246, r: 13, got: false },
-        ];
-
-        state.spikes = [
-          { x: bakery.x + 70, y: world.ground - 18, r: 18, vx: 150 },
-          { x: bakery.x + 250, y: world.ground - 18, r: 18, vx: -130 },
+          { x: 1040, y: 206, r: 13, got: false },
+          { x: 1200, y: 206, r: 13, got: false },
         ];
       }
 
@@ -334,6 +330,7 @@
       function resetGame() {
         state = startState();
         buildWorld();
+        bakery.inside = false;
         cameraX = 0;
         showFlash("开始");
         updateStats();
@@ -349,7 +346,7 @@
         coinText.textContent = state.score;
         cloudText.textContent = `${state.clouds.filter((cloud) => cloud.visited).length}/${state.clouds.length}`;
         breadText.textContent = state.bread;
-        bumpText.textContent = state.bumps;
+        levelText.textContent = state.level;
       }
 
       function jump(power = 690) {
@@ -375,8 +372,52 @@
 
       function enterBakeryIfNeeded() {
         const p = state.player;
-        const atDoor = p.x + p.w > bakery.x + 150 && p.x < bakery.x + 204 && p.y + p.h >= world.ground - 12;
-        bakery.inside = atDoor;
+        return p.x + p.w > bakery.x + 150 && p.x < bakery.x + 204 && p.y + p.h >= world.ground - 12;
+      }
+
+      function playerAtCounter() {
+        const p = state.player;
+        return p.x + p.w > bakery.x + 252 && p.x < bakery.x + 348;
+      }
+
+      function enterBakery() {
+        const p = state.player;
+        bakery.inside = true;
+        p.x = bakery.x + 78;
+        p.y = world.ground - p.h;
+        p.vx = 0;
+        p.vy = 0;
+        p.onGround = true;
+        p.buried = false;
+        showFlash("进店");
+      }
+
+      function leaveBakery() {
+        const p = state.player;
+        bakery.inside = false;
+        p.x = bakery.x + 152;
+        p.y = world.ground - p.h;
+        p.vx = 0;
+        p.vy = 0;
+        p.onGround = true;
+        showFlash("出店");
+      }
+
+      function buyBread() {
+        if (state.score < 3) {
+          showFlash("要 3 金币");
+          return;
+        }
+        state.score -= 3;
+        state.bread += 1;
+        showFlash("买到面包");
+      }
+
+      function eatBread() {
+        if (!bakery.inside || state.bread <= 0) return;
+        state.bread -= 1;
+        state.level += 1;
+        showFlash(`升级 ${state.level}`);
       }
 
       function handleInput(dt) {
@@ -386,18 +427,7 @@
         if (bakery.inside) {
           if (keys.has("ArrowLeft")) move -= 1;
           if (keys.has("ArrowRight")) move += 1;
-          if (keys.has("ArrowDown") && p.onGround) {
-            p.buried = true;
-            p.vx = 0;
-          }
-          if (keys.has("ArrowUp")) {
-            if (p.buried) {
-              p.buried = false;
-              p.invincible = 0.35;
-            } else {
-              jump(650);
-            }
-          }
+          if (keys.has("ArrowDown")) leaveBakery();
         } else {
           if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
           if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
@@ -414,11 +444,15 @@
         flashTime = Math.max(0, flashTime - dt);
         if (flashTime === 0) flash = "";
         p.invincible = Math.max(0, p.invincible - dt);
-        enterBakeryIfNeeded();
         handleInput(dt);
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
-        if (p.buried) {
+        if (bakery.inside) {
+          p.x = Math.max(bakery.x + 48, Math.min(bakery.x + bakery.w - p.w - 34, p.x));
+          p.y = world.ground - p.h;
+          p.vy = 0;
+          p.onGround = true;
+        } else if (p.buried) {
           p.y = world.ground - 23;
           p.vy = 0;
           p.onGround = true;
@@ -451,35 +485,19 @@
           }
         }
 
+        const bakeryRoof = { x: bakery.x + 10, y: bakery.y + 76, w: bakery.w - 20, h: 18 };
+        const onBakeryRoof = !bakery.inside && p.vy >= 0 && p.y + p.h <= bakeryRoof.y + 30 && rectsOverlap(playerRect, bakeryRoof);
+        if (onBakeryRoof) {
+          p.y = bakeryRoof.y - p.h;
+          p.vy = 0;
+          p.onGround = true;
+        }
+
         for (const coin of state.coins) {
           if (!coin.got && circleRectOverlap(coin, playerRect)) {
             coin.got = true;
             state.score += 1;
             showFlash("金币 +1");
-          }
-        }
-
-        if (bakery.inside) {
-          for (const spike of state.spikes) {
-            spike.x += spike.vx * dt;
-            if (spike.x - spike.r < bakery.x + 32 || spike.x + spike.r > bakery.x + bakery.w - 32) {
-              spike.vx *= -1;
-            }
-            if (!p.buried && p.invincible <= 0 && circleRectOverlap(spike, playerRect)) {
-              state.bumps += 1;
-              p.invincible = 1.2;
-              p.vx = -p.facing * 260;
-              p.vy = -420;
-              p.onGround = false;
-              showFlash("小心");
-            }
-          }
-          const oven = { x: bakery.x + 292, y: world.ground - 92, w: 54, h: 72 };
-          if (rectsOverlap(playerRect, oven) && state.score > 0) {
-            state.score -= 1;
-            state.bread += 1;
-            p.x -= 48;
-            showFlash("面包 +1");
           }
         }
 
@@ -550,30 +568,6 @@
         ctx.fill();
       }
 
-      function drawSpike(spike) {
-        const x = spike.x - cameraX;
-        ctx.save();
-        ctx.translate(x, spike.y);
-        ctx.fillStyle = "#464b58";
-        ctx.beginPath();
-        for (let i = 0; i < 14; i += 1) {
-          const angle = (i / 14) * Math.PI * 2;
-          const radius = i % 2 === 0 ? spike.r + 8 : spike.r - 2;
-          const px = Math.cos(angle) * radius;
-          const py = Math.sin(angle) * radius;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#f3f0e9";
-        ctx.beginPath();
-        ctx.arc(-5, -4, 3, 0, Math.PI * 2);
-        ctx.arc(7, -4, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
       function drawPlayer() {
         const p = state.player;
         const x = p.x - cameraX;
@@ -631,6 +625,31 @@
         }
       }
 
+      function drawBakeryInterior() {
+        const x = bakery.x - cameraX;
+        ctx.fillStyle = "#fff2d1";
+        ctx.fillRect(x + 24, bakery.y + 78, bakery.w - 48, bakery.h - 78);
+        ctx.fillStyle = "#cf7848";
+        ctx.fillRect(x + 54, world.ground - 76, bakery.w - 108, 34);
+        ctx.fillStyle = "#8c4f32";
+        ctx.fillRect(x + 282, world.ground - 128, 56, 86);
+        ctx.fillStyle = "#f5c84c";
+        for (let i = 0; i < 3; i += 1) {
+          ctx.beginPath();
+          ctx.arc(x + 126 + i * 36, world.ground - 98, 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#d98b4a";
+        ctx.beginPath();
+        ctx.ellipse(x + 310, world.ground - 112, 24, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#75442e";
+        ctx.font = "900 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("3 金币买面包", x + bakery.w / 2, bakery.y + 132);
+        ctx.fillText("按空格吃面包升级", x + bakery.w / 2, bakery.y + 164);
+      }
+
       function draw() {
         ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         ctx.save();
@@ -639,7 +658,7 @@
         state.clouds.forEach(drawCloud);
         state.coins.forEach(drawCoin);
         drawBakery();
-        if (bakery.inside) state.spikes.forEach(drawSpike);
+        if (bakery.inside) drawBakeryInterior();
         drawPlayer();
         ctx.restore();
 
@@ -668,7 +687,16 @@
           event.preventDefault();
         }
         keys.add(event.code);
-        if (!bakery.inside && (event.code === "Space" || /^Key[A-Z]$/.test(event.code))) {
+        if (event.repeat) return;
+        if (!bakery.inside && event.code === "ArrowUp" && enterBakeryIfNeeded()) {
+          enterBakery();
+        }
+        if (bakery.inside && event.code === "ArrowUp" && playerAtCounter()) {
+          buyBread();
+        }
+        if (bakery.inside && (event.code === "Space" || /^Key[A-Z]$/.test(event.code))) {
+          eatBread();
+        } else if (!bakery.inside && (event.code === "Space" || /^Key[A-Z]$/.test(event.code))) {
           jump();
         }
       });
@@ -679,8 +707,16 @@
         const map = { left: "ArrowLeft", right: "ArrowRight", up: "ArrowUp", down: "ArrowDown" };
         const press = () => {
           const action = button.dataset.touch;
-          if (action === "jump") jump();
-          else keys.add(map[action]);
+          if (action === "jump") {
+            if (bakery.inside) eatBread();
+            else jump();
+          } else if (action === "up" && !bakery.inside && enterBakeryIfNeeded()) {
+            enterBakery();
+          } else if (action === "up" && bakery.inside && playerAtCounter()) {
+            buyBread();
+          } else {
+            keys.add(map[action]);
+          }
           canvas.focus();
         };
         const release = () => {
