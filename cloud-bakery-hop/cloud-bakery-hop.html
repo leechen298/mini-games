@@ -263,6 +263,7 @@
 
       const keys = new Set();
       const gravity = 1850;
+      const coinRespawnTime = 2.8;
       const world = { w: 1680, h: 760, ground: 626 };
       const bakery = { x: 1220, y: 306, w: 360, h: 320, inside: false };
 
@@ -305,14 +306,25 @@
         ];
 
         state.coins = [
-          { x: 330, y: 454, r: 13, got: false },
-          { x: 466, y: 392, r: 13, got: false },
-          { x: 600, y: 330, r: 13, got: false },
-          { x: 736, y: 268, r: 13, got: false },
-          { x: 870, y: 206, r: 13, got: false },
-          { x: 1040, y: 206, r: 13, got: false },
-          { x: 1200, y: 206, r: 13, got: false },
+          ...makeCoinLine(150, 1040, world.ground - 42, 16, 56),
+          ...makeCoinLine(280, 340, 454, 3, 34),
+          ...makeCoinLine(414, 500, 392, 3, 34),
+          ...makeCoinLine(548, 638, 330, 3, 34),
+          ...makeCoinLine(682, 772, 268, 3, 34),
+          ...makeCoinLine(822, 1094, 206, 7, 44),
+          ...makeCoinLine(1160, 1248, 206, 3, 34),
+          ...makeCoinLine(1292, 1532, world.ground - 44, 5, 54),
         ];
+      }
+
+      function makeCoinLine(startX, endX, y, count, step) {
+        return Array.from({ length: count }, (_, index) => ({
+          x: count === 1 ? startX : startX + index * step,
+          y,
+          r: 13,
+          got: false,
+          respawn: 0,
+        })).filter((coin) => coin.x <= endX);
       }
 
       function resize() {
@@ -494,8 +506,16 @@
         }
 
         for (const coin of state.coins) {
+          if (coin.got) {
+            coin.respawn -= dt;
+            if (coin.respawn <= 0) {
+              coin.got = false;
+              coin.respawn = 0;
+            }
+          }
           if (!coin.got && circleRectOverlap(coin, playerRect)) {
             coin.got = true;
+            coin.respawn = coinRespawnTime;
             state.score += 1;
             showFlash("金币 +1");
           }
