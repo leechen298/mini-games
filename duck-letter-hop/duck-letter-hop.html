@@ -1,0 +1,2017 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>小鸭鸭读书</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f4faf7;
+        --panel: #ffffff;
+        --ink: #213241;
+        --muted: #637386;
+        --line: #d7e5dc;
+        --sky: #a9e3f3;
+        --sky-deep: #70c9de;
+        --grass: #78c96d;
+        --grass-deep: #4f9c66;
+        --pond: #4fb7c9;
+        --duck: #ffd84d;
+        --duck-deep: #f3a73a;
+        --beak: #f27a3a;
+        --book-red: #e86c5b;
+        --book-blue: #5aa8e5;
+        --book-green: #61b96f;
+        --book-purple: #8e76dd;
+        --book-yellow: #f0bf45;
+        --letter: #fff3a3;
+        --letter-ink: #533b09;
+        --bomb: #343843;
+        --coin: #f3c546;
+        --coin-deep: #c98b1f;
+        --good: #208354;
+        --bad: #d54840;
+        --focus: rgba(41, 120, 154, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.82), transparent 260px),
+          linear-gradient(180deg, #effaff 0%, var(--page) 62%, #eaf7ed 100%);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+      }
+
+      .app {
+        width: min(100%, 1120px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .title-block {
+        min-width: 250px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.12;
+        font-weight: 950;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.45;
+        font-weight: 760;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(74px, 1fr));
+        gap: 9px;
+        width: min(100%, 640px);
+      }
+
+      .stat {
+        min-height: 64px;
+        padding: 9px 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.93);
+      }
+
+      .stat-label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.2;
+        font-weight: 850;
+      }
+
+      .stat-value {
+        display: block;
+        margin-top: 5px;
+        font-size: 22px;
+        line-height: 1;
+        font-weight: 950;
+      }
+
+      .game-panel {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 18px 42px rgba(52, 91, 83, 0.13);
+      }
+
+      .hud {
+        display: grid;
+        grid-template-columns: minmax(190px, 1fr) minmax(190px, 270px) minmax(210px, 1fr);
+        gap: 12px;
+        align-items: center;
+        padding: 13px 15px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .target-box,
+      .meter-box,
+      .message-box {
+        min-height: 74px;
+        border: 1px solid rgba(169, 190, 179, 0.62);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .target-box {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 10px 13px;
+      }
+
+      .target-label,
+      .meter-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .target-key {
+        min-width: 62px;
+        height: 54px;
+        padding: 0 10px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--letter);
+        color: var(--letter-ink);
+        border: 2px solid #e8b83b;
+        font-size: 31px;
+        font-weight: 950;
+        line-height: 1;
+        text-transform: uppercase;
+        box-shadow: inset 0 -5px 0 rgba(181, 125, 26, 0.17);
+      }
+
+      .target-key.is-space {
+        width: 98px;
+        font-size: 18px;
+        background: #f6f0e7;
+        border-color: #d8b98d;
+      }
+
+      .target-key.is-empty {
+        background: #edf4f0;
+        color: var(--muted);
+        border-color: #d4dfd8;
+        box-shadow: none;
+      }
+
+      .meter-box {
+        padding: 11px 12px;
+      }
+
+      .meter-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+      }
+
+      .meter-value {
+        color: var(--ink);
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .meter-track {
+        height: 14px;
+        overflow: hidden;
+        border: 1px solid #d8e7df;
+        border-radius: 999px;
+        background: #eef5f1;
+      }
+
+      .meter-fill {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #55b86f 0%, #f0bf45 58%, #e86c5b 100%);
+        transform: scaleX(1);
+        transform-origin: left center;
+        transition: transform 120ms linear;
+      }
+
+      .message-box {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 10px 13px;
+      }
+
+      .message {
+        margin: 0;
+        min-height: 22px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.4;
+        font-weight: 850;
+        text-align: right;
+      }
+
+      .message.is-good {
+        color: var(--good);
+      }
+
+      .message.is-bad {
+        color: var(--bad);
+      }
+
+      .stage {
+        position: relative;
+        min-height: 430px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 87% 13%, rgba(255, 240, 144, 0.88) 0 34px, transparent 35px),
+          linear-gradient(180deg, var(--sky) 0%, var(--sky-deep) 57%, #8dd479 58%, var(--grass) 100%);
+      }
+
+      .stage::before,
+      .stage::after {
+        position: absolute;
+        left: 0;
+        right: 0;
+        content: "";
+        pointer-events: none;
+      }
+
+      .stage::before {
+        bottom: 92px;
+        height: 118px;
+        background:
+          radial-gradient(ellipse at 16% 100%, #97d980 0 40%, transparent 41%),
+          radial-gradient(ellipse at 49% 100%, #6fbf67 0 36%, transparent 37%),
+          radial-gradient(ellipse at 83% 100%, var(--grass-deep) 0 34%, transparent 35%);
+        background-size: 680px 118px;
+        background-position: var(--hill-shift, 0px) bottom;
+        opacity: 0.94;
+      }
+
+      .stage::after {
+        bottom: 0;
+        height: 116px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.33), transparent 18px),
+          repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.24) 0 22px, transparent 23px 72px),
+          linear-gradient(180deg, var(--pond), #2d8094);
+        border-top: 5px solid rgba(255, 255, 255, 0.35);
+      }
+
+      .cloud {
+        position: absolute;
+        top: var(--top);
+        left: var(--left);
+        width: var(--width);
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.8);
+        transform: translateX(var(--cloud-shift, 0px));
+        opacity: 0.82;
+      }
+
+      .cloud::before,
+      .cloud::after {
+        position: absolute;
+        bottom: 9px;
+        content: "";
+        border-radius: 50%;
+        background: inherit;
+      }
+
+      .cloud::before {
+        left: 18%;
+        width: 36px;
+        height: 36px;
+      }
+
+      .cloud::after {
+        right: 18%;
+        width: 44px;
+        height: 44px;
+      }
+
+      .shelf {
+        position: absolute;
+        z-index: 3;
+        left: 30px;
+        bottom: 112px;
+        width: 175px;
+        height: 142px;
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, rgba(255, 229, 160, 0.2) 0 5px, transparent 6px 30px),
+          linear-gradient(90deg, rgba(98, 66, 39, 0.13), transparent 18%, rgba(98, 66, 39, 0.15) 50%, transparent 52%),
+          linear-gradient(180deg, #c3854e, #835132);
+        border: 4px solid #6d432c;
+        box-shadow:
+          inset 0 0 0 3px rgba(255, 227, 158, 0.18),
+          0 10px 0 rgba(41, 67, 47, 0.18);
+        transition:
+          background 180ms ease,
+          border-color 180ms ease,
+          box-shadow 180ms ease,
+          transform 180ms ease;
+      }
+
+      .shelf::before,
+      .shelf::after {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        height: 5px;
+        border-radius: 3px;
+        content: "";
+        background: #68402b;
+      }
+
+      .shelf::before {
+        top: 48px;
+      }
+
+      .shelf::after {
+        top: 94px;
+      }
+
+      .stage[data-shelf-level="2"] .shelf {
+        border-color: #7e4c2c;
+        background:
+          linear-gradient(90deg, rgba(255, 235, 178, 0.26) 0 6px, transparent 7px 30px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 26%),
+          linear-gradient(180deg, #d3945a, #8e5a36);
+        box-shadow:
+          inset 0 0 0 4px rgba(255, 231, 164, 0.2),
+          0 12px 0 rgba(41, 67, 47, 0.2);
+      }
+
+      .stage[data-shelf-level="3"] .shelf {
+        border-color: #5f5734;
+        background:
+          linear-gradient(90deg, rgba(255, 243, 181, 0.34) 0 7px, transparent 8px 31px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 24%),
+          linear-gradient(180deg, #c69b51, #6f6239);
+        box-shadow:
+          inset 0 0 0 4px rgba(255, 236, 167, 0.26),
+          0 13px 0 rgba(41, 67, 47, 0.22),
+          0 0 0 5px rgba(255, 236, 167, 0.18);
+      }
+
+      .stage[data-shelf-level="4"] .shelf {
+        transform: translateY(-3px);
+        border-color: #52636a;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.4) 0 6px, transparent 7px 31px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 24%),
+          linear-gradient(180deg, #93b5bf, #526a77);
+        box-shadow:
+          inset 0 0 0 4px rgba(255, 255, 255, 0.22),
+          0 14px 0 rgba(41, 67, 47, 0.22),
+          0 0 0 5px rgba(151, 195, 207, 0.22);
+      }
+
+      .mini-book {
+        position: absolute;
+        bottom: var(--bottom);
+        left: var(--left);
+        width: var(--w);
+        height: var(--h);
+        border-radius: 5px 4px 4px 5px;
+        background: var(--color);
+        border: 2px solid rgba(60, 43, 30, 0.32);
+        box-shadow: inset 4px 0 0 rgba(255, 255, 255, 0.25);
+      }
+
+      .mini-book::after {
+        position: absolute;
+        inset: 4px 3px 3px 5px;
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        content: attr(data-letter);
+        background: rgba(255, 243, 163, 0.86);
+        color: var(--letter-ink);
+        font-size: 12px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .mini-book.is-flat {
+        transform: rotate(90deg);
+      }
+
+      .stage[data-shelf-level="3"] .mini-book::after,
+      .stage[data-shelf-level="4"] .mini-book::after {
+        background: #fff6ba;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+      }
+
+      .reader-wrap {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        bottom: 80px;
+        width: 270px;
+        height: 285px;
+        transform: translateX(-50%);
+      }
+
+      .reader-wrap.is-reading .reader-duck {
+        animation: nod 260ms ease;
+      }
+
+      .reader-wrap.is-bombing .book-bomb {
+        animation: bombPop 360ms ease;
+      }
+
+      .reader-wrap.is-wrong {
+        animation: shake 260ms ease;
+      }
+
+      .duck {
+        position: absolute;
+        width: 142px;
+        height: 120px;
+      }
+
+      .duck-body {
+        position: absolute;
+        left: 11px;
+        bottom: 0;
+        width: 120px;
+        height: 82px;
+        border-radius: 62% 58% 52% 48% / 58% 58% 48% 45%;
+        background:
+          radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.55) 0 15px, transparent 16px),
+          linear-gradient(135deg, var(--duck), var(--duck-deep));
+        border: 4px solid #c88427;
+        box-shadow: inset -13px -12px 0 rgba(145, 83, 22, 0.13);
+      }
+
+      .duck-wing {
+        position: absolute;
+        left: 39px;
+        bottom: 23px;
+        width: 56px;
+        height: 35px;
+        border-radius: 55% 45% 50% 50%;
+        background: rgba(243, 167, 58, 0.68);
+        border: 3px solid rgba(157, 93, 23, 0.25);
+        transform: rotate(-10deg);
+      }
+
+      .duck-head {
+        position: absolute;
+        right: 8px;
+        top: 12px;
+        width: 74px;
+        height: 70px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.55) 0 9px, transparent 10px),
+          linear-gradient(135deg, var(--duck), var(--duck-deep));
+        border: 4px solid #c88427;
+      }
+
+      .duck-eye {
+        position: absolute;
+        right: 28px;
+        top: 34px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #2d2117;
+      }
+
+      .duck-beak {
+        position: absolute;
+        right: -17px;
+        top: 39px;
+        width: 31px;
+        height: 18px;
+        border-radius: 50% 55% 55% 45%;
+        background: var(--beak);
+        border: 3px solid #b9512f;
+      }
+
+      .duck-foot {
+        position: absolute;
+        bottom: -9px;
+        width: 31px;
+        height: 13px;
+        border-radius: 60% 50% 45% 45%;
+        background: var(--beak);
+        border: 3px solid #b9512f;
+      }
+
+      .duck-foot.one {
+        left: 37px;
+      }
+
+      .duck-foot.two {
+        left: 79px;
+      }
+
+      .reader-duck {
+        left: 7px;
+        bottom: 20px;
+      }
+
+      .helper-duck {
+        right: 8px;
+        bottom: 16px;
+        transform: scale(0.74);
+        transform-origin: bottom right;
+      }
+
+      .helper-duck .duck-body,
+      .helper-duck .duck-head {
+        filter: saturate(0.93) brightness(1.02);
+      }
+
+      .reader-wrap.is-jumping .helper-duck {
+        animation: helperJump 560ms ease;
+      }
+
+      .coin-cloud {
+        position: absolute;
+        z-index: 4;
+        left: calc(50% + 28px);
+        top: 134px;
+        width: 122px;
+        height: 38px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow:
+          inset 0 -4px 0 rgba(112, 170, 180, 0.14),
+          0 9px 0 rgba(44, 93, 83, 0.08);
+        transition: transform 140ms ease;
+      }
+
+      .coin-cloud::before,
+      .coin-cloud::after {
+        position: absolute;
+        bottom: 11px;
+        content: "";
+        border-radius: 50%;
+        background: inherit;
+      }
+
+      .coin-cloud::before {
+        left: 19px;
+        width: 42px;
+        height: 42px;
+      }
+
+      .coin-cloud::after {
+        right: 17px;
+        width: 50px;
+        height: 50px;
+      }
+
+      .coin-cloud.is-bumped {
+        animation: cloudBump 380ms ease;
+      }
+
+      .coin-pop {
+        position: absolute;
+        z-index: 2;
+        left: 50%;
+        top: -18px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        transform: translateX(-50%) scale(0);
+        background:
+          radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.58) 0 5px, transparent 6px),
+          linear-gradient(135deg, var(--coin), var(--coin-deep));
+        border: 3px solid #a96d18;
+        color: #5b3d0d;
+        font-size: 12px;
+        font-weight: 950;
+        line-height: 1;
+        opacity: 0;
+      }
+
+      .coin-cloud.is-bumped .coin-pop {
+        animation: coinPop 620ms ease;
+      }
+
+      .current-book {
+        --book-color: var(--book-blue);
+        position: absolute;
+        z-index: 7;
+        right: 8px;
+        top: 18px;
+        width: 98px;
+        height: 72px;
+        transform: rotate(-4deg);
+        transition:
+          transform 170ms ease,
+          opacity 170ms ease;
+      }
+
+      .current-book.is-read {
+        transform: translateY(-22px) rotate(8deg) scale(0.86);
+        opacity: 0;
+      }
+
+      .book-cover {
+        position: absolute;
+        inset: 0;
+        border-radius: 8px 6px 6px 8px;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 12px, transparent 13px),
+          linear-gradient(135deg, color-mix(in srgb, var(--book-color), #ffffff 15%), var(--book-color));
+        border: 4px solid rgba(65, 47, 37, 0.35);
+        box-shadow:
+          inset 7px 0 0 rgba(255, 255, 255, 0.22),
+          0 10px 0 rgba(32, 58, 51, 0.15);
+      }
+
+      .book-cover::after {
+        position: absolute;
+        right: 10px;
+        top: 11px;
+        bottom: 11px;
+        width: 4px;
+        border-radius: 999px;
+        content: "";
+        background: rgba(255, 255, 255, 0.36);
+      }
+
+      .current-book.is-tier-2 .book-cover {
+        border-color: rgba(99, 70, 36, 0.5);
+        box-shadow:
+          inset 7px 0 0 rgba(255, 255, 255, 0.26),
+          inset 0 0 0 3px rgba(255, 244, 190, 0.24),
+          0 10px 0 rgba(32, 58, 51, 0.15);
+      }
+
+      .current-book.is-tier-3 .book-cover,
+      .current-book.is-tier-4 .book-cover {
+        border-color: rgba(104, 77, 26, 0.56);
+        box-shadow:
+          inset 7px 0 0 rgba(255, 255, 255, 0.3),
+          inset 0 0 0 4px rgba(255, 239, 154, 0.3),
+          0 10px 0 rgba(32, 58, 51, 0.15),
+          0 0 0 4px rgba(255, 232, 133, 0.24);
+      }
+
+      .current-book.is-tier-2 .book-cover::before,
+      .current-book.is-tier-3 .book-cover::before,
+      .current-book.is-tier-4 .book-cover::before {
+        position: absolute;
+        left: 17px;
+        top: 8px;
+        width: 8px;
+        height: 56px;
+        border-radius: 999px;
+        content: "";
+        background: rgba(255, 246, 179, 0.58);
+      }
+
+      .current-book.is-tier-4 .book-cover::before {
+        width: 12px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 230, 113, 0.72)),
+          rgba(255, 246, 179, 0.72);
+      }
+
+      .book-letter {
+        position: absolute;
+        left: 29px;
+        top: 12px;
+        width: 43px;
+        height: 43px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--letter);
+        color: var(--letter-ink);
+        border: 2px solid #e7b840;
+        font-size: 28px;
+        font-weight: 950;
+        line-height: 1;
+        text-transform: uppercase;
+        box-shadow: inset 0 -4px 0 rgba(181, 125, 26, 0.17);
+      }
+
+      .book-bomb {
+        position: absolute;
+        z-index: 2;
+        left: 22px;
+        top: 5px;
+        width: 55px;
+        height: 55px;
+        transform: scale(0);
+        pointer-events: none;
+      }
+
+      .current-book.has-bomb .book-bomb {
+        transform: scale(1);
+      }
+
+      .bomb-core {
+        position: absolute;
+        left: 7px;
+        bottom: 1px;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.45) 0 7px, transparent 8px),
+          linear-gradient(135deg, #4d5361, var(--bomb));
+        border: 3px solid #20232c;
+      }
+
+      .bomb-top {
+        position: absolute;
+        left: 23px;
+        top: 3px;
+        width: 15px;
+        height: 16px;
+        border-radius: 5px 5px 2px 2px;
+        background: #2b2f39;
+        border: 2px solid #1d2028;
+      }
+
+      .bomb-fuse {
+        position: absolute;
+        left: 35px;
+        top: 0;
+        width: 24px;
+        height: 19px;
+        border-top: 4px solid #57402e;
+        border-radius: 50%;
+        transform: rotate(-17deg);
+      }
+
+      .bomb-spark {
+        position: absolute;
+        right: -1px;
+        top: -5px;
+        width: 12px;
+        height: 12px;
+        background: #ffcf3f;
+        clip-path: polygon(50% 0, 61% 36%, 100% 22%, 72% 52%, 100% 83%, 59% 67%, 49% 100%, 38% 66%, 0 82%, 28% 52%, 0 20%, 39% 36%);
+      }
+
+      .book-trail {
+        position: absolute;
+        z-index: 4;
+        right: 27px;
+        bottom: 176px;
+        display: flex;
+        align-items: flex-end;
+        gap: 11px;
+      }
+
+      .queue-book {
+        width: 41px;
+        height: 52px;
+        border-radius: 6px 4px 4px 6px;
+        background: var(--queue-color);
+        border: 3px solid rgba(65, 47, 37, 0.3);
+        box-shadow:
+          inset 5px 0 0 rgba(255, 255, 255, 0.24),
+          0 8px 0 rgba(37, 68, 56, 0.12);
+        opacity: 0.9;
+        transform: translateY(var(--drop)) rotate(var(--turn));
+      }
+
+      .queue-book::after {
+        position: absolute;
+        left: 9px;
+        top: 12px;
+        width: 21px;
+        height: 22px;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        content: attr(data-letter);
+        background: rgba(255, 243, 163, 0.9);
+        color: var(--letter-ink);
+        font-size: 13px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .queue-book.is-tier-2,
+      .queue-book.is-tier-3,
+      .queue-book.is-tier-4 {
+        border-color: rgba(104, 77, 26, 0.48);
+        box-shadow:
+          inset 5px 0 0 rgba(255, 255, 255, 0.28),
+          inset 0 0 0 3px rgba(255, 239, 154, 0.22),
+          0 8px 0 rgba(37, 68, 56, 0.12);
+      }
+
+      .sparkle {
+        position: absolute;
+        z-index: 8;
+        left: 48%;
+        top: 86px;
+        width: 10px;
+        height: 10px;
+        background: #fff2a8;
+        clip-path: polygon(50% 0, 62% 35%, 100% 50%, 62% 64%, 50% 100%, 37% 64%, 0 50%, 37% 35%);
+        opacity: 0;
+      }
+
+      .reader-wrap.is-reading .sparkle.one {
+        animation: sparkle 420ms ease;
+      }
+
+      .reader-wrap.is-reading .sparkle.two {
+        animation: sparkle 420ms ease 80ms;
+      }
+
+      .sparkle.two {
+        left: 55%;
+        top: 118px;
+      }
+
+      .word-ribbon {
+        position: absolute;
+        z-index: 6;
+        left: 50%;
+        bottom: 70px;
+        transform: translateX(-50%);
+        min-width: 170px;
+        padding: 8px 15px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.78);
+        color: #2c5262;
+        font-size: 16px;
+        font-weight: 950;
+        text-align: center;
+        box-shadow: 0 8px 0 rgba(34, 84, 80, 0.12);
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 13px;
+        flex-wrap: wrap;
+        padding: 13px 15px 15px;
+        border-top: 1px solid var(--line);
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .btn {
+        min-height: 44px;
+        padding: 0 17px;
+        border-radius: 8px;
+        color: #ffffff;
+        background: #287da0;
+        font-weight: 950;
+        box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.13);
+      }
+
+      .btn.secondary {
+        background: #d95e4f;
+      }
+
+      .btn.soft {
+        background: #4d9463;
+      }
+
+      .btn.gold {
+        background: #bd8424;
+      }
+
+      .btn.jump {
+        min-width: 54px;
+        padding: 0 14px;
+        font-size: 22px;
+      }
+
+      .btn:disabled {
+        opacity: 0.55;
+        filter: saturate(0.75);
+        box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      .btn[hidden] {
+        display: none;
+      }
+
+      .mode-strip,
+      .shop-strip {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 44px;
+        padding: 6px 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f9fcfa;
+      }
+
+      .shop-strip {
+        flex-wrap: wrap;
+      }
+
+      .toggle-label,
+      .shop-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .shop-level {
+        min-width: 34px;
+        height: 28px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: #fff1b4;
+        color: #5d4110;
+        border: 1px solid #e1b949;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .toggle {
+        position: relative;
+        width: 50px;
+        height: 28px;
+        border-radius: 999px;
+        background: #dae8df;
+        border: 1px solid #bed1c5;
+        box-shadow: inset 0 2px 4px rgba(34, 58, 49, 0.1);
+      }
+
+      .toggle::after {
+        position: absolute;
+        left: 3px;
+        top: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        content: "";
+        background: #ffffff;
+        box-shadow: 0 2px 5px rgba(33, 50, 65, 0.2);
+        transition: transform 160ms ease;
+      }
+
+      .toggle.is-on {
+        background: #5ba8d5;
+        border-color: #4086af;
+      }
+
+      .toggle.is-on::after {
+        transform: translateX(21px);
+      }
+
+      .keyboard {
+        display: grid;
+        grid-template-columns: repeat(13, minmax(34px, 1fr));
+        gap: 8px;
+        padding: 0 15px 16px;
+      }
+
+      .key {
+        height: 42px;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #cfe1d7;
+        color: var(--ink);
+        font-weight: 950;
+        box-shadow: inset 0 -3px 0 rgba(58, 92, 83, 0.12);
+      }
+
+      .key.space {
+        grid-column: span 4;
+      }
+
+      .key.is-target {
+        background: var(--letter);
+        border-color: #e8b83b;
+        color: var(--letter-ink);
+      }
+
+      .key.is-space-target {
+        background: #f6f0e7;
+        border-color: #d8b98d;
+        color: #5a4632;
+      }
+
+      .key:disabled {
+        opacity: 0.52;
+      }
+
+      .btn:hover,
+      .key:hover,
+      .toggle:hover {
+        filter: brightness(1.03);
+      }
+
+      .btn:focus-visible,
+      .key:focus-visible,
+      .toggle:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .shake {
+        animation: shake 260ms ease;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+
+        25% {
+          transform: translateX(-8px);
+        }
+
+        50% {
+          transform: translateX(7px);
+        }
+
+        75% {
+          transform: translateX(-5px);
+        }
+      }
+
+      @keyframes nod {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0);
+        }
+
+        45% {
+          transform: translateY(5px) rotate(3deg);
+        }
+      }
+
+      @keyframes bombPop {
+        0% {
+          transform: scale(1) rotate(0);
+          opacity: 1;
+        }
+
+        100% {
+          transform: scale(0) rotate(28deg);
+          opacity: 0;
+        }
+      }
+
+      @keyframes sparkle {
+        0% {
+          transform: translateY(9px) scale(0.2) rotate(0);
+          opacity: 0;
+        }
+
+        45% {
+          opacity: 1;
+        }
+
+        100% {
+          transform: translateY(-12px) scale(1.35) rotate(60deg);
+          opacity: 0;
+        }
+      }
+
+      @keyframes helperJump {
+        0%,
+        100% {
+          transform: scale(0.74) translateY(0);
+        }
+
+        42% {
+          transform: scale(0.74) translateY(-96px) rotate(-4deg);
+        }
+
+        70% {
+          transform: scale(0.74) translateY(-52px) rotate(3deg);
+        }
+      }
+
+      @keyframes cloudBump {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+
+        35% {
+          transform: translateY(-11px);
+        }
+
+        66% {
+          transform: translateY(5px);
+        }
+      }
+
+      @keyframes coinPop {
+        0% {
+          transform: translateX(-50%) translateY(8px) scale(0.2);
+          opacity: 0;
+        }
+
+        30% {
+          opacity: 1;
+        }
+
+        100% {
+          transform: translateX(-50%) translateY(-34px) scale(1.05);
+          opacity: 0;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .app {
+          padding: 13px;
+        }
+
+        h1 {
+          font-size: 25px;
+        }
+
+        .stats {
+          width: 100%;
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        .stat {
+          min-height: 58px;
+          padding: 8px;
+        }
+
+        .stat-value {
+          font-size: 20px;
+        }
+
+        .hud {
+          grid-template-columns: 1fr;
+        }
+
+        .target-box,
+        .meter-box,
+        .message-box {
+          min-height: 58px;
+        }
+
+        .message-box {
+          justify-content: flex-start;
+        }
+
+        .message {
+          text-align: left;
+        }
+
+        .stage {
+          min-height: 390px;
+        }
+
+        .shelf {
+          left: 14px;
+          width: 130px;
+          height: 118px;
+        }
+
+        .reader-wrap {
+          width: 250px;
+          transform: translateX(-42%);
+        }
+
+        .book-trail {
+          right: 8px;
+          gap: 7px;
+        }
+
+        .queue-book {
+          width: 34px;
+        }
+
+        .coin-cloud {
+          left: calc(50% + 18px);
+          top: 130px;
+          width: 106px;
+        }
+
+        .keyboard {
+          grid-template-columns: repeat(7, minmax(36px, 1fr));
+        }
+
+        .key.space {
+          grid-column: span 7;
+        }
+
+        .controls {
+          align-items: stretch;
+        }
+
+        .buttons,
+        .btn,
+        .mode-strip,
+        .shop-strip {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stage {
+          min-height: 360px;
+        }
+
+        .shelf {
+          display: none;
+        }
+
+        .reader-wrap {
+          left: 48%;
+          bottom: 64px;
+          transform: translateX(-50%) scale(0.88);
+          transform-origin: bottom center;
+        }
+
+        .book-trail {
+          display: none;
+        }
+
+        .coin-cloud {
+          left: calc(50% + 12px);
+          top: 124px;
+          transform: scale(0.86);
+          transform-origin: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app" aria-label="小鸭鸭读书游戏">
+      <header class="topbar">
+        <div class="title-block">
+          <h1>小鸭鸭读书</h1>
+          <p class="subtitle">书会落到小鸭鸭头上，字母读对就换下一本；有炸弹时先按空格。</p>
+        </div>
+        <section class="stats" aria-label="游戏进度">
+          <div class="stat">
+            <span class="stat-label">关卡</span>
+            <span class="stat-value"><span id="levelStat">1</span>/<span id="maxLevelStat">6</span></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">读完</span>
+            <span class="stat-value"><span id="bookStat">0</span>/<span id="goalStat">12</span></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">分数</span>
+            <span class="stat-value" id="scoreStat">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">钱</span>
+            <span class="stat-value" id="moneyStat">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">星星</span>
+            <span class="stat-value" id="heartStat">3</span>
+          </div>
+        </section>
+      </header>
+
+      <section class="game-panel" aria-label="游戏区域">
+        <div class="hud">
+          <div class="target-box" aria-live="polite">
+            <span class="target-label">目标键</span>
+            <span class="target-key is-empty" id="targetKey">?</span>
+          </div>
+
+          <div class="meter-box" aria-label="本书时间">
+            <div class="meter-row">
+              <span class="meter-label">读书灯</span>
+              <span class="meter-value" id="meterValue">100%</span>
+            </div>
+            <div class="meter-track" aria-hidden="true">
+              <div class="meter-fill" id="meterFill"></div>
+            </div>
+          </div>
+
+          <div class="message-box">
+            <p class="message" id="message">准备开始。</p>
+          </div>
+        </div>
+
+        <div class="stage" id="stage">
+          <div class="cloud" style="--top: 38px; --left: 8%; --width: 112px"></div>
+          <div class="cloud" style="--top: 70px; --left: 44%; --width: 148px"></div>
+          <div class="cloud" style="--top: 42px; --left: 78%; --width: 96px"></div>
+          <div class="coin-cloud" id="coinCloud" aria-hidden="true">
+            <span class="coin-pop" id="coinPop">+1</span>
+          </div>
+
+          <div class="shelf" aria-hidden="true">
+            <div class="mini-book" style="--left: 17px; --bottom: 87px; --w: 22px; --h: 38px; --color: var(--book-red)"></div>
+            <div class="mini-book" style="--left: 43px; --bottom: 87px; --w: 18px; --h: 38px; --color: var(--book-blue)"></div>
+            <div class="mini-book" style="--left: 66px; --bottom: 87px; --w: 24px; --h: 38px; --color: var(--book-yellow)"></div>
+            <div class="mini-book" style="--left: 96px; --bottom: 87px; --w: 18px; --h: 38px; --color: var(--book-green)"></div>
+            <div class="mini-book" style="--left: 121px; --bottom: 87px; --w: 26px; --h: 38px; --color: var(--book-purple)"></div>
+            <div class="mini-book" style="--left: 17px; --bottom: 42px; --w: 21px; --h: 36px; --color: var(--book-green)"></div>
+            <div class="mini-book" style="--left: 43px; --bottom: 42px; --w: 24px; --h: 36px; --color: var(--book-red)"></div>
+            <div class="mini-book" style="--left: 72px; --bottom: 42px; --w: 20px; --h: 36px; --color: var(--book-blue)"></div>
+            <div class="mini-book is-flat" style="--left: 111px; --bottom: 50px; --w: 18px; --h: 42px; --color: var(--book-yellow)"></div>
+            <div class="mini-book" style="--left: 22px; --bottom: 5px; --w: 24px; --h: 30px; --color: var(--book-purple)"></div>
+            <div class="mini-book" style="--left: 52px; --bottom: 5px; --w: 20px; --h: 30px; --color: var(--book-yellow)"></div>
+            <div class="mini-book" style="--left: 78px; --bottom: 5px; --w: 25px; --h: 30px; --color: var(--book-green)"></div>
+            <div class="mini-book" style="--left: 110px; --bottom: 5px; --w: 22px; --h: 30px; --color: var(--book-red)"></div>
+          </div>
+
+          <div class="book-trail" id="bookTrail" aria-hidden="true"></div>
+
+          <div class="reader-wrap" id="readerWrap">
+            <div class="sparkle one" aria-hidden="true"></div>
+            <div class="sparkle two" aria-hidden="true"></div>
+
+            <div class="current-book" id="currentBook" aria-label="当前书本">
+              <div class="book-cover"></div>
+              <div class="book-letter" id="bookLetter">A</div>
+              <div class="book-bomb" id="bookBomb" aria-hidden="true">
+                <div class="bomb-fuse"></div>
+                <div class="bomb-spark"></div>
+                <div class="bomb-top"></div>
+                <div class="bomb-core"></div>
+              </div>
+            </div>
+
+            <div class="duck reader-duck" aria-hidden="true">
+              <div class="duck-body"></div>
+              <div class="duck-wing"></div>
+              <div class="duck-head"></div>
+              <div class="duck-eye"></div>
+              <div class="duck-beak"></div>
+              <div class="duck-foot one"></div>
+              <div class="duck-foot two"></div>
+            </div>
+
+            <div class="duck helper-duck" aria-hidden="true">
+              <div class="duck-body"></div>
+              <div class="duck-wing"></div>
+              <div class="duck-head"></div>
+              <div class="duck-eye"></div>
+              <div class="duck-beak"></div>
+              <div class="duck-foot one"></div>
+              <div class="duck-foot two"></div>
+            </div>
+
+            <div class="word-ribbon" id="wordRibbon">READY</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="buttons">
+            <button class="btn" id="startButton" type="button">开始游戏</button>
+            <button class="btn secondary" id="retryButton" type="button" hidden>重玩本关</button>
+            <button class="btn soft" id="nextButton" type="button" hidden>下一关</button>
+            <button class="btn jump" id="jumpButton" type="button" aria-label="跳起来顶云">↑</button>
+          </div>
+          <div class="shop-strip" aria-label="书架升级">
+            <span class="shop-label">书架</span>
+            <span class="shop-level" id="shelfLevelStat">1级</span>
+            <button class="btn gold" id="upgradeButton" type="button">升级 3钱</button>
+          </div>
+          <div class="mode-strip" aria-label="炸弹开关">
+            <span class="toggle-label">炸弹书</span>
+            <button class="toggle is-on" id="bombToggle" type="button" aria-label="切换炸弹书" aria-pressed="true"></button>
+          </div>
+        </div>
+
+        <div class="keyboard" id="keyboard" aria-label="屏幕键盘"></div>
+      </section>
+    </main>
+
+    <script>
+      const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      const BOOK_COLORS = [
+        "var(--book-red)",
+        "var(--book-blue)",
+        "var(--book-green)",
+        "var(--book-purple)",
+        "var(--book-yellow)"
+      ];
+      const MAX_LEVEL = 6;
+      const MAX_SHELF_LEVEL = 4;
+      const BASE_TIME = 5200;
+      const MIN_TIME = 2700;
+
+      const state = {
+        level: 1,
+        status: "idle",
+        score: 0,
+        money: 0,
+        combo: 0,
+        lives: 3,
+        booksRead: 0,
+        goal: 12,
+        bookIndex: 0,
+        shelfLevel: 1,
+        bookTier: 1,
+        jumpLocked: false,
+        currentBook: null,
+        bookStart: 0,
+        bookTime: BASE_TIME,
+        frameId: 0,
+        lastStageTick: 0,
+        bombsEnabled: true
+      };
+
+      const els = {
+        levelStat: document.querySelector("#levelStat"),
+        maxLevelStat: document.querySelector("#maxLevelStat"),
+        bookStat: document.querySelector("#bookStat"),
+        goalStat: document.querySelector("#goalStat"),
+        scoreStat: document.querySelector("#scoreStat"),
+        moneyStat: document.querySelector("#moneyStat"),
+        heartStat: document.querySelector("#heartStat"),
+        targetKey: document.querySelector("#targetKey"),
+        meterValue: document.querySelector("#meterValue"),
+        meterFill: document.querySelector("#meterFill"),
+        message: document.querySelector("#message"),
+        stage: document.querySelector("#stage"),
+        coinCloud: document.querySelector("#coinCloud"),
+        readerWrap: document.querySelector("#readerWrap"),
+        currentBook: document.querySelector("#currentBook"),
+        bookLetter: document.querySelector("#bookLetter"),
+        bookBomb: document.querySelector("#bookBomb"),
+        bookTrail: document.querySelector("#bookTrail"),
+        wordRibbon: document.querySelector("#wordRibbon"),
+        startButton: document.querySelector("#startButton"),
+        retryButton: document.querySelector("#retryButton"),
+        nextButton: document.querySelector("#nextButton"),
+        jumpButton: document.querySelector("#jumpButton"),
+        upgradeButton: document.querySelector("#upgradeButton"),
+        shelfLevelStat: document.querySelector("#shelfLevelStat"),
+        bombToggle: document.querySelector("#bombToggle"),
+        keyboard: document.querySelector("#keyboard")
+      };
+
+      function levelConfig(level) {
+        return {
+          goal: 10 + level * 2,
+          bookTime: Math.max(MIN_TIME, BASE_TIME - (level - 1) * 420),
+          bombEvery: Math.max(3, 6 - Math.floor(level / 2))
+        };
+      }
+
+      function buildKeyboard() {
+        els.keyboard.innerHTML = "";
+        LETTERS.forEach((letter) => {
+          const key = document.createElement("button");
+          key.className = "key";
+          key.type = "button";
+          key.textContent = letter;
+          key.setAttribute("aria-label", `输入字母 ${letter}`);
+          key.addEventListener("click", () => handleInput(letter));
+          els.keyboard.append(key);
+        });
+
+        const space = document.createElement("button");
+        space.className = "key space";
+        space.type = "button";
+        space.textContent = "SPACE";
+        space.setAttribute("aria-label", "输入空格");
+        space.addEventListener("click", () => handleInput("SPACE"));
+        els.keyboard.append(space);
+      }
+
+      function prepareLevel(keepScore = true) {
+        const config = levelConfig(state.level);
+        state.status = state.status === "idle" ? "idle" : state.status;
+        if (!keepScore) {
+          state.score = 0;
+          state.money = 0;
+          state.combo = 0;
+          state.shelfLevel = 1;
+          state.bookTier = 1;
+        }
+        state.jumpLocked = false;
+        state.lives = 3;
+        state.booksRead = 0;
+        state.bookIndex = 0;
+        state.goal = config.goal;
+        state.bookTime = config.bookTime;
+        state.bookStart = 0;
+        state.currentBook = makeBook();
+        render();
+      }
+
+      function makeBook() {
+        const index = state.bookIndex;
+        const config = levelConfig(state.level);
+        const letterIndex = (index * 7 + state.level * 5 + state.score) % LETTERS.length;
+        const hasBomb = state.bombsEnabled && index > 0 && (index + state.level) % config.bombEvery === 0;
+
+        return {
+          letter: LETTERS[letterIndex],
+          hasBomb,
+          bombCleared: !hasBomb,
+          tier: state.bookTier,
+          color: BOOK_COLORS[(index + state.level + state.bookTier) % BOOK_COLORS.length]
+        };
+      }
+
+      function startLevel(resetScore = false) {
+        cancelAnimationFrame(state.frameId);
+        state.status = "playing";
+        prepareLevel(!resetScore);
+        state.bookStart = performance.now();
+        updateButtons();
+        updateMessage(`第 ${state.level} 关开始。`, "good");
+        state.lastStageTick = 0;
+        state.frameId = requestAnimationFrame(gameLoop);
+      }
+
+      function retryLevel() {
+        startLevel(false);
+      }
+
+      function nextLevel() {
+        if (state.level >= MAX_LEVEL) {
+          return;
+        }
+        state.level += 1;
+        startLevel(false);
+      }
+
+      function startOrRestartGame() {
+        if (state.status === "finished") {
+          state.level = 1;
+          state.score = 0;
+          state.money = 0;
+          state.combo = 0;
+          state.shelfLevel = 1;
+          state.bookTier = 1;
+        }
+        startLevel(state.status === "idle");
+      }
+
+      function gameLoop(time) {
+        if (state.status !== "playing") {
+          return;
+        }
+
+        updateStageMotion(time);
+        const remaining = bookRemaining(time);
+        if (remaining <= 0) {
+          missBook();
+          return;
+        }
+
+        renderMeter(remaining / state.bookTime);
+        state.frameId = requestAnimationFrame(gameLoop);
+      }
+
+      function updateStageMotion(time) {
+        if (!state.lastStageTick) {
+          state.lastStageTick = time;
+        }
+        const drift = (time / 28) % 680;
+        els.stage.style.setProperty("--hill-shift", `${-drift * 0.16}px`);
+        els.stage.style.setProperty("--cloud-shift", `${-(time / 60) % 240}px`);
+      }
+
+      function bookRemaining(time = performance.now()) {
+        return Math.max(0, state.bookTime - (time - state.bookStart));
+      }
+
+      function jumpForCoin() {
+        if (state.status !== "playing") {
+          updateMessage("开始以后才能跳起来顶云。", "bad");
+          return;
+        }
+
+        if (state.jumpLocked) {
+          return;
+        }
+
+        state.jumpLocked = true;
+        state.money += 1;
+        state.score += state.bookTier;
+
+        els.readerWrap.classList.remove("is-jumping");
+        els.coinCloud.classList.remove("is-bumped");
+        void els.readerWrap.offsetWidth;
+        els.readerWrap.classList.add("is-jumping");
+        els.coinCloud.classList.add("is-bumped");
+
+        updateMessage("顶到云了，拿到 1 个钱。", "good");
+        render();
+
+        window.setTimeout(() => {
+          state.jumpLocked = false;
+          els.readerWrap.classList.remove("is-jumping");
+          els.coinCloud.classList.remove("is-bumped");
+          renderStats();
+        }, 620);
+      }
+
+      function upgradeShelf() {
+        if (state.shelfLevel >= MAX_SHELF_LEVEL) {
+          updateMessage("书架已经满级了。", "good");
+          return;
+        }
+
+        if (state.money < 3) {
+          updateMessage(`还差 ${3 - state.money} 个钱才能升级书架。`, "bad");
+          return;
+        }
+
+        state.money -= 3;
+        state.shelfLevel += 1;
+        state.bookTier = state.shelfLevel;
+        if (state.currentBook) {
+          state.currentBook.tier = state.bookTier;
+          state.currentBook.color = BOOK_COLORS[(state.bookIndex + state.level + state.bookTier) % BOOK_COLORS.length];
+        }
+
+        updateMessage(`${state.shelfLevel} 级书架好了，书也更高级了。`, "good");
+        render();
+      }
+
+      function handleInput(rawKey) {
+        const key = String(rawKey).toUpperCase();
+        if (state.status !== "playing") {
+          return;
+        }
+
+        const book = state.currentBook;
+        if (!book) {
+          return;
+        }
+
+        if (book.hasBomb && !book.bombCleared) {
+          if (key === " " || key === "SPACE") {
+            clearBomb();
+            return;
+          }
+          wrongInput(key, "SPACE");
+          return;
+        }
+
+        if (!/^[A-Z]$/.test(key)) {
+          wrongInput(key, book.letter);
+          return;
+        }
+
+        if (key !== book.letter) {
+          wrongInput(key, book.letter);
+          return;
+        }
+
+        readBook();
+      }
+
+      function clearBomb() {
+        state.currentBook.bombCleared = true;
+        state.combo += 1;
+        state.score += 4 + state.level + state.bookTier;
+        els.readerWrap.classList.remove("is-bombing");
+        void els.readerWrap.offsetWidth;
+        els.readerWrap.classList.add("is-bombing");
+        updateMessage("炸弹拿掉了，字母出来了。", "good");
+        render();
+      }
+
+      function readBook() {
+        const bonus = Math.ceil((bookRemaining() / state.bookTime) * 10);
+        state.booksRead += 1;
+        state.bookIndex += 1;
+        state.combo += 1;
+        state.score += 10 + bonus + state.level * 2 + state.bookTier * 4 + Math.min(12, state.combo);
+
+        els.readerWrap.classList.remove("is-reading");
+        els.currentBook.classList.remove("is-read");
+        void els.readerWrap.offsetWidth;
+        els.readerWrap.classList.add("is-reading");
+        els.currentBook.classList.add("is-read");
+
+        if (state.booksRead >= state.goal) {
+          window.setTimeout(winLevel, 170);
+          render();
+          return;
+        }
+
+        window.setTimeout(() => {
+          if (state.status !== "playing") {
+            return;
+          }
+          state.currentBook = makeBook();
+          state.bookStart = performance.now();
+          els.currentBook.classList.remove("is-read");
+          updateMessage("下一本。", "good");
+          render();
+        }, 170);
+
+        render();
+      }
+
+      function wrongInput(key, expected) {
+        const failed = loseLife();
+        if (failed) {
+          shakeReader();
+          render();
+          return;
+        }
+        updateMessage(wrongText(key, expected), "bad");
+        shakeReader();
+        render();
+      }
+
+      function wrongText(key, expected) {
+        const pressed = key === " " || key === "SPACE" ? "SPACE" : key;
+        if (expected === "SPACE") {
+          return `刚才按了 ${pressed}，这本要先按 SPACE。`;
+        }
+        return `刚才按了 ${pressed}，这本书是 ${expected}。`;
+      }
+
+      function missBook() {
+        const failed = loseLife();
+        if (failed) {
+          shakeReader();
+          render();
+          return;
+        }
+        updateMessage("读书灯灭了，这本书跳过。", "bad");
+        shakeReader();
+        state.bookIndex += 1;
+        state.currentBook = makeBook();
+        state.bookStart = performance.now();
+        render();
+        state.frameId = requestAnimationFrame(gameLoop);
+      }
+
+      function loseLife() {
+        state.combo = 0;
+        state.lives -= 1;
+        if (state.lives <= 0) {
+          failLevel();
+          return true;
+        }
+        return false;
+      }
+
+      function failLevel() {
+        cancelAnimationFrame(state.frameId);
+        state.status = "failed";
+        state.lives = 0;
+        updateButtons();
+        updateMessage("星星用完了，重玩本关。", "bad");
+      }
+
+      function winLevel() {
+        if (state.status !== "playing") {
+          return;
+        }
+        cancelAnimationFrame(state.frameId);
+        state.status = state.level >= MAX_LEVEL ? "finished" : "won";
+        state.combo = 0;
+        updateButtons();
+        updateMessage(levelCompleteMessage(), "good");
+        render();
+      }
+
+      function levelCompleteMessage() {
+        if (state.level >= MAX_LEVEL) {
+          return "全部读完，小鸭鸭毕业了。";
+        }
+        return `第 ${state.level} 关读完了。`;
+      }
+
+      function shakeReader() {
+        els.readerWrap.classList.remove("is-wrong");
+        els.targetKey.classList.remove("shake");
+        void els.readerWrap.offsetWidth;
+        els.readerWrap.classList.add("is-wrong");
+        els.targetKey.classList.add("shake");
+      }
+
+      function render() {
+        renderStats();
+        renderShelf();
+        renderBook();
+        renderTarget();
+        renderKeyboard();
+        renderTrail();
+        renderMeter(state.status === "playing" ? bookRemaining() / state.bookTime : 1);
+      }
+
+      function renderStats() {
+        els.maxLevelStat.textContent = String(MAX_LEVEL);
+        els.levelStat.textContent = String(state.level);
+        els.bookStat.textContent = String(state.booksRead);
+        els.goalStat.textContent = String(state.goal);
+        els.scoreStat.textContent = String(state.score);
+        els.moneyStat.textContent = String(state.money);
+        els.heartStat.textContent = String(state.lives);
+        els.shelfLevelStat.textContent = `${state.shelfLevel}级`;
+        els.jumpButton.disabled = state.status !== "playing" || state.jumpLocked;
+        els.upgradeButton.disabled = state.money < 3 || state.shelfLevel >= MAX_SHELF_LEVEL;
+        els.upgradeButton.textContent = state.shelfLevel >= MAX_SHELF_LEVEL ? "满级" : "升级 3钱";
+      }
+
+      function renderShelf() {
+        els.stage.dataset.shelfLevel = String(state.shelfLevel);
+        document.querySelectorAll(".mini-book").forEach((book, index) => {
+          const letterIndex = (index * 5 + state.shelfLevel * 3 + state.bookTier) % LETTERS.length;
+          book.dataset.letter = LETTERS[letterIndex];
+        });
+      }
+
+      function renderBook() {
+        const book = state.currentBook;
+        if (!book) {
+          return;
+        }
+        els.currentBook.style.setProperty("--book-color", book.color);
+        els.currentBook.classList.remove("is-tier-1", "is-tier-2", "is-tier-3", "is-tier-4");
+        els.currentBook.classList.add(`is-tier-${book.tier}`);
+        els.currentBook.classList.toggle("has-bomb", book.hasBomb && !book.bombCleared);
+        els.bookLetter.textContent = book.bombCleared ? book.letter : "?";
+        els.wordRibbon.textContent = state.status === "playing" ? wordForBook(book) : "READY";
+      }
+
+      function wordForBook(book) {
+        if (book.hasBomb && !book.bombCleared) {
+          return "SPACE";
+        }
+        return `READ ${book.letter}`;
+      }
+
+      function renderTarget() {
+        const book = state.currentBook;
+        els.targetKey.classList.remove("is-space", "is-empty");
+
+        if (state.status !== "playing" || !book) {
+          els.targetKey.textContent = "?";
+          els.targetKey.classList.add("is-empty");
+          return;
+        }
+
+        if (book.hasBomb && !book.bombCleared) {
+          els.targetKey.textContent = "SPACE";
+          els.targetKey.classList.add("is-space");
+          return;
+        }
+
+        els.targetKey.textContent = book.letter;
+      }
+
+      function renderKeyboard() {
+        const book = state.currentBook;
+        [...els.keyboard.children].forEach((key) => {
+          const keyValue = key.textContent === "SPACE" ? "SPACE" : key.textContent;
+          const wantsSpace = state.status === "playing" && book && book.hasBomb && !book.bombCleared;
+          const wantsLetter = state.status === "playing" && book && book.bombCleared && keyValue === book.letter;
+
+          key.disabled = state.status !== "playing";
+          key.classList.toggle("is-space-target", wantsSpace && keyValue === "SPACE");
+          key.classList.toggle("is-target", wantsLetter);
+        });
+      }
+
+      function renderTrail() {
+        els.bookTrail.innerHTML = "";
+        for (let i = 0; i < 5; i += 1) {
+          const node = document.createElement("div");
+          const letterIndex = (state.bookIndex + i * 7 + state.level + state.bookTier * 3) % LETTERS.length;
+          node.className = `queue-book is-tier-${state.bookTier}`;
+          node.dataset.letter = LETTERS[letterIndex];
+          node.style.setProperty("--queue-color", BOOK_COLORS[(state.bookIndex + i + state.level + 1) % BOOK_COLORS.length]);
+          node.style.setProperty("--drop", `${(i % 2) * 12}px`);
+          node.style.setProperty("--turn", `${[-9, 5, -3, 8, -6][i]}deg`);
+          els.bookTrail.append(node);
+        }
+      }
+
+      function renderMeter(progress) {
+        const safeProgress = Math.max(0, Math.min(1, progress));
+        els.meterFill.style.transform = `scaleX(${safeProgress})`;
+        els.meterValue.textContent = `${Math.ceil(safeProgress * 100)}%`;
+      }
+
+      function updateButtons() {
+        els.startButton.hidden = state.status !== "idle" && state.status !== "finished";
+        els.startButton.textContent = state.status === "finished" ? "从第1关开始" : "开始游戏";
+        els.retryButton.hidden = state.status === "idle" || state.status === "won" || state.status === "finished";
+        els.nextButton.hidden = state.status !== "won" || state.level >= MAX_LEVEL;
+      }
+
+      function updateMessage(text, kind) {
+        els.message.textContent = text;
+        els.message.classList.toggle("is-good", kind === "good");
+        els.message.classList.toggle("is-bad", kind === "bad");
+      }
+
+      function toggleBombs() {
+        state.bombsEnabled = !state.bombsEnabled;
+        els.bombToggle.classList.toggle("is-on", state.bombsEnabled);
+        els.bombToggle.setAttribute("aria-pressed", String(state.bombsEnabled));
+        if (state.status === "playing") {
+          state.currentBook = makeBook();
+          state.bookStart = performance.now();
+        }
+        updateMessage(state.bombsEnabled ? "炸弹书打开。" : "炸弹书关闭。", "good");
+        render();
+      }
+
+      window.addEventListener("keydown", (event) => {
+        if (event.repeat) {
+          return;
+        }
+
+        if (event.code === "ArrowUp") {
+          event.preventDefault();
+          jumpForCoin();
+          return;
+        }
+
+        if (event.code === "Space") {
+          event.preventDefault();
+          handleInput("SPACE");
+          return;
+        }
+
+        const key = event.key.toUpperCase();
+        if (/^[A-Z]$/.test(key)) {
+          event.preventDefault();
+          handleInput(key);
+        }
+      });
+
+      els.startButton.addEventListener("click", startOrRestartGame);
+      els.retryButton.addEventListener("click", retryLevel);
+      els.nextButton.addEventListener("click", nextLevel);
+      els.jumpButton.addEventListener("click", jumpForCoin);
+      els.upgradeButton.addEventListener("click", upgradeShelf);
+      els.bombToggle.addEventListener("click", toggleBombs);
+
+      buildKeyboard();
+      prepareLevel(false);
+      updateButtons();
+      updateMessage("准备开始。", "");
+    </script>
+  </body>
+</html>
