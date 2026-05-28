@@ -296,19 +296,19 @@
 
       function buildWorld() {
         state.clouds = [
-          { x: 260, y: 492, w: 128, h: 34, active: true, visited: false },
-          { x: 438, y: 402, w: 138, h: 34, active: true, visited: false },
-          { x: 650, y: 314, w: 150, h: 34, active: true, visited: false },
-          { x: 876, y: 236, w: 142, h: 34, active: true, visited: false },
-          { x: 1058, y: 164, w: 154, h: 34, active: true, visited: false },
+          { x: 250, y: 500, w: 162, h: 34, active: true, visited: false },
+          { x: 380, y: 438, w: 166, h: 34, active: true, visited: false },
+          { x: 512, y: 376, w: 170, h: 34, active: true, visited: false },
+          { x: 646, y: 314, w: 170, h: 34, active: true, visited: false },
+          { x: 780, y: 252, w: 174, h: 34, active: true, visited: false },
         ];
 
         state.coins = [
-          { x: 342, y: 446, r: 13, got: false },
-          { x: 502, y: 356, r: 13, got: false },
-          { x: 724, y: 268, r: 13, got: false },
-          { x: 950, y: 190, r: 13, got: false },
-          { x: 1136, y: 118, r: 13, got: false },
+          { x: 330, y: 454, r: 13, got: false },
+          { x: 466, y: 392, r: 13, got: false },
+          { x: 600, y: 330, r: 13, got: false },
+          { x: 736, y: 268, r: 13, got: false },
+          { x: 870, y: 206, r: 13, got: false },
           { x: 1356, y: 246, r: 13, got: false },
           { x: 1518, y: 246, r: 13, got: false },
         ];
@@ -441,7 +441,8 @@
             p.y = cloud.y + cloud.h + 2;
             p.vy = 220;
           }
-          const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 28 && rectsOverlap(playerRect, cloud);
+          const softCloudTop = { x: cloud.x - 20, y: cloud.y, w: cloud.w + 40, h: cloud.h };
+          const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
           if (landing) {
             cloud.visited = true;
             p.y = cloud.y - p.h;
