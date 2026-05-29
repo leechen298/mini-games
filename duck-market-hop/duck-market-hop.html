@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>小鸭跳跳去买菜</title>
+    <title>小鸭的跳跳日常</title>
     <style>
       :root {
         color-scheme: light;
@@ -21,6 +21,9 @@
         --duck: #f3cf4f;
         --orange: #e9823d;
         --roof: #d85750;
+        --home: #f4d99b;
+        --home-dark: #b6844b;
+        --danger: #d95767;
       }
 
       * {
@@ -105,7 +108,7 @@
       .layout {
         min-height: 0;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 292px;
+        grid-template-columns: minmax(0, 1fr) 320px;
         gap: 12px;
       }
 
@@ -120,7 +123,7 @@
 
       canvas {
         width: 100%;
-        height: min(68vh, 660px);
+        height: min(70vh, 690px);
         min-height: 470px;
         display: block;
         background: #a9dcf0;
@@ -146,16 +149,16 @@
 
       .task-list {
         display: grid;
-        gap: 8px;
+        gap: 7px;
       }
 
       .task {
-        min-height: 46px;
-        padding: 9px 10px;
+        min-height: 38px;
+        padding: 8px 10px;
         border-radius: 8px;
         background: #edf6e9;
         color: var(--muted);
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.3;
         font-weight: 850;
       }
@@ -166,7 +169,7 @@
       }
 
       .message {
-        min-height: 142px;
+        min-height: 132px;
         padding: 14px;
         color: var(--muted);
         font-size: 15px;
@@ -246,6 +249,25 @@
         background: rgba(216, 87, 80, 0.86);
       }
 
+      .stage-wrap {
+        position: relative;
+      }
+
+      .mini-label {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        max-width: calc(100% - 24px);
+        padding: 7px 10px;
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.86);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 850;
+        pointer-events: none;
+      }
+
       @media (max-width: 820px) {
         .app {
           padding: 10px;
@@ -284,10 +306,10 @@
   <body>
     <main class="app">
       <header class="topbar">
-        <h1>小鸭跳跳去买菜</h1>
+        <h1>小鸭的跳跳日常</h1>
         <div class="badges" aria-label="游戏状态">
           <div class="badge"><span>菜篮子</span><strong id="veggieCount">0/3</strong></div>
-          <div class="badge"><span>清洁瓶</span><strong id="soapCount">0/2</strong></div>
+          <div class="badge"><span>家务</span><strong id="homeCount">0/4</strong></div>
           <div class="badge"><span>跳跃</span><strong id="jumpCount">0</strong></div>
         </div>
       </header>
@@ -295,6 +317,7 @@
       <section class="layout">
         <div class="stage-wrap">
           <canvas id="game" width="960" height="640" tabindex="0" aria-label="小鸭子跳跳小游戏"></canvas>
+          <div class="mini-label">E 做事情，空格跳起躲小气球，水方块可以游泳。</div>
         </div>
 
         <div class="touch-pad" aria-label="手机控制">
@@ -314,17 +337,22 @@
           <div class="panel">
             <h2>今天的事情</h2>
             <div class="task-list">
+              <div class="task" id="taskDoor">从家门出发</div>
               <div class="task" id="taskWater">去水方块里游一游</div>
               <div class="task" id="taskSoap">捡到 2 瓶清洁瓶</div>
               <div class="task" id="taskMarket">去菜市场买 3 样菜</div>
-              <div class="task" id="taskHome">带着菜回到小鸭家</div>
+              <div class="task" id="taskHome">带菜回家进门</div>
+              <div class="task" id="taskKitchen">在厨房整理晚饭</div>
+              <div class="task" id="taskBath">洗手洗脸香香的</div>
+              <div class="task" id="taskBalloons">去厕所路上躲 3 次小气球</div>
+              <div class="task" id="taskRest">在小床休息一下</div>
             </div>
           </div>
           <div class="message" id="message">
-            从家门口出发，沿着方块路跳过去。蓝色水方块可以游泳，到了菜市场按进入键买菜，最后回家。
+            今天是小鸭的日常。先出门买菜，回家后还要做饭、洗洗、走过小河去厕所，再回床边休息。
           </div>
           <div class="action-row">
-            <p class="hint">方向键或 WASD 移动，空格跳，E 进入家门或菜市场。</p>
+            <p class="hint">方向键或 WASD 移动，空格跳，E 在家门、菜市场、厨房、洗手台、小床做事情。</p>
             <button id="resetButton" type="button">重新开始</button>
           </div>
         </aside>
@@ -335,44 +363,72 @@
       const canvas = document.querySelector("#game");
       const ctx = canvas.getContext("2d");
       const veggieCountEl = document.querySelector("#veggieCount");
-      const soapCountEl = document.querySelector("#soapCount");
+      const homeCountEl = document.querySelector("#homeCount");
       const jumpCountEl = document.querySelector("#jumpCount");
       const messageEl = document.querySelector("#message");
+      const taskDoorEl = document.querySelector("#taskDoor");
       const taskWaterEl = document.querySelector("#taskWater");
       const taskSoapEl = document.querySelector("#taskSoap");
       const taskMarketEl = document.querySelector("#taskMarket");
       const taskHomeEl = document.querySelector("#taskHome");
+      const taskKitchenEl = document.querySelector("#taskKitchen");
+      const taskBathEl = document.querySelector("#taskBath");
+      const taskBalloonsEl = document.querySelector("#taskBalloons");
+      const taskRestEl = document.querySelector("#taskRest");
       const resetButton = document.querySelector("#resetButton");
 
-      const COLS = 12;
-      const ROWS = 8;
+      const COLS = 14;
+      const ROWS = 9;
       const TILE = 64;
       const map = [
-        "GGGGGGGGGGGG",
-        "GHHHPPLLLMMG",
-        "GHHHPPWLLMMG",
-        "GPPPPPWWPPPG",
-        "GLWSSPWWPPPG",
-        "GLWPPPPPVVVG",
-        "GLLLLPPPVVVG",
-        "GGGGGGGGGGGG",
+        "GGGGGGGGGGGGGG",
+        "GHHHKPPLLLMMMG",
+        "GHBARPWLLLMMMG",
+        "GHHHDPPWWPPPPG",
+        "GPPSPPPWWPPPPG",
+        "GLWSSPPRRPPPVG",
+        "GLWPPPPPPPVVVG",
+        "GTTTPPPPPPVTGG",
+        "GGGGGGGGGGGGGG",
       ];
 
-      const start = { x: 2, y: 2 };
+      const start = { x: 3, y: 3 };
       const marketZone = [
-        { x: 9, y: 1 },
         { x: 10, y: 1 },
-        { x: 9, y: 2 },
+        { x: 11, y: 1 },
+        { x: 12, y: 1 },
         { x: 10, y: 2 },
+        { x: 11, y: 2 },
+        { x: 12, y: 2 },
       ];
       const homeZone = [
         { x: 1, y: 1 },
         { x: 2, y: 1 },
         { x: 3, y: 1 },
+        { x: 4, y: 1 },
         { x: 1, y: 2 },
         { x: 2, y: 2 },
         { x: 3, y: 2 },
+        { x: 4, y: 2 },
+        { x: 1, y: 3 },
+        { x: 2, y: 3 },
+        { x: 3, y: 3 },
       ];
+      const doorZone = [{ x: 4, y: 3 }];
+      const kitchenZone = [{ x: 4, y: 1 }];
+      const bathZone = [{ x: 3, y: 2 }];
+      const bedZone = [
+        { x: 2, y: 2 },
+        { x: 12, y: 4 },
+      ];
+      const toiletZone = [
+        { x: 1, y: 7 },
+        { x: 2, y: 7 },
+        { x: 3, y: 7 },
+        { x: 12, y: 7 },
+      ];
+      const balloonLane = { y: 5, fromX: 13.2, toX: 6.7 };
+      const taskTotal = 9;
 
       let state;
       const keys = new Set();
@@ -395,11 +451,20 @@
           soaps: 0,
           jumps: 0,
           swam: false,
+          leftHome: false,
           enteredMarket: false,
           enteredHome: false,
+          returnedHome: false,
+          kitchen: false,
+          washed: false,
+          toiletVisited: false,
+          rested: false,
+          dodgeCount: 0,
+          balloonRuns: 0,
+          balloon: null,
           won: false,
           collected: new Set(),
-          message: "小鸭子背好菜篮子，准备跳跳跳出门。",
+          message: "小鸭子从家门口出发，今天要把日常安排好。",
         };
       }
 
@@ -418,6 +483,7 @@
 
       function resetGame() {
         state = makeState();
+        spawnBalloonSoon();
         updateHud();
         canvas.focus();
       }
@@ -464,6 +530,9 @@
         if (tile === "W") {
           state.swam = true;
           state.message = "扑通，小鸭子在水方块里游泳，脚脚很开心。";
+        } else if (tile === "R") {
+          state.swam = true;
+          state.message = "去厕所的路上有一条小河，小鸭子稳稳游过去。";
         } else if (tile === "S" && !state.collected.has(key)) {
           state.collected.add(key);
           state.soaps += 1;
@@ -474,10 +543,32 @@
           state.message = "小鸭子把新鲜菜放进篮子里。";
         } else if (tile === "M") {
           state.message = "到菜市场了，按 E 可以认真买菜。";
+        } else if (tile === "K") {
+          state.message = "厨房到了，按 E 把菜洗好、摆好。";
+        } else if (tile === "A") {
+          state.message = "洗手台在这里，按 E 洗手洗脸。";
+        } else if (tile === "R") {
+          state.message = "这里是小河，去厕所要先过水。";
+        } else if (tile === "T") {
+          state.toiletVisited = true;
+          state.message = "到厕所啦，回去的时候也要注意小气球。";
+        } else if (tile === "B") {
+          state.message = "小床软软的，按 E 可以休息一下。";
         } else if (tile === "H") {
-          state.message = state.veggies >= 3 ? "家就在这里，按 E 把菜带回家。" : "这是小鸭家，先去菜市场买菜吧。";
+          state.message = state.enteredHome ? "家里可以做饭、洗手、休息。" : "这是小鸭家，先去菜市场买菜再回来。";
+        } else if (tile === "D") {
+          if (state.enteredHome) {
+            state.message = "已经回到家了，开始做今天的日常吧。";
+          } else {
+            state.message = state.veggies >= 3 ? "家门到了，按 E 带着菜进家。" : "先出门买菜，再从这里回家。";
+          }
         } else {
-          state.message = "小鸭子在方块路上跳跳跳。";
+          if (!state.leftHome) {
+            state.leftHome = true;
+            state.message = "小鸭子离开家门，开始今天的跳跳日常。";
+          } else {
+            state.message = "小鸭子在方块路上跳跳跳。";
+          }
         }
 
         updateHud();
@@ -495,29 +586,143 @@
           const missing = Math.max(0, 3 - state.veggies);
           state.veggies = 3;
           state.message = missing > 0 ? `小鸭子在菜市场买齐了 ${missing} 样菜。` : "菜已经买齐了，准备回家。";
-        } else if (isInsideZone(homeZone, x, y)) {
-          state.enteredHome = true;
-          if (state.veggies >= 3 && state.soaps >= 2 && state.swam) {
-            state.won = true;
-            state.message = "完成啦。小鸭子游了泳，买了菜，还带着清洁瓶回家了。";
+        } else if (isInsideZone(kitchenZone, x, y)) {
+          if (state.returnedHome && state.veggies >= 3) {
+            state.kitchen = true;
+            state.message = "厨房里咕嘟咕嘟，小鸭子把菜洗好、晚饭摆好。";
           } else {
-            state.message = "小鸭子探头看了看家门：还有事情没做完呢。";
+            state.message = "还没把菜带回家，厨房先等等。";
+          }
+        } else if (isInsideZone(bathZone, x, y)) {
+          if (state.soaps >= 2) {
+            state.washed = true;
+            state.message = "小鸭子用清洁瓶洗手洗脸，香香亮亮。";
+          } else {
+            state.message = "清洁瓶还不够，路上再找一找。";
+          }
+        } else if (isInsideZone(bedZone, x, y)) {
+          if (state.kitchen && state.washed && state.toiletVisited && state.dodgeCount >= 3) {
+            state.rested = true;
+            state.won = true;
+            state.message = "日常完成。小鸭子吃饱、洗好、躲过气球，窝进小床休息啦。";
+          } else {
+            state.message = "小床在等小鸭子，先把家里的事情做完。";
+          }
+        } else if (isInsideZone(doorZone, x, y) || isInsideZone(homeZone, x, y)) {
+          state.enteredHome = true;
+          if (!state.leftHome) {
+            state.leftHome = true;
+            state.message = "小鸭子推开家门出发啦，今天要跳跳跳。";
+          } else if (state.veggies >= 3) {
+            state.returnedHome = true;
+            state.message = "小鸭子带着菜回到家，接下来做饭、洗洗，再去厕所路上躲气球。";
+          } else {
+            state.message = "家门记住了，先把菜买回来。";
           }
         } else {
-          state.message = "这里没有门，继续跳到家或菜市场吧。";
+          state.message = "这里不用进入，找家门、菜市场、厨房、洗手台或小床试试。";
         }
         updateHud();
       }
 
       function updateHud() {
         veggieCountEl.textContent = `${state.veggies}/3`;
-        soapCountEl.textContent = `${state.soaps}/2`;
+        const doneCount = [
+          state.leftHome,
+          state.swam,
+          state.soaps >= 2,
+          state.veggies >= 3 && state.enteredMarket,
+          state.returnedHome,
+          state.kitchen,
+          state.washed,
+          state.dodgeCount >= 3,
+          state.rested,
+        ].filter(Boolean).length;
+        homeCountEl.textContent = `${doneCount}/${taskTotal}`;
         jumpCountEl.textContent = state.jumps;
         messageEl.textContent = state.message;
+        taskDoorEl.classList.toggle("done", state.leftHome);
         taskWaterEl.classList.toggle("done", state.swam);
         taskSoapEl.classList.toggle("done", state.soaps >= 2);
         taskMarketEl.classList.toggle("done", state.veggies >= 3 && state.enteredMarket);
-        taskHomeEl.classList.toggle("done", state.won);
+        taskHomeEl.classList.toggle("done", state.returnedHome);
+        taskKitchenEl.classList.toggle("done", state.kitchen);
+        taskBathEl.classList.toggle("done", state.washed);
+        taskBalloonsEl.classList.toggle("done", state.dodgeCount >= 3);
+        taskBalloonsEl.textContent = `去厕所路上躲 ${Math.min(state.dodgeCount, 3)}/3 次小气球`;
+        taskRestEl.classList.toggle("done", state.rested);
+      }
+
+      function spawnBalloonSoon() {
+        if (state.balloonRuns >= 3 || state.balloon) return;
+        const delay = state.balloonRuns === 0 ? 1100 : 850;
+        state.balloon = {
+          x: balloonLane.fromX,
+          y: balloonLane.y,
+          speed: 0.04 + state.balloonRuns * 0.008,
+          waitUntil: performance.now() + delay,
+          active: false,
+          counted: false,
+        };
+      }
+
+      function updateBalloon() {
+        if (!state.balloon) {
+          const nearToiletRoad = state.duck.x >= 6 && state.duck.y >= 4 && state.duck.y <= 7;
+          if (state.returnedHome && nearToiletRoad && state.balloonRuns < 3) spawnBalloonSoon();
+          return;
+        }
+
+        const balloon = state.balloon;
+        if (!balloon.active) {
+          balloon.active = performance.now() >= balloon.waitUntil;
+          return;
+        }
+
+        balloon.x -= balloon.speed;
+        const sameLane = state.duck.y === balloonLane.y || state.duck.y === balloonLane.y + 1;
+        const close = Math.abs(state.duck.x + 0.5 - balloon.x) < 0.46 && sameLane;
+        if (close && !balloon.counted) {
+          if (state.duck.hop > 0.25 || state.duck.moving > 0.35) {
+            balloon.counted = true;
+            state.balloonRuns += 1;
+            state.dodgeCount += 1;
+            state.message = `跳过去啦，小鸭子躲过第 ${state.dodgeCount} 个小气球。`;
+            state.balloon = null;
+            if (state.balloonRuns < 3) spawnBalloonSoon();
+          } else {
+            state.message = "小气球滚过来了，快按空格跳起来躲。";
+            balloon.x += 0.7;
+          }
+          updateHud();
+        }
+
+        if (balloon.x < balloonLane.toX) {
+          state.balloon = null;
+        }
+      }
+
+      function jumpDuck() {
+        state.jumps += 1;
+        state.duck.hop = 1;
+        if (tryDodgeBalloon()) return;
+        state.message = "小鸭子原地跳了一下。";
+        updateHud();
+      }
+
+      function tryDodgeBalloon() {
+        if (!state.balloon || !state.balloon.active || state.balloon.counted) return false;
+        const nearLane = state.duck.y === balloonLane.y || state.duck.y === balloonLane.y + 1;
+        const closeEnough = Math.abs(state.duck.x + 0.5 - state.balloon.x) < 3.35;
+        if (!nearLane || !closeEnough) return false;
+        state.balloon.counted = true;
+        state.balloonRuns += 1;
+        state.dodgeCount += 1;
+        state.balloon = null;
+        state.message = `好险。小鸭子跳起来躲过第 ${state.dodgeCount} 个小气球。`;
+        if (state.balloonRuns < 3) spawnBalloonSoon();
+        updateHud();
+        return true;
       }
 
       function resizeCanvas() {
@@ -553,15 +758,30 @@
           return;
         }
 
-        const base = tile === "W" ? "#67b7dc" : tile === "H" ? "#e9c379" : tile === "M" ? "#f0b56a" : tile === "S" ? "#c9d8e0" : tile === "V" ? "#b5d58c" : "#d9bf86";
+        const base =
+          tile === "W" || tile === "R"
+            ? "#67b7dc"
+            : tile === "H" || tile === "K" || tile === "B" || tile === "A"
+              ? "#f4d99b"
+              : tile === "D"
+                ? "#d1a366"
+                : tile === "M"
+                  ? "#f0b56a"
+                  : tile === "S"
+                    ? "#c9d8e0"
+                    : tile === "V"
+                      ? "#b5d58c"
+                      : tile === "T"
+                        ? "#dde7e8"
+                        : "#d9bf86";
         ctx.fillStyle = base;
         drawRoundedRect(x + 4, y + 4, size - 8, size - 8, 9);
         ctx.fill();
-        ctx.strokeStyle = tile === "W" ? "#327fa7" : "#a67f46";
+        ctx.strokeStyle = tile === "W" || tile === "R" ? "#327fa7" : tile === "H" || tile === "K" || tile === "B" || tile === "A" ? "#b6844b" : "#a67f46";
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        if (tile === "W") {
+        if (tile === "W" || tile === "R") {
           ctx.strokeStyle = "rgba(255,255,255,0.72)";
           ctx.lineWidth = 3;
           for (let i = 0; i < 2; i += 1) {
@@ -572,6 +792,11 @@
         }
 
         if (tile === "H") drawHouseMark(x, y, size);
+        if (tile === "D") drawDoorMark(x, y, size);
+        if (tile === "K") drawKitchenMark(x, y, size);
+        if (tile === "A") drawBathMark(x, y, size);
+        if (tile === "B") drawBedMark(x, y, size);
+        if (tile === "T") drawToiletMark(x, y, size);
         if (tile === "M") drawMarketMark(x, y, size);
         if (tile === "S" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawSoap(x, y, size);
         if (tile === "V" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawVeggie(x, y, size);
@@ -604,6 +829,78 @@
         }
       }
 
+      function drawDoorMark(x, y, size) {
+        ctx.fillStyle = "#7b5438";
+        drawRoundedRect(x + size * 0.34, y + size * 0.2, size * 0.32, size * 0.58, 6);
+        ctx.fill();
+        ctx.fillStyle = "#f5cc64";
+        ctx.beginPath();
+        ctx.arc(x + size * 0.58, y + size * 0.5, size * 0.035, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawKitchenMark(x, y, size) {
+        ctx.fillStyle = "#fff7dc";
+        drawRoundedRect(x + size * 0.2, y + size * 0.3, size * 0.6, size * 0.38, 7);
+        ctx.fill();
+        ctx.fillStyle = "#4f8b64";
+        ctx.fillRect(x + size * 0.29, y + size * 0.42, size * 0.17, size * 0.12);
+        ctx.fillStyle = "#e9823d";
+        ctx.beginPath();
+        ctx.arc(x + size * 0.62, y + size * 0.48, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#74523f";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.28, y + size * 0.68);
+        ctx.lineTo(x + size * 0.72, y + size * 0.68);
+        ctx.stroke();
+      }
+
+      function drawBathMark(x, y, size) {
+        ctx.fillStyle = "#ffffff";
+        drawRoundedRect(x + size * 0.25, y + size * 0.38, size * 0.5, size * 0.18, 7);
+        ctx.fill();
+        ctx.strokeStyle = "#89a9b6";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = "#67b7dc";
+        ctx.beginPath();
+        ctx.arc(x + size * 0.5, y + size * 0.47, size * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#74523f";
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.5, y + size * 0.28);
+        ctx.lineTo(x + size * 0.5, y + size * 0.38);
+        ctx.moveTo(x + size * 0.5, y + size * 0.28);
+        ctx.lineTo(x + size * 0.62, y + size * 0.28);
+        ctx.stroke();
+      }
+
+      function drawBedMark(x, y, size) {
+        ctx.fillStyle = "#fff4d9";
+        drawRoundedRect(x + size * 0.18, y + size * 0.38, size * 0.62, size * 0.28, 7);
+        ctx.fill();
+        ctx.fillStyle = "#7ba9d6";
+        ctx.fillRect(x + size * 0.24, y + size * 0.42, size * 0.22, size * 0.16);
+        ctx.fillStyle = "#d85750";
+        ctx.fillRect(x + size * 0.45, y + size * 0.42, size * 0.28, size * 0.16);
+      }
+
+      function drawToiletMark(x, y, size) {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.5, y + size * 0.47, size * 0.21, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#89c4dc";
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.5, y + size * 0.47, size * 0.11, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        drawRoundedRect(x + size * 0.36, y + size * 0.22, size * 0.28, size * 0.16, 5);
+        ctx.fill();
+      }
+
       function drawSoap(x, y, size) {
         ctx.fillStyle = "#ffffff";
         drawRoundedRect(x + size * 0.36, y + size * 0.24, size * 0.28, size * 0.44, 7);
@@ -622,6 +919,41 @@
         ctx.fill();
         ctx.fillStyle = "#e9823d";
         ctx.fillRect(x + size * 0.38, y + size * 0.57, size * 0.27, size * 0.08);
+      }
+
+      function drawBalloon(size) {
+        if (!state.balloon || !state.balloon.active) return;
+        const cx = board.x + state.balloon.x * size;
+        const cy = board.y + (state.balloon.y + 0.62) * size;
+        ctx.save();
+        ctx.fillStyle = "rgba(37,49,58,0.18)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + size * 0.26, size * 0.22, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const wobble = Math.sin(performance.now() / 120) * size * 0.04;
+        ctx.fillStyle = "#d95767";
+        ctx.beginPath();
+        ctx.arc(cx, cy + wobble, size * 0.23, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f08b96";
+        ctx.beginPath();
+        ctx.arc(cx - size * 0.08, cy - size * 0.08 + wobble, size * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#a93a4b";
+        ctx.beginPath();
+        ctx.moveTo(cx - size * 0.04, cy + size * 0.22 + wobble);
+        ctx.lineTo(cx + size * 0.04, cy + size * 0.22 + wobble);
+        ctx.lineTo(cx, cy + size * 0.3 + wobble);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#7a4650";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + size * 0.3 + wobble);
+        ctx.quadraticCurveTo(cx - size * 0.08, cy + size * 0.42, cx + size * 0.03, cy + size * 0.52);
+        ctx.stroke();
+        ctx.restore();
       }
 
       let board = { x: 0, y: 0, size: TILE };
@@ -700,6 +1032,8 @@
           }
         }
 
+        drawBalloon(size);
+
         const duck = state.duck;
         const t = 1 - duck.moving;
         const drawX = board.x + (duck.px + (duck.x - duck.px) * t + 0.5) * size;
@@ -721,14 +1055,15 @@
           ctx.fillStyle = "#25313a";
           ctx.font = "900 26px sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText("小鸭子到家啦", width / 2, height * 0.34 + 42);
+          ctx.fillText("小鸭日常完成啦", width / 2, height * 0.34 + 42);
           ctx.font = "800 16px sans-serif";
-          ctx.fillText("按重新开始，再跳一次", width / 2, height * 0.34 + 70);
+          ctx.fillText("按重新开始，明天再跳跳跳", width / 2, height * 0.34 + 70);
         }
       }
 
       function tick() {
         settleDuckMotion();
+        updateBalloon();
         if (state.duck.moving > 0) {
           state.duck.moving = Math.max(0, state.duck.moving - 0.12);
           state.duck.hop = state.duck.moving;
@@ -756,10 +1091,7 @@
           handleHeldKeys();
         } else if (event.code === "Space") {
           event.preventDefault();
-          state.jumps += 1;
-          state.duck.hop = 1;
-          state.message = "小鸭子原地跳了一下。";
-          updateHud();
+          jumpDuck();
         } else if (event.code === "KeyE" || event.code === "Enter") {
           event.preventDefault();
           interact();
@@ -776,10 +1108,7 @@
         if (name === "left") tryMove(-1, 0);
         if (name === "right") tryMove(1, 0);
         if (name === "jump") {
-          state.jumps += 1;
-          state.duck.hop = 1;
-          state.message = "小鸭子原地跳了一下。";
-          updateHud();
+          jumpDuck();
         }
         if (name === "enter") interact();
         canvas.focus();
