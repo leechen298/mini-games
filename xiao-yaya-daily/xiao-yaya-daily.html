@@ -150,7 +150,7 @@
 
       .outfits {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 8px;
       }
 
@@ -173,6 +173,13 @@
         margin: 5px auto 2px;
         border: 2px solid #334042;
         border-radius: 50% 50% 8px 8px;
+      }
+
+      .shoe-swatch {
+        border-radius: 14px 14px 8px 8px;
+        width: 34px;
+        height: 18px;
+        margin-top: 12px;
       }
 
       .story {
@@ -267,6 +274,8 @@
           <section class="panel">
             <h2>早上穿什么</h2>
             <div class="outfits" id="outfits"></div>
+            <h2 style="margin-top: 14px">鞋子</h2>
+            <div class="outfits" id="shoes"></div>
           </section>
 
           <section class="panel story">
@@ -288,6 +297,7 @@
       const dayPill = document.querySelector("#dayPill");
       const metersEl = document.querySelector("#meters");
       const outfitsEl = document.querySelector("#outfits");
+      const shoesEl = document.querySelector("#shoes");
       const storyLog = document.querySelector("#storyLog");
       const menuCard = document.querySelector("#menuCard");
 
@@ -308,6 +318,21 @@
         { id: "leaf", name: "薄荷套", color: "#65b981" },
         { id: "grape", name: "葡萄衫", color: "#8a77be" },
         { id: "carrot", name: "胡萝卜", color: "#eb8d4e" },
+        { id: "star", name: "星星裙", color: "#f7a8c6" },
+        { id: "sailor", name: "水手服", color: "#4c8fb6" },
+        { id: "lime", name: "青柠裙", color: "#a6d96a" },
+        { id: "cake", name: "蛋糕裙", color: "#f0a66c" },
+        { id: "night", name: "月亮裙", color: "#5963a8" },
+        { id: "snow", name: "雪花裙", color: "#96d8df" },
+      ];
+
+      const shoes = [
+        { id: "red", name: "红皮鞋", color: "#c94e5b" },
+        { id: "blue", name: "蓝球鞋", color: "#4f89c8" },
+        { id: "yellow", name: "黄雨靴", color: "#e5bd38" },
+        { id: "purple", name: "紫凉鞋", color: "#8064b4" },
+        { id: "green", name: "绿布鞋", color: "#4f9a6a" },
+        { id: "black", name: "黑小鞋", color: "#3d4248" },
       ];
 
       const meals = [
@@ -322,6 +347,7 @@
         room: "bedroom",
         time: 0,
         outfit: "rose",
+        shoes: "red",
         energy: 74,
         happiness: 78,
         hunger: 40,
@@ -402,6 +428,16 @@
             `,
           )
           .join("");
+        shoesEl.innerHTML = shoes
+          .map(
+            (item) => `
+              <button class="outfit ${state.shoes === item.id ? "active" : ""}" data-shoes="${item.id}" title="${item.name}">
+                <span class="swatch shoe-swatch" style="background:${item.color}"></span>
+                ${item.name}
+              </button>
+            `,
+          )
+          .join("");
       }
 
       function updateMenuCard() {
@@ -414,6 +450,10 @@
 
       function outfitColor() {
         return outfits.find((item) => item.id === state.outfit).color;
+      }
+
+      function shoeColor() {
+        return shoes.find((item) => item.id === state.shoes).color;
       }
 
       function roundedRect(x, y, w, h, r, color, stroke = "#334042") {
@@ -461,7 +501,10 @@
         ctx.stroke();
         roundedRect(x, y, w, h, 8, body);
         roundedRect(x + w / 2 - 24, y + h - 72, 48, 72, 5, "#8a6042");
-        label(text, x + w / 2, y + 40);
+        ctx.fillStyle = "#253238";
+        ctx.font = text.length > 5 ? "900 18px system-ui, sans-serif" : "900 22px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x + w / 2, y + 42);
         ctx.fillStyle = "#f6d77a";
         ctx.fillRect(x + w / 2 + 9, y + h - 36, 6, 6);
       }
@@ -484,11 +527,13 @@
         drawSkyGround("#a7d9f0", "#8ec46f");
         ctx.fillStyle = "#d7bd82";
         ctx.fillRect(0, groundY + 40, canvas.width, 44);
-        drawHouse(80, 260, 210, 224, "#ffe2a5", "#d86155", "小熊猫家");
+        drawHouse(80, 260, 210, 224, "#ffe2a5", "#d86155", "小丫丫的家");
         drawHouse(655, 266, 220, 218, "#ffd7c3", "#7f9fd0", "小浣熊家");
         drawMarketSign(400, 330);
-        drawNpc(515, groundY, "brother");
-        speech("大哥：去菜市场我知道路！", 515, 284, 214);
+        drawNpc(315, groundY, "redPanda");
+        drawNpc(515, groundY, "duck");
+        speech("小鸭子：嘎嘎，去菜市场！", 515, 284, 220);
+        speech("小熊猫：我也在家门口。", 315, 306, 190);
         drawDoorHint(185, 258, "门口按 ↑ 进家");
         drawDoorHint(510, 350, "按 ↑ 去菜市场");
         drawDoorHint(765, 258, "按 ↑ 去小浣熊家");
@@ -520,7 +565,7 @@
         ctx.fillText("🥚", 556, 430);
         ctx.fillText("🍅", 700, 428);
         drawNpc(250, groundY, "vendor");
-        drawNpc(770, groundY, "brother");
+        drawNpc(770, groundY, "duck");
         speech("摊主：站近一点按 ↑ 买菜。", 250, 286, 218);
         drawDoorHint(70, 452, "按 ↑ 回街上");
       }
@@ -529,9 +574,10 @@
         drawSkyGround("#b1dff2", "#a9ca74");
         drawHouse(610, 260, 220, 224, "#ffd7c3", "#7f9fd0", "小浣熊家");
         drawNpc(725, groundY, "raccoon");
-        drawNpc(410, groundY, "brother");
+        drawNpc(410, groundY, "duck");
+        drawNpc(285, groundY, "redPanda");
         speech("小浣熊：来玩拼图吧！", 725, 284, 198);
-        speech("大哥：我也来做客。", 410, 300, 170);
+        speech("小鸭子：嘎嘎，我也来！", 410, 300, 180);
         drawDoorHint(80, 452, "按 ↑ 回街上");
       }
 
@@ -552,6 +598,8 @@
           drawFurniture(92, 292, 230, 104, "小床", "🛏️");
           drawFurniture(612, 245, 190, 150, "衣柜", "👗");
           drawFurniture(372, 344, 170, 90, "书桌", "🖍️");
+          drawClothesRack(565, 120);
+          drawShoeRack(610, 412);
           drawDoorHint(82, 452, "按 ↑ 出门");
           drawDoorHint(808, 452, "按 ↑ 去厕所");
         }
@@ -589,22 +637,82 @@
         ctx.fillText(icon, x + w - 18, y + h - 18);
       }
 
+      function drawClothesRack(x, y) {
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 250, y);
+        ctx.moveTo(x + 16, y);
+        ctx.lineTo(x + 16, y + 112);
+        ctx.moveTo(x + 234, y);
+        ctx.lineTo(x + 234, y + 112);
+        ctx.stroke();
+        outfits.slice(0, 8).forEach((item, index) => {
+          const px = x + 22 + index * 28;
+          ctx.strokeStyle = "#334042";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(px + 10, y + 8);
+          ctx.lineTo(px + 4, y + 20);
+          ctx.lineTo(px + 16, y + 20);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fillStyle = item.color;
+          ctx.beginPath();
+          ctx.moveTo(px, y + 26);
+          ctx.lineTo(px + 20, y + 26);
+          ctx.lineTo(px + 26, y + 72);
+          ctx.lineTo(px - 6, y + 72);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+        label("好多漂亮衣服", x + 125, y - 12);
+      }
+
+      function drawShoeRack(x, y) {
+        roundedRect(x, y, 222, 52, 8, "#fff7db");
+        shoes.forEach((item, index) => {
+          const px = x + 18 + index * 32;
+          ctx.fillStyle = item.color;
+          ctx.strokeStyle = "#334042";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(px, y + 18, 28, 15, 6);
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("鞋子排排站", x + 111, y + 47);
+      }
+
       function drawNpc(x, footY, type) {
         if (type === "raccoon") {
-          drawAnimal(x, footY, "#8e8a80", "#2f3438", "🦝");
+          drawRaccoon(x, footY);
+          return;
+        }
+        if (type === "redPanda") {
+          drawRedPanda(x, footY);
+          return;
+        }
+        if (type === "duck") {
+          drawDuck(x, footY);
           return;
         }
         if (type === "vendor") {
           drawPerson(x, footY, "#466f54", "#f1c65a", "摊主");
           return;
         }
-        drawPerson(x, footY, "#3d5f86", "#a7c6e9", "大哥");
+        drawDuck(x, footY);
       }
 
-      function drawAnimal(x, footY, body, mask, faceText) {
+      function drawRaccoon(x, footY) {
         ctx.save();
         ctx.translate(x, footY - 92);
-        ctx.fillStyle = body;
+        ctx.fillStyle = "#8e8a80";
         ctx.strokeStyle = "#2e3638";
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -616,7 +724,7 @@
         ctx.fillStyle = "#cfc8b6";
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = mask;
+        ctx.fillStyle = "#2f3438";
         ctx.fillRect(-28, -8, 56, 18);
         ctx.fillStyle = "#fff";
         ctx.beginPath();
@@ -628,9 +736,87 @@
         ctx.arc(-13, 0, 3, 0, Math.PI * 2);
         ctx.arc(13, 0, 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = "22px serif";
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(faceText, 0, -46);
+        ctx.fillText("小浣熊", 0, 118);
+        ctx.restore();
+      }
+
+      function drawRedPanda(x, footY) {
+        ctx.save();
+        ctx.translate(x, footY - 96);
+        ctx.fillStyle = "#7a3f2d";
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(38, 50, 16, 50, -0.34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#c95f35";
+        ctx.beginPath();
+        ctx.ellipse(0, 48, 34, 44, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, 38, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#fff2dc";
+        ctx.beginPath();
+        ctx.ellipse(-13, 5, 12, 18, -0.45, 0, Math.PI * 2);
+        ctx.ellipse(13, 5, 12, 18, 0.45, 0, Math.PI * 2);
+        ctx.arc(0, 18, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-12, 0, 4, 0, Math.PI * 2);
+        ctx.arc(12, 0, 4, 0, Math.PI * 2);
+        ctx.arc(0, 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("小熊猫", 0, 122);
+        ctx.restore();
+      }
+
+      function drawDuck(x, footY) {
+        ctx.save();
+        ctx.translate(x, footY - 92);
+        ctx.fillStyle = "#ffe175";
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(0, 48, 34, 42, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 2, 32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#f19a3e";
+        ctx.beginPath();
+        ctx.moveTo(20, 4);
+        ctx.lineTo(48, 14);
+        ctx.lineTo(20, 23);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-9, -4, 4, 0, Math.PI * 2);
+        ctx.arc(10, -4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f19a3e";
+        ctx.beginPath();
+        ctx.roundRect(-24, 86, 20, 9, 4);
+        ctx.roundRect(5, 86, 20, 9, 4);
+        ctx.fill();
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("小鸭子", 0, 120);
         ctx.restore();
       }
 
@@ -729,6 +915,12 @@
           ctx.roundRect(side * 12 - 7, 108, 14, 34, 7);
           ctx.fill();
           ctx.stroke();
+          ctx.fillStyle = shoeColor();
+          ctx.beginPath();
+          ctx.roundRect(side * 12 - 12, 136, 24, 10, 5);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffd8b1";
         }
         ctx.restore();
       }
@@ -777,7 +969,7 @@
             player.x = 130;
             state.prompt = "进家啦。左右走，门口按 ↑ 换房间或出门。";
             updateDay();
-            addStory("小丫丫自己走进了小熊猫家。");
+            addStory("小丫丫自己走进了小丫丫的家。");
             return true;
           }
           if (near(510)) {
@@ -817,8 +1009,8 @@
           if (near(770, 90)) {
             state.happiness = clamp(state.happiness + 4);
             updateMeters();
-            state.prompt = "大哥说：小丫丫走路真稳，继续向前！";
-            addStory("大哥在菜市场给小丫丫指路。");
+            state.prompt = "小鸭子说：嘎嘎，小丫丫走路真稳！";
+            addStory("小鸭子在菜市场陪小丫丫逛摊。");
             return true;
           }
         }
@@ -840,8 +1032,8 @@
             return true;
           }
           if (near(410, 95)) {
-            state.prompt = "大哥说：按 ↑ 是跳，也是进门，站近门口就会进门。";
-            addStory("大哥认真讲了一遍方向键玩法。");
+            state.prompt = "小鸭子说：按 ↑ 是跳，站近门口按 ↑ 就进门。";
+            addStory("小鸭子嘎嘎地提醒方向键玩法。");
             return true;
           }
         }
@@ -970,6 +1162,19 @@
         updateOutfits();
         updateMeters();
         addStory(`小丫丫换上${item.name}，准备自己出门玩。`);
+        canvas.focus();
+      });
+
+      shoesEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-shoes]");
+        if (!button) return;
+        const item = shoes.find((shoe) => shoe.id === button.dataset.shoes);
+        state.shoes = item.id;
+        state.happiness = clamp(state.happiness + 2);
+        state.prompt = `小丫丫穿上了${item.name}。`;
+        updateOutfits();
+        updateMeters();
+        addStory(`小丫丫穿上${item.name}，脚步哒哒响。`);
         canvas.focus();
       });
 
