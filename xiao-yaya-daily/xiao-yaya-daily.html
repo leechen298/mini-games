@@ -7,19 +7,15 @@
     <style>
       :root {
         color-scheme: light;
-        --page: #f4f7f1;
-        --ink: #243034;
-        --muted: #65727a;
-        --line: #d9e0d2;
+        --page: #eef5ed;
         --panel: #fffdf6;
-        --green: #4f9c6d;
-        --green-dark: #2f6f52;
-        --blue: #69a9cf;
-        --rose: #e97385;
-        --yellow: #f2c85b;
-        --violet: #8c77be;
-        --wood: #b98050;
-        --floor: #ecd7b6;
+        --ink: #253238;
+        --muted: #66747a;
+        --line: #d7dfcf;
+        --green: #3f7b5d;
+        --blue: #6aaad0;
+        --rose: #e7778b;
+        --yellow: #f1c65a;
       }
 
       * {
@@ -30,7 +26,7 @@
         margin: 0;
         min-height: 100vh;
         background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.85), transparent 300px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.8), transparent 260px),
           var(--page);
         color: var(--ink);
         font-family:
@@ -41,17 +37,11 @@
         min-height: 42px;
         border: 0;
         border-radius: 8px;
-        background: var(--green-dark);
+        background: var(--green);
         color: #fff;
         font: inherit;
         font-weight: 900;
         cursor: pointer;
-      }
-
-      button:focus-visible,
-      .choice:focus-visible {
-        outline: 3px solid rgba(105, 169, 207, 0.72);
-        outline-offset: 2px;
       }
 
       .app {
@@ -60,7 +50,7 @@
         margin: 0 auto;
         padding: 14px;
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto 1fr auto;
         gap: 12px;
       }
 
@@ -79,7 +69,7 @@
       }
 
       .day-pill {
-        min-width: 162px;
+        min-width: 180px;
         padding: 10px 14px;
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -91,11 +81,11 @@
       .layout {
         min-height: 0;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 318px;
+        grid-template-columns: minmax(0, 1fr) 320px;
         gap: 12px;
       }
 
-      .world,
+      .stage-wrap,
       .side {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -104,331 +94,14 @@
         overflow: hidden;
       }
 
-      .scene {
-        min-height: 540px;
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(180deg, #9fd2ee 0 42%, #91c67b 42% 100%);
-      }
-
-      .scene.home {
-        background:
-          linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px) 0 0 / 78px 100%,
-          linear-gradient(180deg, #ffe9be 0 36%, var(--floor) 36% 100%);
-      }
-
-      .scene.market {
-        background: linear-gradient(180deg, #a9dff0 0 38%, #e7d5a3 38% 100%);
-      }
-
-      .scene.neighbor {
-        background: linear-gradient(180deg, #afdff3 0 40%, #b8d386 40% 100%);
-      }
-
-      .room-tabs,
-      .place-tabs {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
-        padding: 10px;
-        border-bottom: 1px solid var(--line);
-        background: rgba(255, 253, 246, 0.95);
-      }
-
-      .place-tabs {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .tab {
-        min-width: 0;
-        padding: 0 8px;
-        background: #edf3e7;
-        color: var(--ink);
-        white-space: nowrap;
-      }
-
-      .tab.active {
-        background: var(--green-dark);
-        color: #fff;
-      }
-
-      .character {
-        position: absolute;
-        left: 50%;
-        bottom: 110px;
-        width: 104px;
-        height: 170px;
-        transform: translateX(-50%);
-        transition: left 0.35s ease, bottom 0.35s ease;
-        z-index: 4;
-      }
-
-      .head {
-        position: absolute;
-        left: 24px;
-        top: 0;
-        width: 56px;
-        height: 56px;
-        border: 3px solid #2e3638;
-        border-radius: 50%;
-        background: #ffd9b1;
-      }
-
-      .hair {
-        position: absolute;
-        left: 18px;
-        top: -6px;
-        width: 68px;
-        height: 34px;
-        border-radius: 50% 50% 18px 18px;
-        background: #372b27;
-      }
-
-      .pigtail {
-        position: absolute;
-        top: 20px;
-        width: 23px;
-        height: 23px;
-        border-radius: 50%;
-        background: #372b27;
-      }
-
-      .pigtail.left {
-        left: 5px;
-      }
-
-      .pigtail.right {
-        right: 5px;
-      }
-
-      .eye {
-        position: absolute;
-        top: 29px;
-        width: 6px;
-        height: 8px;
-        border-radius: 50%;
-        background: #2e3638;
-      }
-
-      .eye.left {
-        left: 41px;
-      }
-
-      .eye.right {
-        right: 41px;
-      }
-
-      .smile {
-        position: absolute;
-        left: 45px;
-        top: 40px;
-        width: 14px;
-        height: 7px;
-        border-bottom: 3px solid #b95b62;
-        border-radius: 0 0 14px 14px;
-      }
-
-      .dress {
-        position: absolute;
-        left: 21px;
-        top: 58px;
-        width: 62px;
-        height: 78px;
-        clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
-        background: var(--rose);
-        border: 3px solid #2e3638;
-      }
-
-      .arm,
-      .leg {
-        position: absolute;
-        background: #ffd9b1;
-        border: 3px solid #2e3638;
-      }
-
-      .arm {
-        top: 70px;
-        width: 19px;
-        height: 54px;
-        border-radius: 12px;
-      }
-
-      .arm.left {
-        left: 10px;
-        transform: rotate(18deg);
-      }
-
-      .arm.right {
-        right: 10px;
-        transform: rotate(-18deg);
-      }
-
-      .leg {
-        top: 130px;
-        width: 18px;
-        height: 40px;
-        border-radius: 12px;
-      }
-
-      .leg.left {
-        left: 34px;
-      }
-
-      .leg.right {
-        right: 34px;
-      }
-
-      .building {
-        position: absolute;
-        border: 3px solid #334042;
-        border-radius: 8px 8px 5px 5px;
-        background: #ffe3a3;
-      }
-
-      .building::before {
-        content: "";
-        position: absolute;
-        left: -16px;
-        right: -16px;
-        top: -38px;
-        height: 44px;
-        background: #d96355;
-        clip-path: polygon(50% 0, 100% 100%, 0 100%);
-        border-radius: 6px;
-      }
-
-      .home-house {
-        left: 60px;
-        bottom: 76px;
-        width: 170px;
-        height: 120px;
-      }
-
-      .neighbor-house {
-        right: 56px;
-        bottom: 76px;
-        width: 176px;
-        height: 124px;
-        background: #ffd6be;
-      }
-
-      .market-stall {
-        position: absolute;
-        left: 70px;
-        bottom: 80px;
-        width: 230px;
-        height: 138px;
-        border: 3px solid #334042;
-        border-radius: 8px;
-        background: #fff4cc;
-      }
-
-      .market-stall::before {
-        content: "";
-        position: absolute;
-        left: -3px;
-        right: -3px;
-        top: -46px;
-        height: 48px;
-        border: 3px solid #334042;
-        border-radius: 8px 8px 0 0;
-        background: repeating-linear-gradient(90deg, #e85d66 0 34px, #fff1c2 34px 68px);
-      }
-
-      .market-crates {
-        position: absolute;
-        right: 58px;
-        bottom: 84px;
-        display: grid;
-        grid-template-columns: repeat(2, 108px);
-        gap: 12px;
-      }
-
-      .crate,
-      .furniture,
-      .friend-card {
-        border: 3px solid #334042;
-        border-radius: 8px;
-        background: #fffdf6;
-      }
-
-      .crate {
-        min-height: 82px;
-        padding: 10px;
-        font-size: 32px;
-        text-align: center;
-      }
-
-      .label {
+      canvas {
+        width: 100%;
+        height: min(68vh, 660px);
+        min-height: 500px;
         display: block;
-        margin-top: 4px;
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 900;
-      }
-
-      .room {
-        position: absolute;
-        inset: 72px 22px 20px;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        grid-template-rows: 1fr 1fr;
-        gap: 14px;
-        z-index: 2;
-      }
-
-      .furniture {
-        position: relative;
-        min-height: 132px;
-        padding: 14px;
-        background: rgba(255, 253, 246, 0.92);
-      }
-
-      .furniture strong {
-        display: block;
-        font-size: 18px;
-      }
-
-      .furniture span {
-        position: absolute;
-        right: 14px;
-        bottom: 12px;
-        font-size: 42px;
-      }
-
-      .room .wide {
-        grid-column: span 2;
-      }
-
-      .friend-card {
-        position: absolute;
-        right: 34px;
-        bottom: 92px;
-        width: 246px;
-        min-height: 170px;
-        padding: 18px;
-        background: #fff6df;
-      }
-
-      .friend-card .face {
-        font-size: 58px;
-      }
-
-      .path {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 112px;
-        background:
-          radial-gradient(circle at 20% 45%, rgba(255, 255, 255, 0.42) 0 9px, transparent 10px),
-          radial-gradient(circle at 48% 60%, rgba(255, 255, 255, 0.36) 0 8px, transparent 9px),
-          radial-gradient(circle at 75% 42%, rgba(255, 255, 255, 0.4) 0 10px, transparent 11px),
-          #d8bd82;
-      }
-
-      .scene.home .path {
-        display: none;
+        background: #9ed4ef;
+        outline: none;
+        touch-action: none;
       }
 
       .side {
@@ -473,53 +146,24 @@
         height: 100%;
         border-radius: inherit;
         background: var(--green);
-        transition: width 0.25s ease;
       }
 
-      .choices,
       .outfits {
         display: grid;
-        gap: 8px;
-      }
-
-      .choice {
-        width: 100%;
-        min-height: 46px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #f5f8ef;
-        color: var(--ink);
-        text-align: left;
-      }
-
-      .choice strong {
-        display: block;
-        font-size: 15px;
-      }
-
-      .choice span {
-        display: block;
-        margin-top: 3px;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 800;
-      }
-
-      .outfits {
         grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
       }
 
       .outfit {
         min-height: 54px;
         padding: 0;
         border: 3px solid transparent;
-        background: #f5f8ef;
+        background: #f4f7ef;
         color: var(--ink);
       }
 
       .outfit.active {
-        border-color: #2f6f52;
+        border-color: var(--green);
       }
 
       .swatch {
@@ -532,7 +176,7 @@
       }
 
       .story {
-        min-height: 156px;
+        min-height: 168px;
         overflow: auto;
       }
 
@@ -554,14 +198,25 @@
         line-height: 1.45;
       }
 
-      .footer-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 14px;
+      .help {
+        padding: 12px 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+        font-weight: 850;
       }
 
-      .secondary {
+      .touch-pad {
+        display: none;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        padding: 12px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 253, 246, 0.95);
+      }
+
+      .touch-pad button {
+        min-height: 48px;
         background: #58636a;
       }
 
@@ -575,84 +230,13 @@
           grid-template-columns: 1fr;
         }
 
-        .day-pill {
-          width: 100%;
+        canvas {
+          min-height: 460px;
+          height: 58vh;
         }
 
-        .scene {
-          min-height: 500px;
-        }
-
-        .room-tabs,
-        .place-tabs {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .room {
-          inset: 116px 12px 16px;
-          grid-template-columns: 1fr 1fr;
-          gap: 9px;
-        }
-
-        .furniture {
-          min-height: 108px;
-          padding: 10px;
-        }
-
-        .market-stall,
-        .home-house {
-          left: 18px;
-          transform: scale(0.86);
-          transform-origin: left bottom;
-        }
-
-        .neighbor-house,
-        .friend-card {
-          right: 16px;
-          transform: scale(0.88);
-          transform-origin: right bottom;
-        }
-
-        .market-crates {
-          right: 14px;
-          bottom: 62px;
-          grid-template-columns: repeat(2, 82px);
-        }
-
-        .crate {
-          min-height: 72px;
-          font-size: 25px;
-        }
-
-        .character {
-          bottom: 78px;
-          width: 92px;
-          transform: translateX(-50%) scale(0.88);
-        }
-      }
-
-      @media (max-width: 520px) {
-        .scene {
-          min-height: 470px;
-        }
-
-        .room {
-          grid-template-columns: 1fr;
-          overflow: auto;
-        }
-
-        .room .wide {
-          grid-column: span 1;
-        }
-
-        .character {
-          left: 76%;
-          bottom: 24px;
-          transform: translateX(-50%) scale(0.68);
-        }
-
-        .scene.home .character {
-          z-index: 1;
+        .touch-pad {
+          display: grid;
         }
       }
     </style>
@@ -661,40 +245,17 @@
     <main class="app">
       <header class="topbar">
         <h1>小丫丫的日常</h1>
-        <div class="day-pill" id="dayPill">早上 7:30 · 晴天</div>
+        <div class="day-pill" id="dayPill">早上 7:30 · 家门口</div>
       </header>
 
       <section class="layout" aria-label="游戏区">
-        <div class="world">
-          <nav class="place-tabs" aria-label="地点">
-            <button class="tab active" data-place="home">小熊猫家</button>
-            <button class="tab" data-place="market">菜市场</button>
-            <button class="tab" data-place="neighbor">小浣熊家</button>
-          </nav>
-          <div class="room-tabs" id="roomTabs" aria-label="房间">
-            <button class="tab active" data-room="bedroom">卧室</button>
-            <button class="tab" data-room="bathroom">厕所</button>
-            <button class="tab" data-room="living">客厅</button>
-            <button class="tab" data-room="kitchen">厨房餐厅</button>
+        <div class="stage-wrap">
+          <canvas id="game" width="960" height="600" tabindex="0" aria-label="用方向键控制小丫丫"></canvas>
+          <div class="touch-pad" aria-label="手机控制">
+            <button data-touch="left">← 走</button>
+            <button data-touch="up">↑ 跳/进门</button>
+            <button data-touch="right">走 →</button>
           </div>
-          <section class="scene home" id="scene" aria-live="polite">
-            <div id="sceneArt"></div>
-            <div class="character" id="yaya" aria-label="小丫丫">
-              <div class="pigtail left"></div>
-              <div class="pigtail right"></div>
-              <div class="hair"></div>
-              <div class="head"></div>
-              <div class="eye left"></div>
-              <div class="eye right"></div>
-              <div class="smile"></div>
-              <div class="arm left"></div>
-              <div class="arm right"></div>
-              <div class="dress" id="dress"></div>
-              <div class="leg left"></div>
-              <div class="leg right"></div>
-            </div>
-            <div class="path"></div>
-          </section>
         </div>
 
         <aside class="side" aria-label="日常面板">
@@ -708,115 +269,79 @@
             <div class="outfits" id="outfits"></div>
           </section>
 
-          <section class="panel story" id="storyPanel">
+          <section class="panel story">
             <h2>小丫丫在做什么</h2>
             <div id="storyLog"></div>
-            <div class="menu-card" id="menuCard">今天还没有去菜市场，晚饭等小丫丫买菜后自动安排。</div>
+            <div class="menu-card" id="menuCard">去菜市场摊主旁边按 ↑，会自动买菜并安排今天煮什么饭。</div>
           </section>
 
-          <div class="footer-actions">
-            <button id="mainAction">做一件日常小事</button>
-            <button class="secondary" id="newDay">新的一天</button>
+          <div class="help">
+            键盘：← → 控制方向，↑ 跳。站到门口、摊主、朋友旁边按 ↑ 可以进门、出门、买菜或聊天。
           </div>
         </aside>
       </section>
     </main>
 
     <script>
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const dayPill = document.querySelector("#dayPill");
+      const metersEl = document.querySelector("#meters");
+      const outfitsEl = document.querySelector("#outfits");
+      const storyLog = document.querySelector("#storyLog");
+      const menuCard = document.querySelector("#menuCard");
+
+      const groundY = 484;
+      const keys = { left: false, right: false };
+      const rooms = ["bedroom", "bathroom", "living", "kitchen"];
+      const roomNames = {
+        bedroom: "卧室",
+        bathroom: "厕所",
+        living: "客厅",
+        kitchen: "厨房餐厅",
+      };
+
+      const outfits = [
+        { id: "rose", name: "草莓裙", color: "#e7778b" },
+        { id: "sun", name: "向日葵", color: "#f1c65a" },
+        { id: "sky", name: "蓝云朵", color: "#6aaad0" },
+        { id: "leaf", name: "薄荷套", color: "#65b981" },
+        { id: "grape", name: "葡萄衫", color: "#8a77be" },
+        { id: "carrot", name: "胡萝卜", color: "#eb8d4e" },
+      ];
+
+      const meals = [
+        { items: ["番茄", "鸡蛋", "青菜"], meal: "番茄鸡蛋面配清炒青菜", cost: 12 },
+        { items: ["土豆", "胡萝卜", "牛肉粒"], meal: "土豆胡萝卜炖饭", cost: 16 },
+        { items: ["豆腐", "蘑菇", "小白菜"], meal: "蘑菇豆腐汤和米饭", cost: 10 },
+        { items: ["玉米", "鸡腿", "生菜"], meal: "玉米鸡腿饭团和生菜汤", cost: 14 },
+      ];
+
       const state = {
-        place: "home",
+        scene: "street",
         room: "bedroom",
-        timeIndex: 0,
+        time: 0,
         outfit: "rose",
-        energy: 72,
+        energy: 74,
         happiness: 78,
-        hunger: 42,
-        clean: 70,
-        coins: 28,
+        hunger: 40,
+        clean: 72,
+        coins: 30,
         menu: null,
+        prompt: "用 ← → 走到门口，按 ↑ 可以进门。",
+      };
+
+      const player = {
+        x: 130,
+        y: groundY,
+        vy: 0,
+        width: 54,
+        height: 116,
+        facing: 1,
+        onGround: true,
       };
 
       const times = ["早上 7:30", "上午 10:00", "中午 12:20", "下午 3:40", "傍晚 6:10", "晚上 8:30"];
-
-      const outfits = [
-        { id: "rose", name: "草莓裙", color: "#e97385" },
-        { id: "sun", name: "向日葵", color: "#f2c85b" },
-        { id: "sky", name: "蓝云朵", color: "#69a9cf" },
-        { id: "leaf", name: "薄荷套", color: "#63b97a" },
-        { id: "grape", name: "葡萄衫", color: "#8c77be" },
-        { id: "carrot", name: "胡萝卜", color: "#ec8b4b" },
-      ];
-
-      const marketPlans = [
-        {
-          cost: 12,
-          items: ["番茄", "鸡蛋", "青菜"],
-          meal: "番茄鸡蛋面配清炒青菜",
-          reason: "快快煮好，适合想去客厅玩一会儿的日子。",
-        },
-        {
-          cost: 16,
-          items: ["土豆", "胡萝卜", "牛肉粒"],
-          meal: "土豆胡萝卜炖饭",
-          reason: "香香软软，吃完能量会涨得很快。",
-        },
-        {
-          cost: 10,
-          items: ["豆腐", "蘑菇", "小白菜"],
-          meal: "蘑菇豆腐汤和米饭",
-          reason: "清清爽爽，适合晴天晚饭。",
-        },
-        {
-          cost: 14,
-          items: ["玉米", "鸡腿", "生菜"],
-          meal: "玉米鸡腿饭团和生菜汤",
-          reason: "可以带去小浣熊家一起分享。",
-        },
-      ];
-
-      const roomActions = {
-        bedroom: {
-          title: "整理卧室",
-          note: "小丫丫把枕头拍蓬，又选了一件很好看的衣服。",
-          energy: 8,
-          happiness: 4,
-          clean: 2,
-          hunger: 4,
-        },
-        bathroom: {
-          title: "洗脸刷牙",
-          note: "水龙头哗啦啦，小丫丫变得清清爽爽。",
-          energy: 1,
-          happiness: 3,
-          clean: 15,
-          hunger: 3,
-        },
-        living: {
-          title: "看绘本",
-          note: "客厅地毯软软的，小丫丫读到一个好笑的故事。",
-          energy: -4,
-          happiness: 10,
-          clean: -1,
-          hunger: 5,
-        },
-        kitchen: {
-          title: "做饭吃饭",
-          note: "厨房餐厅香喷喷，小丫丫把今天的饭吃得干干净净。",
-          energy: 8,
-          happiness: 8,
-          clean: -4,
-          hunger: -28,
-        },
-      };
-
-      const metersEl = document.querySelector("#meters");
-      const storyLog = document.querySelector("#storyLog");
-      const menuCard = document.querySelector("#menuCard");
-      const scene = document.querySelector("#scene");
-      const sceneArt = document.querySelector("#sceneArt");
-      const dress = document.querySelector("#dress");
-      const dayPill = document.querySelector("#dayPill");
-      const roomTabs = document.querySelector("#roomTabs");
 
       function clamp(value) {
         return Math.max(0, Math.min(100, value));
@@ -826,9 +351,24 @@
         const p = document.createElement("p");
         p.textContent = text;
         storyLog.prepend(p);
-        while (storyLog.children.length > 6) {
-          storyLog.lastChild.remove();
-        }
+        while (storyLog.children.length > 6) storyLog.lastChild.remove();
+      }
+
+      function passTime() {
+        state.time = Math.min(times.length - 1, state.time + 1);
+        updateDay();
+      }
+
+      function updateDay() {
+        const place =
+          state.scene === "street"
+            ? "家门口"
+            : state.scene === "market"
+              ? "菜市场"
+              : state.scene === "neighbor"
+                ? "小浣熊家"
+                : roomNames[state.room];
+        dayPill.textContent = `${times[state.time]} · ${place}`;
       }
 
       function updateMeters() {
@@ -852,7 +392,7 @@
       }
 
       function updateOutfits() {
-        document.querySelector("#outfits").innerHTML = outfits
+        outfitsEl.innerHTML = outfits
           .map(
             (item) => `
               <button class="outfit ${state.outfit === item.id ? "active" : ""}" data-outfit="${item.id}" title="${item.name}">
@@ -862,194 +402,596 @@
             `,
           )
           .join("");
-        dress.style.background = outfits.find((item) => item.id === state.outfit).color;
-      }
-
-      function updateTabs() {
-        document.querySelectorAll("[data-place]").forEach((button) => {
-          button.classList.toggle("active", button.dataset.place === state.place);
-        });
-        document.querySelectorAll("[data-room]").forEach((button) => {
-          button.classList.toggle("active", button.dataset.room === state.room);
-        });
-        roomTabs.hidden = state.place !== "home";
-      }
-
-      function homeArt() {
-        const rooms = {
-          bedroom: [
-            ["小床", "被子晒着太阳", "🛏️", "wide"],
-            ["衣柜", "漂亮衣服排排站", "👗", ""],
-            ["书桌", "画笔和贴纸", "🖍️", ""],
-            ["窗台", "小花在点头", "🌼", ""],
-          ],
-          bathroom: [
-            ["洗手台", "刷牙杯摆好了", "🪥", ""],
-            ["马桶", "干净小厕所", "🚽", ""],
-            ["浴缸", "泡泡像云一样", "🛁", "wide"],
-            ["毛巾架", "软软小毛巾", "🧺", ""],
-          ],
-          living: [
-            ["沙发", "可以抱着靠垫", "🛋️", "wide"],
-            ["电视柜", "动画片时间", "📺", ""],
-            ["地毯", "坐着读绘本", "📚", ""],
-            ["玩具箱", "积木还没收", "🧸", ""],
-          ],
-          kitchen: [
-            ["灶台", "准备咕嘟咕嘟", "🍳", ""],
-            ["冰箱", "贴着小便签", "🧊", ""],
-            ["餐桌", "等今天的晚饭", "🍚", "wide"],
-            ["水槽", "洗菜洗碗", "🥬", ""],
-          ],
-        };
-        return `<div class="room">${rooms[state.room]
-          .map(
-            ([name, text, icon, wide]) => `
-              <div class="furniture ${wide}">
-                <strong>${name}</strong>
-                <p>${text}</p>
-                <span>${icon}</span>
-              </div>
-            `,
-          )
-          .join("")}</div>`;
-      }
-
-      function renderScene() {
-        scene.className = `scene ${state.place}`;
-        if (state.place === "home") {
-          sceneArt.innerHTML = homeArt();
-          document.querySelector("#mainAction").textContent = roomActions[state.room].title;
-        }
-        if (state.place === "market") {
-          sceneArt.innerHTML = `
-            <div class="market-stall"></div>
-            <div class="market-crates">
-              <div class="crate">🥬<span class="label">青菜摊</span></div>
-              <div class="crate">🥕<span class="label">根茎篮</span></div>
-              <div class="crate">🍅<span class="label">番茄盒</span></div>
-              <div class="crate">🥚<span class="label">鸡蛋筐</span></div>
-            </div>
-          `;
-          document.querySelector("#mainAction").textContent = "买菜并自动安排晚饭";
-        }
-        if (state.place === "neighbor") {
-          sceneArt.innerHTML = `
-            <div class="building home-house"></div>
-            <div class="building neighbor-house"></div>
-            <div class="friend-card">
-              <div class="face">🦝</div>
-              <strong>小浣熊家</strong>
-              <p>小浣熊已经把小点心摆到窗边，等小丫丫来聊天。</p>
-            </div>
-          `;
-          document.querySelector("#mainAction").textContent = "去小浣熊家玩";
-        }
-        updateTabs();
       }
 
       function updateMenuCard() {
         if (!state.menu) {
-          menuCard.textContent = "今天还没有去菜市场，晚饭等小丫丫买菜后自动安排。";
+          menuCard.textContent = "去菜市场摊主旁边按 ↑，会自动买菜并安排今天煮什么饭。";
           return;
         }
-        menuCard.innerHTML = `
-          <strong>今天煮：${state.menu.meal}</strong><br>
-          买了：${state.menu.items.join("、")}。<br>
-          ${state.menu.reason}
-        `;
+        menuCard.innerHTML = `<strong>今天煮：${state.menu.meal}</strong><br>买了：${state.menu.items.join("、")}。`;
       }
 
-      function passTime() {
-        state.timeIndex = Math.min(times.length - 1, state.timeIndex + 1);
-        dayPill.textContent = `${times[state.timeIndex]} · 晴天`;
+      function outfitColor() {
+        return outfits.find((item) => item.id === state.outfit).color;
       }
 
-      function applyAction(change) {
-        state.energy = clamp(state.energy + change.energy);
-        state.happiness = clamp(state.happiness + change.happiness);
-        state.hunger = clamp(state.hunger + change.hunger);
-        state.clean = clamp(state.clean + change.clean);
-        passTime();
-        updateMeters();
+      function roundedRect(x, y, w, h, r, color, stroke = "#334042") {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.fill();
+        ctx.stroke();
       }
 
-      function doMainAction() {
-        if (state.place === "home") {
-          const action = roomActions[state.room];
-          applyAction(action);
-          addStory(action.note);
-        }
-        if (state.place === "market") {
-          const affordable = marketPlans.filter((plan) => plan.cost <= state.coins);
-          const plan = affordable[(state.timeIndex + state.happiness + state.energy) % affordable.length];
-          state.menu = plan;
-          state.coins -= plan.cost;
-          applyAction({ energy: -6, happiness: 8, hunger: 8, clean: -3 });
-          updateMenuCard();
-          addStory(`小丫丫带着 ${plan.items.join("、")} 回家了，今天自动决定煮 ${plan.meal}。`);
-        }
-        if (state.place === "neighbor") {
-          applyAction({ energy: -8, happiness: 14, hunger: 7, clean: -2 });
-          addStory("小丫丫到小浣熊家玩拼图，还把今天的故事讲给小浣熊听。");
+      function label(text, x, y, color = "#253238") {
+        ctx.fillStyle = color;
+        ctx.font = "900 22px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x, y);
+      }
+
+      function drawSkyGround(sky, ground) {
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+        ctx.fillStyle = "rgba(255,255,255,0.38)";
+        for (const x of [120, 330, 570, 780]) {
+          ctx.beginPath();
+          ctx.ellipse(x, 96, 48, 18, 0, 0, Math.PI * 2);
+          ctx.ellipse(x + 42, 92, 34, 16, 0, 0, Math.PI * 2);
+          ctx.ellipse(x - 40, 100, 30, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
 
-      function newDay() {
-        state.place = "home";
-        state.room = "bedroom";
-        state.timeIndex = 0;
-        state.energy = 74;
-        state.happiness = 76;
-        state.hunger = 38;
-        state.clean = 72;
-        state.coins = 28;
-        state.menu = null;
-        dayPill.textContent = `${times[state.timeIndex]} · 晴天`;
-        storyLog.innerHTML = "";
-        addStory("新的一天开始了，小丫丫伸伸懒腰，准备过自己的日常。");
-        updateAll();
+      function drawHouse(x, y, w, h, body, roof, text) {
+        ctx.fillStyle = roof;
+        ctx.beginPath();
+        ctx.moveTo(x - 24, y);
+        ctx.lineTo(x + w / 2, y - 80);
+        ctx.lineTo(x + w + 24, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        roundedRect(x, y, w, h, 8, body);
+        roundedRect(x + w / 2 - 24, y + h - 72, 48, 72, 5, "#8a6042");
+        label(text, x + w / 2, y + 40);
+        ctx.fillStyle = "#f6d77a";
+        ctx.fillRect(x + w / 2 + 9, y + h - 36, 6, 6);
       }
 
-      function updateAll() {
-        updateMeters();
-        updateOutfits();
-        updateMenuCard();
-        renderScene();
+      function drawDoorHint(x, y, text) {
+        ctx.fillStyle = "rgba(255,253,246,0.94)";
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(x - 86, y - 52, 172, 38, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x, y - 27);
       }
 
-      document.querySelectorAll("[data-place]").forEach((button) => {
-        button.addEventListener("click", () => {
-          state.place = button.dataset.place;
-          renderScene();
-          addStory(`小丫丫来到了${button.textContent}。`);
+      function drawStreet() {
+        drawSkyGround("#a7d9f0", "#8ec46f");
+        ctx.fillStyle = "#d7bd82";
+        ctx.fillRect(0, groundY + 40, canvas.width, 44);
+        drawHouse(80, 260, 210, 224, "#ffe2a5", "#d86155", "小熊猫家");
+        drawHouse(655, 266, 220, 218, "#ffd7c3", "#7f9fd0", "小浣熊家");
+        drawMarketSign(400, 330);
+        drawNpc(515, groundY, "brother");
+        speech("大哥：去菜市场我知道路！", 515, 284, 214);
+        drawDoorHint(185, 258, "门口按 ↑ 进家");
+        drawDoorHint(510, 350, "按 ↑ 去菜市场");
+        drawDoorHint(765, 258, "按 ↑ 去小浣熊家");
+      }
+
+      function drawMarketSign(x, y) {
+        roundedRect(x, y, 210, 150, 8, "#fff4ca");
+        ctx.fillStyle = "#e96368";
+        ctx.fillRect(x - 4, y - 52, 218, 52);
+        ctx.fillStyle = "#fff0be";
+        for (let i = 0; i < 5; i += 1) ctx.fillRect(x + i * 43, y - 52, 22, 52);
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x - 4, y - 52, 218, 52);
+        label("菜市场", x + 105, y + 48);
+        ctx.font = "34px serif";
+        ctx.fillText("🥬  🥕  🍅", x + 105, y + 104);
+      }
+
+      function drawMarket() {
+        drawSkyGround("#a7dff1", "#e0c58a");
+        drawMarketSign(94, 300);
+        roundedRect(356, 378, 112, 76, 8, "#f6d59a");
+        roundedRect(500, 382, 112, 72, 8, "#f6d59a");
+        roundedRect(644, 378, 112, 76, 8, "#f6d59a");
+        ctx.font = "38px serif";
+        ctx.textAlign = "center";
+        ctx.fillText("🥬", 412, 428);
+        ctx.fillText("🥚", 556, 430);
+        ctx.fillText("🍅", 700, 428);
+        drawNpc(250, groundY, "vendor");
+        drawNpc(770, groundY, "brother");
+        speech("摊主：站近一点按 ↑ 买菜。", 250, 286, 218);
+        drawDoorHint(70, 452, "按 ↑ 回街上");
+      }
+
+      function drawNeighbor() {
+        drawSkyGround("#b1dff2", "#a9ca74");
+        drawHouse(610, 260, 220, 224, "#ffd7c3", "#7f9fd0", "小浣熊家");
+        drawNpc(725, groundY, "raccoon");
+        drawNpc(410, groundY, "brother");
+        speech("小浣熊：来玩拼图吧！", 725, 284, 198);
+        speech("大哥：我也来做客。", 410, 300, 170);
+        drawDoorHint(80, 452, "按 ↑ 回街上");
+      }
+
+      function drawRoom() {
+        ctx.fillStyle = "#ffe9be";
+        ctx.fillRect(0, 0, canvas.width, groundY);
+        ctx.fillStyle = "#ead5b4";
+        ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+        for (let x = 0; x < canvas.width; x += 80) {
+          ctx.strokeStyle = "rgba(255,255,255,0.22)";
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, groundY);
+          ctx.stroke();
+        }
+
+        if (state.room === "bedroom") {
+          drawFurniture(92, 292, 230, 104, "小床", "🛏️");
+          drawFurniture(612, 245, 190, 150, "衣柜", "👗");
+          drawFurniture(372, 344, 170, 90, "书桌", "🖍️");
+          drawDoorHint(82, 452, "按 ↑ 出门");
+          drawDoorHint(808, 452, "按 ↑ 去厕所");
+        }
+        if (state.room === "bathroom") {
+          drawFurniture(130, 298, 172, 126, "洗手台", "🪥");
+          drawFurniture(388, 292, 172, 132, "马桶", "🚽");
+          drawFurniture(640, 292, 210, 132, "浴缸", "🛁");
+          drawDoorHint(82, 452, "按 ↑ 回卧室");
+          drawDoorHint(808, 452, "按 ↑ 去客厅");
+        }
+        if (state.room === "living") {
+          drawFurniture(115, 310, 270, 108, "沙发", "🛋️");
+          drawFurniture(485, 286, 172, 130, "电视", "📺");
+          drawFurniture(696, 308, 150, 100, "玩具箱", "🧸");
+          drawDoorHint(82, 452, "按 ↑ 回厕所");
+          drawDoorHint(808, 452, "按 ↑ 去厨房");
+        }
+        if (state.room === "kitchen") {
+          drawFurniture(100, 286, 168, 134, "灶台", "🍳");
+          drawFurniture(330, 276, 162, 144, "冰箱", "🧊");
+          drawFurniture(565, 318, 240, 94, "餐桌", "🍚");
+          drawDoorHint(82, 452, "按 ↑ 回客厅");
+          drawDoorHint(808, 452, "按 ↑ 出门");
+        }
+      }
+
+      function drawFurniture(x, y, w, h, name, icon) {
+        roundedRect(x, y, w, h, 8, "rgba(255,253,246,0.94)");
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 22px system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(name, x + 16, y + 32);
+        ctx.font = "42px serif";
+        ctx.textAlign = "right";
+        ctx.fillText(icon, x + w - 18, y + h - 18);
+      }
+
+      function drawNpc(x, footY, type) {
+        if (type === "raccoon") {
+          drawAnimal(x, footY, "#8e8a80", "#2f3438", "🦝");
+          return;
+        }
+        if (type === "vendor") {
+          drawPerson(x, footY, "#466f54", "#f1c65a", "摊主");
+          return;
+        }
+        drawPerson(x, footY, "#3d5f86", "#a7c6e9", "大哥");
+      }
+
+      function drawAnimal(x, footY, body, mask, faceText) {
+        ctx.save();
+        ctx.translate(x, footY - 92);
+        ctx.fillStyle = body;
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(0, 42, 34, 45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, 36, 0, Math.PI * 2);
+        ctx.fillStyle = "#cfc8b6";
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = mask;
+        ctx.fillRect(-28, -8, 56, 18);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(-13, 0, 6, 0, Math.PI * 2);
+        ctx.arc(13, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-13, 0, 3, 0, Math.PI * 2);
+        ctx.arc(13, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = "22px serif";
+        ctx.textAlign = "center";
+        ctx.fillText(faceText, 0, -46);
+        ctx.restore();
+      }
+
+      function drawPerson(x, footY, hair, clothes, name) {
+        ctx.save();
+        ctx.translate(x, footY - 118);
+        ctx.fillStyle = hair;
+        ctx.beginPath();
+        ctx.ellipse(0, 16, 40, 34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffd8b1";
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 31, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-11, -3, 4, 0, Math.PI * 2);
+        ctx.arc(11, -3, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#b95b62";
+        ctx.beginPath();
+        ctx.arc(0, 8, 10, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+        roundedRect(-28, 34, 56, 62, 8, clothes);
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(name, 0, 118);
+        ctx.restore();
+      }
+
+      function speech(text, x, y, w) {
+        ctx.fillStyle = "rgba(255,253,246,0.94)";
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(x - w / 2, y - 44, w, 36, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#253238";
+        ctx.font = "800 15px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x, y - 21);
+      }
+
+      function drawYaya() {
+        ctx.save();
+        ctx.translate(player.x, player.y - player.height);
+        ctx.scale(player.facing, 1);
+        ctx.fillStyle = "#372b27";
+        ctx.beginPath();
+        ctx.arc(-30, 34, 16, 0, Math.PI * 2);
+        ctx.arc(30, 34, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#372b27";
+        ctx.beginPath();
+        ctx.ellipse(0, 16, 38, 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffd8b1";
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 22, 32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-12, 18, 4, 0, Math.PI * 2);
+        ctx.arc(12, 18, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#b95b62";
+        ctx.beginPath();
+        ctx.arc(0, 27, 10, 0.15, Math.PI - 0.15);
+        ctx.stroke();
+        ctx.fillStyle = outfitColor();
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-24, 58);
+        ctx.lineTo(24, 58);
+        ctx.lineTo(36, 112);
+        ctx.lineTo(-36, 112);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ffd8b1";
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          ctx.roundRect(side * 30 - 8, 66, 16, 42, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.roundRect(side * 12 - 7, 108, 14, 34, 7);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawPrompt() {
+        ctx.fillStyle = "rgba(255,253,246,0.96)";
+        ctx.strokeStyle = "#334042";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(22, 18, canvas.width - 44, 48, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 18px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(state.prompt, canvas.width / 2, 49);
+      }
+
+      function jumpOrInteract() {
+        if (tryInteract()) return;
+        if (player.onGround) {
+          player.vy = -15.5;
+          player.onGround = false;
+          state.prompt = "小丫丫跳起来啦！";
+        }
+      }
+
+      function near(x, distance = 76) {
+        return Math.abs(player.x - x) < distance;
+      }
+
+      function enterScene(scene, x) {
+        state.scene = scene;
+        player.x = x;
+        player.y = groundY;
+        player.vy = 0;
+        player.onGround = true;
+        updateDay();
+      }
+
+      function tryInteract() {
+        if (state.scene === "street") {
+          if (near(185)) {
+            state.scene = "room";
+            state.room = "bedroom";
+            player.x = 130;
+            state.prompt = "进家啦。左右走，门口按 ↑ 换房间或出门。";
+            updateDay();
+            addStory("小丫丫自己走进了小熊猫家。");
+            return true;
+          }
+          if (near(510)) {
+            enterScene("market", 92);
+            state.prompt = "到菜市场了，走到摊主旁边按 ↑ 买菜。";
+            addStory("小丫丫走到了菜市场。");
+            return true;
+          }
+          if (near(765)) {
+            enterScene("neighbor", 100);
+            state.prompt = "到小浣熊家啦，走到小浣熊旁边按 ↑ 聊天。";
+            addStory("小丫丫来到小浣熊家门口。");
+            return true;
+          }
+        }
+
+        if (state.scene === "market") {
+          if (near(70)) {
+            enterScene("street", 510);
+            state.prompt = "回到街上啦。";
+            return true;
+          }
+          if (near(250, 90)) {
+            const plan = meals[(state.time + state.happiness + state.energy) % meals.length];
+            state.menu = plan;
+            state.coins = Math.max(0, state.coins - plan.cost);
+            state.energy = clamp(state.energy - 5);
+            state.happiness = clamp(state.happiness + 8);
+            state.hunger = clamp(state.hunger + 7);
+            passTime();
+            updateMeters();
+            updateMenuCard();
+            state.prompt = `买好菜了：今天煮 ${plan.meal}。`;
+            addStory(`摊主帮小丫丫配好 ${plan.items.join("、")}，今天自动安排煮 ${plan.meal}。`);
+            return true;
+          }
+          if (near(770, 90)) {
+            state.happiness = clamp(state.happiness + 4);
+            updateMeters();
+            state.prompt = "大哥说：小丫丫走路真稳，继续向前！";
+            addStory("大哥在菜市场给小丫丫指路。");
+            return true;
+          }
+        }
+
+        if (state.scene === "neighbor") {
+          if (near(80)) {
+            enterScene("street", 765);
+            state.prompt = "回到街上啦。";
+            return true;
+          }
+          if (near(725, 95)) {
+            state.energy = clamp(state.energy - 8);
+            state.happiness = clamp(state.happiness + 14);
+            state.hunger = clamp(state.hunger + 6);
+            passTime();
+            updateMeters();
+            state.prompt = "小丫丫和小浣熊玩拼图，开心加好多。";
+            addStory("小丫丫和小浣熊在家里玩拼图。");
+            return true;
+          }
+          if (near(410, 95)) {
+            state.prompt = "大哥说：按 ↑ 是跳，也是进门，站近门口就会进门。";
+            addStory("大哥认真讲了一遍方向键玩法。");
+            return true;
+          }
+        }
+
+        if (state.scene === "room") {
+          const index = rooms.indexOf(state.room);
+          if (near(82)) {
+            if (index === 0) {
+              enterScene("street", 185);
+              state.prompt = "出门啦，可以去菜市场或小浣熊家。";
+            } else {
+              state.room = rooms[index - 1];
+              player.x = 780;
+              state.prompt = `来到${roomNames[state.room]}。`;
+              updateDay();
+            }
+            return true;
+          }
+          if (near(808)) {
+            if (index === rooms.length - 1) {
+              enterScene("street", 185);
+              state.prompt = "从厨房餐厅出门啦。";
+            } else {
+              state.room = rooms[index + 1];
+              player.x = 150;
+              state.prompt = `来到${roomNames[state.room]}。`;
+              updateDay();
+            }
+            return true;
+          }
+          if (state.room === "bathroom" && near(388, 95)) {
+            state.clean = clamp(state.clean + 15);
+            passTime();
+            updateMeters();
+            state.prompt = "小丫丫洗脸刷牙，干干净净。";
+            addStory("小丫丫在厕所洗脸刷牙。");
+            return true;
+          }
+          if (state.room === "kitchen" && near(565, 120)) {
+            state.hunger = clamp(state.hunger - 28);
+            state.energy = clamp(state.energy + 8);
+            state.happiness = clamp(state.happiness + 8);
+            passTime();
+            updateMeters();
+            state.prompt = state.menu ? `吃饭啦：${state.menu.meal}。` : "冰箱里还有米饭，也可以先吃一点。";
+            addStory(state.menu ? `厨房餐厅香喷喷，小丫丫吃了 ${state.menu.meal}。` : "小丫丫在厨房餐厅吃了一点米饭。");
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      function updatePlayer() {
+        const speed = 5.2;
+        if (keys.left) {
+          player.x -= speed;
+          player.facing = -1;
+        }
+        if (keys.right) {
+          player.x += speed;
+          player.facing = 1;
+        }
+        player.x = Math.max(44, Math.min(canvas.width - 44, player.x));
+        player.vy += 0.72;
+        player.y += player.vy;
+        if (player.y >= groundY) {
+          player.y = groundY;
+          player.vy = 0;
+          player.onGround = true;
+        }
+      }
+
+      function draw() {
+        if (state.scene === "street") drawStreet();
+        if (state.scene === "market") drawMarket();
+        if (state.scene === "neighbor") drawNeighbor();
+        if (state.scene === "room") drawRoom();
+        drawYaya();
+        drawPrompt();
+      }
+
+      function frame() {
+        updatePlayer();
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      function setKey(event, down) {
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", " "].includes(event.key)) event.preventDefault();
+        if (event.key === "ArrowLeft") keys.left = down;
+        if (event.key === "ArrowRight") keys.right = down;
+        if (down && (event.key === "ArrowUp" || event.key === " ")) jumpOrInteract();
+      }
+
+      window.addEventListener("keydown", (event) => setKey(event, true));
+      window.addEventListener("keyup", (event) => setKey(event, false));
+      canvas.addEventListener("pointerdown", () => canvas.focus());
+
+      document.querySelectorAll("[data-touch]").forEach((button) => {
+        const key = button.dataset.touch;
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          canvas.focus();
+          if (key === "up") jumpOrInteract();
+          if (key === "left") keys.left = true;
+          if (key === "right") keys.right = true;
+        });
+        button.addEventListener("pointerup", () => {
+          if (key === "left") keys.left = false;
+          if (key === "right") keys.right = false;
+        });
+        button.addEventListener("pointerleave", () => {
+          if (key === "left") keys.left = false;
+          if (key === "right") keys.right = false;
         });
       });
 
-      document.querySelectorAll("[data-room]").forEach((button) => {
-        button.addEventListener("click", () => {
-          state.room = button.dataset.room;
-          renderScene();
-          addStory(`小丫丫走进了${button.textContent}。`);
-        });
-      });
-
-      document.querySelector("#outfits").addEventListener("click", (event) => {
+      outfitsEl.addEventListener("click", (event) => {
         const button = event.target.closest("[data-outfit]");
         if (!button) return;
         const item = outfits.find((outfit) => outfit.id === button.dataset.outfit);
         state.outfit = item.id;
         state.happiness = clamp(state.happiness + 3);
+        state.prompt = `小丫丫换上了${item.name}。`;
         updateOutfits();
         updateMeters();
-        addStory(`小丫丫换上了${item.name}，觉得今天更好看了。`);
+        addStory(`小丫丫换上${item.name}，准备自己出门玩。`);
+        canvas.focus();
       });
 
-      document.querySelector("#mainAction").addEventListener("click", doMainAction);
-      document.querySelector("#newDay").addEventListener("click", newDay);
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function roundRect(x, y, w, h, r) {
+          const radius = Math.min(r, w / 2, h / 2);
+          this.moveTo(x + radius, y);
+          this.arcTo(x + w, y, x + w, y + h, radius);
+          this.arcTo(x + w, y + h, x, y + h, radius);
+          this.arcTo(x, y + h, x, y, radius);
+          this.arcTo(x, y, x + w, y, radius);
+          return this;
+        };
+      }
 
-      addStory("小丫丫醒来了，衣柜里有好多漂亮衣服，今天想先穿哪一件呢？");
-      updateAll();
+      addStory("小丫丫站在家门口，等你用方向键控制她。");
+      updateDay();
+      updateMeters();
+      updateOutfits();
+      updateMenuCard();
+      canvas.focus();
+      frame();
     </script>
   </body>
 </html>
