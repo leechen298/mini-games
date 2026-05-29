@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>小鸭跳跳去买菜</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #eef8f2;
+        --panel: #fffdf7;
+        --ink: #25313a;
+        --muted: #66737a;
+        --line: #d8e1d5;
+        --leaf: #4f8b64;
+        --leaf-dark: #2f6548;
+        --water: #67b7dc;
+        --water-dark: #327fa7;
+        --path: #d9bf86;
+        --path-dark: #a67f46;
+        --duck: #f3cf4f;
+        --orange: #e9823d;
+        --roof: #d85750;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.82), transparent 230px),
+          var(--page);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--leaf);
+        color: #fff;
+        font: inherit;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .app {
+        width: min(100%, 1120px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 14px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 12px;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 4vw, 36px);
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .badges {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(82px, 1fr));
+        gap: 8px;
+        width: min(100%, 390px);
+      }
+
+      .badge {
+        min-height: 54px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.95);
+      }
+
+      .badge span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .badge strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .layout {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 292px;
+        gap: 12px;
+      }
+
+      .stage-wrap,
+      .side {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 18px 38px rgba(52, 83, 63, 0.13);
+        overflow: hidden;
+      }
+
+      canvas {
+        width: 100%;
+        height: min(68vh, 660px);
+        min-height: 470px;
+        display: block;
+        background: #a9dcf0;
+        outline: none;
+        touch-action: none;
+      }
+
+      .side {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .panel {
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .task-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .task {
+        min-height: 46px;
+        padding: 9px 10px;
+        border-radius: 8px;
+        background: #edf6e9;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.3;
+        font-weight: 850;
+      }
+
+      .task.done {
+        background: #dff0e4;
+        color: var(--leaf-dark);
+      }
+
+      .message {
+        min-height: 142px;
+        padding: 14px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.55;
+        font-weight: 800;
+      }
+
+      .action-row {
+        padding: 12px 14px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 800;
+      }
+
+      .touch-pad {
+        display: none;
+        justify-content: space-between;
+        gap: 12px;
+        pointer-events: none;
+      }
+
+      .touch-group {
+        display: grid;
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(2, 48px);
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .touch-button {
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        background: rgba(37, 49, 58, 0.75);
+      }
+
+      .touch-button.up {
+        grid-column: 2;
+      }
+
+      .touch-button.left {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .touch-button.down {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .touch-button.right {
+        grid-column: 3;
+        grid-row: 2;
+      }
+
+      .touch-actions {
+        align-self: end;
+        display: grid;
+        grid-template-columns: 64px 64px;
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .touch-actions button {
+        width: 64px;
+        height: 64px;
+        padding: 0;
+        background: rgba(216, 87, 80, 0.86);
+      }
+
+      @media (max-width: 820px) {
+        .app {
+          padding: 10px;
+        }
+
+        .topbar,
+        .layout,
+        .action-row {
+          grid-template-columns: 1fr;
+        }
+
+        .badges {
+          width: 100%;
+        }
+
+        canvas {
+          height: 58vh;
+          min-height: 380px;
+        }
+
+        .side {
+          min-height: 0;
+        }
+
+        .message {
+          min-height: 92px;
+        }
+
+        .touch-pad {
+          display: flex;
+          padding: 10px 2px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>小鸭跳跳去买菜</h1>
+        <div class="badges" aria-label="游戏状态">
+          <div class="badge"><span>菜篮子</span><strong id="veggieCount">0/3</strong></div>
+          <div class="badge"><span>清洁瓶</span><strong id="soapCount">0/2</strong></div>
+          <div class="badge"><span>跳跃</span><strong id="jumpCount">0</strong></div>
+        </div>
+      </header>
+
+      <section class="layout">
+        <div class="stage-wrap">
+          <canvas id="game" width="960" height="640" tabindex="0" aria-label="小鸭子跳跳小游戏"></canvas>
+        </div>
+
+        <div class="touch-pad" aria-label="手机控制">
+          <div class="touch-group">
+            <button class="touch-button up" type="button" data-key="up">上</button>
+            <button class="touch-button left" type="button" data-key="left">左</button>
+            <button class="touch-button down" type="button" data-key="down">下</button>
+            <button class="touch-button right" type="button" data-key="right">右</button>
+          </div>
+          <div class="touch-actions">
+            <button type="button" data-key="jump">跳</button>
+            <button type="button" data-key="enter">进</button>
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="panel">
+            <h2>今天的事情</h2>
+            <div class="task-list">
+              <div class="task" id="taskWater">去水方块里游一游</div>
+              <div class="task" id="taskSoap">捡到 2 瓶清洁瓶</div>
+              <div class="task" id="taskMarket">去菜市场买 3 样菜</div>
+              <div class="task" id="taskHome">带着菜回到小鸭家</div>
+            </div>
+          </div>
+          <div class="message" id="message">
+            从家门口出发，沿着方块路跳过去。蓝色水方块可以游泳，到了菜市场按进入键买菜，最后回家。
+          </div>
+          <div class="action-row">
+            <p class="hint">方向键或 WASD 移动，空格跳，E 进入家门或菜市场。</p>
+            <button id="resetButton" type="button">重新开始</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const veggieCountEl = document.querySelector("#veggieCount");
+      const soapCountEl = document.querySelector("#soapCount");
+      const jumpCountEl = document.querySelector("#jumpCount");
+      const messageEl = document.querySelector("#message");
+      const taskWaterEl = document.querySelector("#taskWater");
+      const taskSoapEl = document.querySelector("#taskSoap");
+      const taskMarketEl = document.querySelector("#taskMarket");
+      const taskHomeEl = document.querySelector("#taskHome");
+      const resetButton = document.querySelector("#resetButton");
+
+      const COLS = 12;
+      const ROWS = 8;
+      const TILE = 64;
+      const map = [
+        "GGGGGGGGGGGG",
+        "GHHHPPLLLMMG",
+        "GHHHPPWLLMMG",
+        "GPPPPPWWPPPG",
+        "GLWSSPWWPPPG",
+        "GLWPPPPPVVVG",
+        "GLLLLPPPVVVG",
+        "GGGGGGGGGGGG",
+      ];
+
+      const start = { x: 2, y: 2 };
+      const marketZone = [
+        { x: 9, y: 1 },
+        { x: 10, y: 1 },
+        { x: 9, y: 2 },
+        { x: 10, y: 2 },
+      ];
+      const homeZone = [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        { x: 3, y: 1 },
+        { x: 1, y: 2 },
+        { x: 2, y: 2 },
+        { x: 3, y: 2 },
+      ];
+
+      let state;
+      const keys = new Set();
+
+      function makeState() {
+        return {
+          duck: {
+            x: start.x,
+            y: start.y,
+            px: start.x,
+            py: start.y,
+            targetX: start.x,
+            targetY: start.y,
+            moving: 0,
+            hop: 0,
+            moveStarted: 0,
+            facing: 1,
+          },
+          veggies: 0,
+          soaps: 0,
+          jumps: 0,
+          swam: false,
+          enteredMarket: false,
+          enteredHome: false,
+          won: false,
+          collected: new Set(),
+          message: "小鸭子背好菜篮子，准备跳跳跳出门。",
+        };
+      }
+
+      function tileAt(x, y) {
+        if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return "G";
+        return map[y][x];
+      }
+
+      function isWalkable(x, y) {
+        return tileAt(x, y) !== "G";
+      }
+
+      function isInsideZone(zone, x, y) {
+        return zone.some((cell) => cell.x === x && cell.y === y);
+      }
+
+      function resetGame() {
+        state = makeState();
+        updateHud();
+        canvas.focus();
+      }
+
+      function tryMove(dx, dy) {
+        settleDuckMotion();
+        if (state.won || state.duck.moving > 0) return;
+        const nextX = state.duck.x + dx;
+        const nextY = state.duck.y + dy;
+        if (!isWalkable(nextX, nextY)) {
+          state.message = "这里是草丛，小鸭子需要走方块路。";
+          updateHud();
+          return;
+        }
+
+        state.duck.px = state.duck.x;
+        state.duck.py = state.duck.y;
+        state.duck.x = nextX;
+        state.duck.y = nextY;
+        state.duck.targetX = nextX;
+        state.duck.targetY = nextY;
+        state.duck.moving = 1;
+        state.duck.hop = 1;
+        state.duck.moveStarted = performance.now();
+        state.duck.facing = dx === 0 ? state.duck.facing : Math.sign(dx);
+        state.jumps += tileAt(nextX, nextY) === "W" ? 0 : 1;
+        landOnTile();
+      }
+
+      function settleDuckMotion() {
+        if (state.duck.moving > 0 && performance.now() - state.duck.moveStarted > 180) {
+          state.duck.moving = 0;
+          state.duck.hop = 0;
+          state.duck.px = state.duck.x;
+          state.duck.py = state.duck.y;
+        }
+      }
+
+      function landOnTile() {
+        const { x, y } = state.duck;
+        const tile = tileAt(x, y);
+        const key = `${x},${y}`;
+
+        if (tile === "W") {
+          state.swam = true;
+          state.message = "扑通，小鸭子在水方块里游泳，脚脚很开心。";
+        } else if (tile === "S" && !state.collected.has(key)) {
+          state.collected.add(key);
+          state.soaps += 1;
+          state.message = "捡到一瓶清洁瓶，回家可以洗得香香的。";
+        } else if (tile === "V" && !state.collected.has(key)) {
+          state.collected.add(key);
+          if (state.veggies < 3) state.veggies += 1;
+          state.message = "小鸭子把新鲜菜放进篮子里。";
+        } else if (tile === "M") {
+          state.message = "到菜市场了，按 E 可以认真买菜。";
+        } else if (tile === "H") {
+          state.message = state.veggies >= 3 ? "家就在这里，按 E 把菜带回家。" : "这是小鸭家，先去菜市场买菜吧。";
+        } else {
+          state.message = "小鸭子在方块路上跳跳跳。";
+        }
+
+        updateHud();
+      }
+
+      function interact() {
+        if (state.won) {
+          resetGame();
+          return;
+        }
+
+        const { x, y } = state.duck;
+        if (isInsideZone(marketZone, x, y)) {
+          state.enteredMarket = true;
+          const missing = Math.max(0, 3 - state.veggies);
+          state.veggies = 3;
+          state.message = missing > 0 ? `小鸭子在菜市场买齐了 ${missing} 样菜。` : "菜已经买齐了，准备回家。";
+        } else if (isInsideZone(homeZone, x, y)) {
+          state.enteredHome = true;
+          if (state.veggies >= 3 && state.soaps >= 2 && state.swam) {
+            state.won = true;
+            state.message = "完成啦。小鸭子游了泳，买了菜，还带着清洁瓶回家了。";
+          } else {
+            state.message = "小鸭子探头看了看家门：还有事情没做完呢。";
+          }
+        } else {
+          state.message = "这里没有门，继续跳到家或菜市场吧。";
+        }
+        updateHud();
+      }
+
+      function updateHud() {
+        veggieCountEl.textContent = `${state.veggies}/3`;
+        soapCountEl.textContent = `${state.soaps}/2`;
+        jumpCountEl.textContent = state.jumps;
+        messageEl.textContent = state.message;
+        taskWaterEl.classList.toggle("done", state.swam);
+        taskSoapEl.classList.toggle("done", state.soaps >= 2);
+        taskMarketEl.classList.toggle("done", state.veggies >= 3 && state.enteredMarket);
+        taskHomeEl.classList.toggle("done", state.won);
+      }
+
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.round(rect.width * ratio);
+        canvas.height = Math.round(rect.height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function drawRoundedRect(x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+      }
+
+      function drawTile(tile, x, y, size) {
+        if (tile === "G") {
+          ctx.fillStyle = "#5fb36e";
+          ctx.fillRect(x, y, size, size);
+          ctx.fillStyle = "#4b9b61";
+          for (let i = 0; i < 4; i += 1) {
+            ctx.fillRect(x + 10 + i * 13, y + 12 + (i % 2) * 28, 7, 18);
+          }
+          return;
+        }
+
+        const base = tile === "W" ? "#67b7dc" : tile === "H" ? "#e9c379" : tile === "M" ? "#f0b56a" : tile === "S" ? "#c9d8e0" : tile === "V" ? "#b5d58c" : "#d9bf86";
+        ctx.fillStyle = base;
+        drawRoundedRect(x + 4, y + 4, size - 8, size - 8, 9);
+        ctx.fill();
+        ctx.strokeStyle = tile === "W" ? "#327fa7" : "#a67f46";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        if (tile === "W") {
+          ctx.strokeStyle = "rgba(255,255,255,0.72)";
+          ctx.lineWidth = 3;
+          for (let i = 0; i < 2; i += 1) {
+            ctx.beginPath();
+            ctx.arc(x + 20 + i * 24, y + 34, 9, Math.PI * 0.1, Math.PI * 0.9);
+            ctx.stroke();
+          }
+        }
+
+        if (tile === "H") drawHouseMark(x, y, size);
+        if (tile === "M") drawMarketMark(x, y, size);
+        if (tile === "S" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawSoap(x, y, size);
+        if (tile === "V" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawVeggie(x, y, size);
+      }
+
+      function drawHouseMark(x, y, size) {
+        ctx.fillStyle = "#d85750";
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.2, y + size * 0.45);
+        ctx.lineTo(x + size * 0.5, y + size * 0.17);
+        ctx.lineTo(x + size * 0.8, y + size * 0.45);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#fff4d9";
+        ctx.fillRect(x + size * 0.27, y + size * 0.43, size * 0.46, size * 0.34);
+        ctx.fillStyle = "#74523f";
+        ctx.fillRect(x + size * 0.46, y + size * 0.55, size * 0.13, size * 0.22);
+      }
+
+      function drawMarketMark(x, y, size) {
+        ctx.fillStyle = "#fff7dc";
+        ctx.fillRect(x + size * 0.2, y + size * 0.32, size * 0.6, size * 0.38);
+        ctx.fillStyle = "#d85750";
+        for (let i = 0; i < 3; i += 1) {
+          ctx.fillRect(x + size * (0.2 + i * 0.2), y + size * 0.22, size * 0.1, size * 0.16);
+        }
+        ctx.fillStyle = "#4f8b64";
+        for (let i = 0; i < 3; i += 1) {
+          ctx.fillRect(x + size * (0.3 + i * 0.2), y + size * 0.22, size * 0.1, size * 0.16);
+        }
+      }
+
+      function drawSoap(x, y, size) {
+        ctx.fillStyle = "#ffffff";
+        drawRoundedRect(x + size * 0.36, y + size * 0.24, size * 0.28, size * 0.44, 7);
+        ctx.fill();
+        ctx.fillStyle = "#67b7dc";
+        ctx.fillRect(x + size * 0.4, y + size * 0.34, size * 0.2, size * 0.18);
+        ctx.fillStyle = "#327fa7";
+        ctx.fillRect(x + size * 0.43, y + size * 0.18, size * 0.14, size * 0.08);
+      }
+
+      function drawVeggie(x, y, size) {
+        ctx.fillStyle = "#4f8b64";
+        ctx.beginPath();
+        ctx.arc(x + size * 0.46, y + size * 0.5, size * 0.15, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.58, y + size * 0.52, size * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#e9823d";
+        ctx.fillRect(x + size * 0.38, y + size * 0.57, size * 0.27, size * 0.08);
+      }
+
+      let board = { x: 0, y: 0, size: TILE };
+
+      function drawDuck(cx, cy, size, duck) {
+        const bob = Math.sin(duck.hop * Math.PI) * size * 0.22;
+        const y = cy - bob;
+        const dir = duck.facing;
+        ctx.save();
+        ctx.translate(cx, y);
+        ctx.scale(dir, 1);
+
+        ctx.fillStyle = "rgba(37,49,58,0.18)";
+        ctx.beginPath();
+        ctx.ellipse(0, size * 0.34, size * 0.28, size * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f3cf4f";
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.03, size * 0.02, size * 0.28, size * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(size * 0.2, -size * 0.16, size * 0.17, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f6df75";
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.1, size * 0.02, size * 0.12, size * 0.08, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#e9823d";
+        ctx.beginPath();
+        ctx.moveTo(size * 0.34, -size * 0.16);
+        ctx.lineTo(size * 0.52, -size * 0.09);
+        ctx.lineTo(size * 0.34, -size * 0.04);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#25313a";
+        ctx.beginPath();
+        ctx.arc(size * 0.25, -size * 0.2, size * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#e9823d";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.1, size * 0.24);
+        ctx.lineTo(-size * 0.16, size * 0.34);
+        ctx.moveTo(size * 0.08, size * 0.24);
+        ctx.lineTo(size * 0.15, size * 0.34);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawScene() {
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        ctx.clearRect(0, 0, width, height);
+
+        const size = Math.min(width / COLS, height / ROWS) * 0.94;
+        board = {
+          size,
+          x: (width - size * COLS) / 2,
+          y: (height - size * ROWS) / 2,
+        };
+
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#a9dcf0");
+        sky.addColorStop(1, "#eef8f2");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        for (let y = 0; y < ROWS; y += 1) {
+          for (let x = 0; x < COLS; x += 1) {
+            drawTile(tileAt(x, y), board.x + x * size, board.y + y * size, size);
+          }
+        }
+
+        const duck = state.duck;
+        const t = 1 - duck.moving;
+        const drawX = board.x + (duck.px + (duck.x - duck.px) * t + 0.5) * size;
+        const drawY = board.y + (duck.py + (duck.y - duck.py) * t + 0.52) * size;
+
+        if (tileAt(duck.x, duck.y) === "W") {
+          ctx.fillStyle = "rgba(255,255,255,0.62)";
+          ctx.beginPath();
+          ctx.ellipse(drawX, drawY + size * 0.2, size * 0.28, size * 0.08, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        drawDuck(drawX, drawY, size, duck);
+
+        if (state.won) {
+          ctx.fillStyle = "rgba(255, 253, 247, 0.9)";
+          drawRoundedRect(width * 0.18, height * 0.34, width * 0.64, 96, 8);
+          ctx.fill();
+          ctx.fillStyle = "#25313a";
+          ctx.font = "900 26px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("小鸭子到家啦", width / 2, height * 0.34 + 42);
+          ctx.font = "800 16px sans-serif";
+          ctx.fillText("按重新开始，再跳一次", width / 2, height * 0.34 + 70);
+        }
+      }
+
+      function tick() {
+        settleDuckMotion();
+        if (state.duck.moving > 0) {
+          state.duck.moving = Math.max(0, state.duck.moving - 0.12);
+          state.duck.hop = state.duck.moving;
+        } else {
+          state.duck.px = state.duck.x;
+          state.duck.py = state.duck.y;
+          state.duck.hop = Math.max(0, state.duck.hop - 0.1);
+          handleHeldKeys();
+        }
+        drawScene();
+        requestAnimationFrame(tick);
+      }
+
+      function handleHeldKeys() {
+        if (keys.has("ArrowUp") || keys.has("KeyW")) tryMove(0, -1);
+        else if (keys.has("ArrowDown") || keys.has("KeyS")) tryMove(0, 1);
+        else if (keys.has("ArrowLeft") || keys.has("KeyA")) tryMove(-1, 0);
+        else if (keys.has("ArrowRight") || keys.has("KeyD")) tryMove(1, 0);
+      }
+
+      function handleKeyDown(event) {
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) {
+          event.preventDefault();
+          keys.add(event.code);
+          handleHeldKeys();
+        } else if (event.code === "Space") {
+          event.preventDefault();
+          state.jumps += 1;
+          state.duck.hop = 1;
+          state.message = "小鸭子原地跳了一下。";
+          updateHud();
+        } else if (event.code === "KeyE" || event.code === "Enter") {
+          event.preventDefault();
+          interact();
+        }
+      }
+
+      function handleKeyUp(event) {
+        keys.delete(event.code);
+      }
+
+      function touchAction(name) {
+        if (name === "up") tryMove(0, -1);
+        if (name === "down") tryMove(0, 1);
+        if (name === "left") tryMove(-1, 0);
+        if (name === "right") tryMove(1, 0);
+        if (name === "jump") {
+          state.jumps += 1;
+          state.duck.hop = 1;
+          state.message = "小鸭子原地跳了一下。";
+          updateHud();
+        }
+        if (name === "enter") interact();
+        canvas.focus();
+      }
+
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keyup", handleKeyUp);
+      resetButton.addEventListener("click", resetGame);
+      document.querySelectorAll("[data-key]").forEach((button) => {
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          touchAction(button.dataset.key);
+        });
+      });
+      window.addEventListener("resize", resizeCanvas);
+
+      resetGame();
+      resizeCanvas();
+      tick();
+    </script>
+  </body>
+</html>
