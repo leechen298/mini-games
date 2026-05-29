@@ -2,13 +2,15 @@
 
 ## 这个项目是什么
 
-这是一个小游戏项目。这里的游戏主要给小朋友练习单词、字母和反应。
+这是一个小游戏项目。这里的游戏主要给小朋友练习单词、字母、反应，也有一些日常跳跳小游戏。
 
 现在有这些游戏：
 
-- `word-spelling-practice/word-spelling-practice.html`
 - `word-spelling-practice-duck/word-spelling-practice-duck.html`
 - `duck-letter-hop/duck-letter-hop.html`
+- `cloud-bakery-hop/cloud-bakery-hop.html`
+- `duck-market-hop/duck-market-hop.html`
+- `xiao-yaya-daily/xiao-yaya-daily.html`
 
 每个游戏基本都是一个单独的 HTML 文件。打开文件就能玩，不需要安装复杂工具。
 
@@ -22,6 +24,18 @@
 - 尽量用普通的 HTML、CSS 和 JavaScript。
 - 不要随便加入新的第三方库，除非用户明确要求。
 - 只改用户要改的地方，不要顺手大改一堆无关内容。
+
+## 隐私规则
+
+- 不要写真实姓名、学校、班级、地址、电话、照片。
+- 游戏角色尽量使用小动物、昵称或虚构名字。
+
+## 存档规则
+
+- 大改功能前先提交一次存档。
+- 每次尽量只改一个主要想法。
+- 不要把一个游戏的代码改到另一个游戏里。
+- 不要顺手修改用户没有要求修改的游戏。
 
 ## 新游戏怎么放
 
@@ -42,9 +56,11 @@ python3 -m http.server 8000
 
 然后在浏览器里打开：
 
-- `http://localhost:8000/word-spelling-practice/word-spelling-practice.html`
 - `http://localhost:8000/word-spelling-practice-duck/word-spelling-practice-duck.html`
 - `http://localhost:8000/duck-letter-hop/duck-letter-hop.html`
+- `http://localhost:8000/cloud-bakery-hop/cloud-bakery-hop.html`
+- `http://localhost:8000/duck-market-hop/duck-market-hop.html`
+- `http://localhost:8000/xiao-yaya-daily/xiao-yaya-daily.html`
 
 检查时要看这些：
 
@@ -71,4 +87,4 @@ python3 -m http.server 8000
 - 不要撤销别人已经改过的内容，除非用户明确说可以。
 - 每次提交只放相关改动，不要把无关东西混在一起。
 - 每次 commit 的说明要用简单中文写，尽量让小朋友也能看懂这次改了什么。
-- Codex 每次改完代码并检查通过后，要自动提交 commit，并推送 push 到当前分支。
+- 每次改完代码并检查通过后，要自动提交 commit，并推送 push 到当前分支。
