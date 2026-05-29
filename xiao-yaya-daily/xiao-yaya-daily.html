@@ -257,7 +257,7 @@
 
       <section class="layout" aria-label="游戏区">
         <div class="stage-wrap">
-          <canvas id="game" width="960" height="600" tabindex="0" aria-label="用方向键控制小丫丫"></canvas>
+          <canvas id="game" width="960" height="600" tabindex="0" aria-label="用方向键控制小鸭子"></canvas>
           <div class="touch-pad" aria-label="手机控制">
             <button data-touch="left">← 走</button>
             <button data-touch="up">↑ 跳/进门</button>
@@ -279,7 +279,7 @@
           </section>
 
           <section class="panel story">
-            <h2>小丫丫在做什么</h2>
+            <h2>小鸭子在做什么</h2>
             <div id="storyLog"></div>
             <div class="menu-card" id="menuCard">去菜市场摊主旁边按 ↑，会自动买菜并安排今天煮什么饭。</div>
           </section>
@@ -354,7 +354,7 @@
         clean: 72,
         coins: 30,
         menu: null,
-        prompt: "用 ← → 走到门口，按 ↑ 可以进门。",
+        prompt: "你控制小鸭子：用 ← → 走到门口，按 ↑ 可以进门。",
       };
 
       const player = {
@@ -474,11 +474,28 @@
       }
 
       function drawSkyGround(sky, ground) {
-        ctx.fillStyle = sky;
+        const skyGradient = ctx.createLinearGradient(0, 0, 0, groundY);
+        skyGradient.addColorStop(0, "#7fc5ea");
+        skyGradient.addColorStop(0.55, sky);
+        skyGradient.addColorStop(1, "#d9f0f6");
+        ctx.fillStyle = skyGradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = ground;
+        const grassGradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+        grassGradient.addColorStop(0, "#a8d07b");
+        grassGradient.addColorStop(0.55, ground);
+        grassGradient.addColorStop(1, "#6faf61");
+        ctx.fillStyle = grassGradient;
         ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-        ctx.fillStyle = "rgba(255,255,255,0.38)";
+
+        const sun = ctx.createRadialGradient(840, 86, 8, 840, 86, 62);
+        sun.addColorStop(0, "rgba(255, 236, 132, 0.95)");
+        sun.addColorStop(1, "rgba(255, 236, 132, 0)");
+        ctx.fillStyle = sun;
+        ctx.beginPath();
+        ctx.arc(840, 86, 62, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,255,255,0.56)";
         for (const x of [120, 330, 570, 780]) {
           ctx.beginPath();
           ctx.ellipse(x, 96, 48, 18, 0, 0, Math.PI * 2);
@@ -486,9 +503,26 @@
           ctx.ellipse(x - 40, 100, 30, 14, 0, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        for (const x of [46, 168, 286, 620, 700, 892]) {
+          ctx.fillStyle = "#f7df6a";
+          ctx.beginPath();
+          ctx.arc(x, groundY + 26, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#4d8b55";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(x, groundY + 34);
+          ctx.lineTo(x, groundY + 47);
+          ctx.stroke();
+        }
       }
 
       function drawHouse(x, y, w, h, body, roof, text) {
+        ctx.save();
+        ctx.shadowColor = "rgba(33, 44, 45, 0.22)";
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 9;
         ctx.fillStyle = roof;
         ctx.beginPath();
         ctx.moveTo(x - 24, y);
@@ -496,10 +530,13 @@
         ctx.lineTo(x + w + 24, y);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowColor = "transparent";
         ctx.strokeStyle = "#334042";
         ctx.lineWidth = 5;
         ctx.stroke();
         roundedRect(x, y, w, h, 8, body);
+        roundedRect(x + 22, y + 78, 48, 46, 6, "#bde4f3");
+        roundedRect(x + w - 70, y + 78, 48, 46, 6, "#bde4f3");
         roundedRect(x + w / 2 - 24, y + h - 72, 48, 72, 5, "#8a6042");
         ctx.fillStyle = "#253238";
         ctx.font = text.length > 5 ? "900 18px system-ui, sans-serif" : "900 22px system-ui, sans-serif";
@@ -507,6 +544,7 @@
         ctx.fillText(text, x + w / 2, y + 42);
         ctx.fillStyle = "#f6d77a";
         ctx.fillRect(x + w / 2 + 9, y + h - 36, 6, 6);
+        ctx.restore();
       }
 
       function drawDoorHint(x, y, text) {
@@ -530,10 +568,10 @@
         drawHouse(80, 260, 210, 224, "#ffe2a5", "#d86155", "小丫丫的家");
         drawHouse(655, 266, 220, 218, "#ffd7c3", "#7f9fd0", "小浣熊家");
         drawMarketSign(400, 330);
-        drawNpc(315, groundY, "redPanda");
-        drawNpc(515, groundY, "duck");
-        speech("小鸭子：嘎嘎，去菜市场！", 515, 284, 220);
-        speech("小熊猫：我也在家门口。", 315, 306, 190);
+        drawYayaNpc(320, groundY);
+        drawNpc(438, groundY, "redPanda");
+        speech("小丫丫：小鸭子，出发！", 306, 304, 190);
+        speech("小熊猫：我也在家门口。", 440, 250, 190);
         drawDoorHint(185, 258, "门口按 ↑ 进家");
         drawDoorHint(510, 350, "按 ↑ 去菜市场");
         drawDoorHint(765, 258, "按 ↑ 去小浣熊家");
@@ -565,7 +603,7 @@
         ctx.fillText("🥚", 556, 430);
         ctx.fillText("🍅", 700, 428);
         drawNpc(250, groundY, "vendor");
-        drawNpc(770, groundY, "duck");
+        drawNpc(770, groundY, "redPanda");
         speech("摊主：站近一点按 ↑ 买菜。", 250, 286, 218);
         drawDoorHint(70, 452, "按 ↑ 回街上");
       }
@@ -574,10 +612,10 @@
         drawSkyGround("#b1dff2", "#a9ca74");
         drawHouse(610, 260, 220, 224, "#ffd7c3", "#7f9fd0", "小浣熊家");
         drawNpc(725, groundY, "raccoon");
-        drawNpc(410, groundY, "duck");
+        drawYayaNpc(410, groundY);
         drawNpc(285, groundY, "redPanda");
         speech("小浣熊：来玩拼图吧！", 725, 284, 198);
-        speech("小鸭子：嘎嘎，我也来！", 410, 300, 180);
+        speech("小丫丫：小鸭子真会走！", 410, 300, 190);
         drawDoorHint(80, 452, "按 ↑ 回街上");
       }
 
@@ -784,17 +822,28 @@
       function drawDuck(x, footY) {
         ctx.save();
         ctx.translate(x, footY - 92);
-        ctx.fillStyle = "#ffe175";
+        ctx.shadowColor = "rgba(32, 40, 42, 0.2)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 6;
+        const bodyGradient = ctx.createLinearGradient(-30, 0, 28, 84);
+        bodyGradient.addColorStop(0, "#fff2a8");
+        bodyGradient.addColorStop(1, "#f3c94e");
+        ctx.fillStyle = bodyGradient;
         ctx.strokeStyle = "#2e3638";
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.ellipse(0, 48, 34, 42, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.shadowColor = "transparent";
         ctx.beginPath();
         ctx.arc(0, 2, 32, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.beginPath();
+        ctx.ellipse(-12, 37, 12, 20, -0.45, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = "#f19a3e";
         ctx.beginPath();
         ctx.moveTo(20, 4);
@@ -808,6 +857,11 @@
         ctx.arc(-9, -4, 4, 0, Math.PI * 2);
         ctx.arc(10, -4, 4, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 14, 10, 0.18, Math.PI - 0.18);
+        ctx.stroke();
         ctx.fillStyle = "#f19a3e";
         ctx.beginPath();
         ctx.roundRect(-24, 86, 20, 9, 4);
@@ -817,6 +871,72 @@
         ctx.font = "900 16px system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("小鸭子", 0, 120);
+        ctx.restore();
+      }
+
+      function drawPlayerDuck() {
+        ctx.save();
+        ctx.translate(player.x, player.y - 94);
+        ctx.scale(player.facing, 1);
+        ctx.shadowColor = "rgba(32, 40, 42, 0.28)";
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 8;
+        const bodyGradient = ctx.createLinearGradient(-42, 0, 40, 98);
+        bodyGradient.addColorStop(0, "#fff6b8");
+        bodyGradient.addColorStop(0.5, "#ffe175");
+        bodyGradient.addColorStop(1, "#eab83f");
+        ctx.fillStyle = bodyGradient;
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(0, 52, 42, 48, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowColor = "transparent";
+        ctx.fillStyle = "rgba(255,255,255,0.48)";
+        ctx.beginPath();
+        ctx.ellipse(-15, 45, 15, 25, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffe67f";
+        ctx.beginPath();
+        ctx.arc(0, 0, 38, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#f1993e";
+        ctx.beginPath();
+        ctx.moveTo(24, 2);
+        ctx.lineTo(58, 14);
+        ctx.lineTo(24, 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2e3638";
+        ctx.beginPath();
+        ctx.arc(-12, -6, 5, 0, Math.PI * 2);
+        ctx.arc(12, -6, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 14, 12, 0.18, Math.PI - 0.18);
+        ctx.stroke();
+        ctx.fillStyle = outfitColor();
+        ctx.strokeStyle = "#2e3638";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.roundRect(-28, 58, 56, 34, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = shoeColor();
+        ctx.beginPath();
+        ctx.roundRect(-32, 91, 28, 12, 6);
+        ctx.roundRect(5, 91, 28, 12, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#253238";
+        ctx.font = "900 16px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("你的小鸭子", 0, 124);
         ctx.restore();
       }
 
@@ -849,6 +969,19 @@
         ctx.textAlign = "center";
         ctx.fillText(name, 0, 118);
         ctx.restore();
+      }
+
+      function drawYayaNpc(x, footY) {
+        const savedPlayer = { x: player.x, y: player.y, facing: player.facing, height: player.height };
+        player.x = x;
+        player.y = footY;
+        player.facing = 1;
+        player.height = 116;
+        drawYaya();
+        player.x = savedPlayer.x;
+        player.y = savedPlayer.y;
+        player.facing = savedPlayer.facing;
+        player.height = savedPlayer.height;
       }
 
       function speech(text, x, y, w) {
@@ -944,7 +1077,7 @@
         if (player.onGround) {
           player.vy = -15.5;
           player.onGround = false;
-          state.prompt = "小丫丫跳起来啦！";
+          state.prompt = "小鸭子跳起来啦！";
         }
       }
 
@@ -967,21 +1100,21 @@
             state.scene = "room";
             state.room = "bedroom";
             player.x = 130;
-            state.prompt = "进家啦。左右走，门口按 ↑ 换房间或出门。";
+            state.prompt = "小鸭子进家啦。左右走，门口按 ↑ 换房间或出门。";
             updateDay();
-            addStory("小丫丫自己走进了小丫丫的家。");
+            addStory("小鸭子自己走进了小丫丫的家。");
             return true;
           }
           if (near(510)) {
             enterScene("market", 92);
             state.prompt = "到菜市场了，走到摊主旁边按 ↑ 买菜。";
-            addStory("小丫丫走到了菜市场。");
+            addStory("小鸭子走到了菜市场。");
             return true;
           }
           if (near(765)) {
             enterScene("neighbor", 100);
             state.prompt = "到小浣熊家啦，走到小浣熊旁边按 ↑ 聊天。";
-            addStory("小丫丫来到小浣熊家门口。");
+            addStory("小鸭子来到小浣熊家门口。");
             return true;
           }
         }
@@ -1003,14 +1136,14 @@
             updateMeters();
             updateMenuCard();
             state.prompt = `买好菜了：今天煮 ${plan.meal}。`;
-            addStory(`摊主帮小丫丫配好 ${plan.items.join("、")}，今天自动安排煮 ${plan.meal}。`);
+            addStory(`摊主帮小鸭子配好 ${plan.items.join("、")}，今天自动安排煮 ${plan.meal}。`);
             return true;
           }
           if (near(770, 90)) {
             state.happiness = clamp(state.happiness + 4);
             updateMeters();
-            state.prompt = "小鸭子说：嘎嘎，小丫丫走路真稳！";
-            addStory("小鸭子在菜市场陪小丫丫逛摊。");
+            state.prompt = "小熊猫说：小鸭子走路真稳！";
+            addStory("小熊猫在菜市场陪小鸭子逛摊。");
             return true;
           }
         }
@@ -1027,13 +1160,13 @@
             state.hunger = clamp(state.hunger + 6);
             passTime();
             updateMeters();
-            state.prompt = "小丫丫和小浣熊玩拼图，开心加好多。";
-            addStory("小丫丫和小浣熊在家里玩拼图。");
+            state.prompt = "小鸭子和小浣熊玩拼图，开心加好多。";
+            addStory("小鸭子和小浣熊在家里玩拼图。");
             return true;
           }
           if (near(410, 95)) {
-            state.prompt = "小鸭子说：按 ↑ 是跳，站近门口按 ↑ 就进门。";
-            addStory("小鸭子嘎嘎地提醒方向键玩法。");
+            state.prompt = "小丫丫说：按 ↑ 是跳，站近门口按 ↑ 就进门。";
+            addStory("小丫丫认真提醒小鸭子方向键玩法。");
             return true;
           }
         }
@@ -1068,8 +1201,8 @@
             state.clean = clamp(state.clean + 15);
             passTime();
             updateMeters();
-            state.prompt = "小丫丫洗脸刷牙，干干净净。";
-            addStory("小丫丫在厕所洗脸刷牙。");
+            state.prompt = "小鸭子洗洗小翅膀，干干净净。";
+            addStory("小鸭子在厕所洗干净小翅膀。");
             return true;
           }
           if (state.room === "kitchen" && near(565, 120)) {
@@ -1079,7 +1212,7 @@
             passTime();
             updateMeters();
             state.prompt = state.menu ? `吃饭啦：${state.menu.meal}。` : "冰箱里还有米饭，也可以先吃一点。";
-            addStory(state.menu ? `厨房餐厅香喷喷，小丫丫吃了 ${state.menu.meal}。` : "小丫丫在厨房餐厅吃了一点米饭。");
+            addStory(state.menu ? `厨房餐厅香喷喷，小鸭子吃了 ${state.menu.meal}。` : "小鸭子在厨房餐厅吃了一点米饭。");
             return true;
           }
         }
@@ -1112,7 +1245,7 @@
         if (state.scene === "market") drawMarket();
         if (state.scene === "neighbor") drawNeighbor();
         if (state.scene === "room") drawRoom();
-        drawYaya();
+        drawPlayerDuck();
         drawPrompt();
       }
 
@@ -1158,10 +1291,10 @@
         const item = outfits.find((outfit) => outfit.id === button.dataset.outfit);
         state.outfit = item.id;
         state.happiness = clamp(state.happiness + 3);
-        state.prompt = `小丫丫换上了${item.name}。`;
+        state.prompt = `小鸭子穿上了${item.name}。`;
         updateOutfits();
         updateMeters();
-        addStory(`小丫丫换上${item.name}，准备自己出门玩。`);
+        addStory(`小鸭子穿上${item.name}，准备自己出门玩。`);
         canvas.focus();
       });
 
@@ -1171,10 +1304,10 @@
         const item = shoes.find((shoe) => shoe.id === button.dataset.shoes);
         state.shoes = item.id;
         state.happiness = clamp(state.happiness + 2);
-        state.prompt = `小丫丫穿上了${item.name}。`;
+        state.prompt = `小鸭子穿上了${item.name}。`;
         updateOutfits();
         updateMeters();
-        addStory(`小丫丫穿上${item.name}，脚步哒哒响。`);
+        addStory(`小鸭子穿上${item.name}，脚步哒哒响。`);
         canvas.focus();
       });
 
@@ -1190,7 +1323,7 @@
         };
       }
 
-      addStory("小丫丫站在家门口，等你用方向键控制她。");
+      addStory("小鸭子站在家门口，等你用方向键控制它。");
       updateDay();
       updateMeters();
       updateOutfits();
