@@ -317,7 +317,7 @@
       <section class="layout">
         <div class="stage-wrap">
           <canvas id="game" width="960" height="640" tabindex="0" aria-label="小鸭子跳跳小游戏"></canvas>
-          <div class="mini-label">E 做事情，空格跳起躲小气球，水方块可以游泳。</div>
+          <div class="mini-label">E/回车做事情，空格跳起躲路上气球，下键在土地方块挖地道。</div>
         </div>
 
         <div class="touch-pad" aria-label="手机控制">
@@ -345,14 +345,19 @@
               <div class="task" id="taskKitchen">在厨房整理晚饭</div>
               <div class="task" id="taskBath">洗手洗脸香香的</div>
               <div class="task" id="taskBalloons">去厕所路上躲 3 次小气球</div>
+              <div class="task" id="taskDig">挖 3 段地道</div>
+              <div class="task" id="taskHidden">找到 4 个隐藏东西</div>
+              <div class="task" id="taskGarden">走到远处小花园</div>
+              <div class="task" id="taskCave">发现地下小房间</div>
+              <div class="task" id="taskToiletBalloon">上厕所时按回车挡住 3 个气球</div>
               <div class="task" id="taskRest">在小床休息一下</div>
             </div>
           </div>
           <div class="message" id="message">
-            今天是小鸭的日常。先出门买菜，回家后还要做饭、洗洗、走过小河去厕所，再回床边休息。
+            今天是小鸭的大地图日常。先买菜回家，再挖地道、找隐藏东西，厕所里有气球滚来时按回车稳住。
           </div>
           <div class="action-row">
-            <p class="hint">方向键或 WASD 移动，空格跳，E 在家门、菜市场、厨房、洗手台、小床做事情。</p>
+            <p class="hint">方向键或 WASD 移动，空格跳；下键在土上挖地道；E/回车做事情、厕所挡气球。</p>
             <button id="resetButton" type="button">重新开始</button>
           </div>
         </aside>
@@ -374,22 +379,36 @@
       const taskKitchenEl = document.querySelector("#taskKitchen");
       const taskBathEl = document.querySelector("#taskBath");
       const taskBalloonsEl = document.querySelector("#taskBalloons");
+      const taskDigEl = document.querySelector("#taskDig");
+      const taskHiddenEl = document.querySelector("#taskHidden");
+      const taskGardenEl = document.querySelector("#taskGarden");
+      const taskCaveEl = document.querySelector("#taskCave");
+      const taskToiletBalloonEl = document.querySelector("#taskToiletBalloon");
       const taskRestEl = document.querySelector("#taskRest");
       const resetButton = document.querySelector("#resetButton");
 
-      const COLS = 14;
-      const ROWS = 9;
+      const COLS = 28;
+      const ROWS = 18;
       const TILE = 64;
       const map = [
-        "GGGGGGGGGGGGGG",
-        "GHHHKPPLLLMMMG",
-        "GHBARPWLLLMMMG",
-        "GHHHDPPWWPPPPG",
-        "GPPSPPPWWPPPPG",
-        "GLWSSPPRRPPPVG",
-        "GLWPPPPPPPVVVG",
-        "GTTTPPPPPPVTGG",
-        "GGGGGGGGGGGGGG",
+        "GGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+        "GHHHKPPLLLMMMPPPPPOOOPPPPPGG",
+        "GHBARPWLLLMMMPPPPOCOOPPVPPGG",
+        "GHHHDPPWWPPPPPOOOOOPPPPVPPGG",
+        "GPPSPPPWWPPPPPPOOOPPPPPPPPGG",
+        "GLWSSPPRRPPPVPPPPOOOPPPPCPGG",
+        "GLWPPPPPPPVVVPPOOOOPPPPPPPGG",
+        "GTTTPPPPPPVTGPPOOOOOORRRRPGG",
+        "GPPPPPOOOOOOOPPPPPPPPRRRRPGG",
+        "GPOOOCOPPPPPPPPPPOOOOPPPPPGG",
+        "GPOOOOOPPPWWWWPPPOOOCOPPPPGG",
+        "GPPPPPPPPPWGGWPPPOOOOPPPPPGG",
+        "GPOOOPPPPPWWWWPPPPPPPPPVVVGG",
+        "GPOCOOOOPPPPPPPPPPOOOOOPPPGG",
+        "GPPPPPPPPPPPOOOOPPPPPPPPPGGG",
+        "GPPPGGGPPPPPOOOCOPPPPPPPPGGG",
+        "GPPPPPPPPPPPPPPPPPPPGGGGPGGG",
+        "GGGGGGGGGGGGGGGGGGGGGGGGGGGG",
       ];
 
       const start = { x: 3, y: 3 };
@@ -427,8 +446,18 @@
         { x: 3, y: 7 },
         { x: 12, y: 7 },
       ];
-      const balloonLane = { y: 5, fromX: 13.2, toX: 6.7 };
-      const taskTotal = 9;
+      const gardenZone = [
+        { x: 22, y: 12 },
+        { x: 23, y: 12 },
+        { x: 24, y: 12 },
+      ];
+      const caveZone = [
+        { x: 5, y: 15 },
+        { x: 6, y: 15 },
+        { x: 7, y: 16 },
+      ];
+      const balloonLane = { y: 5, fromX: 24.2, toX: 14.7 };
+      const taskTotal = 14;
 
       let state;
       const keys = new Set();
@@ -460,8 +489,16 @@
           toiletVisited: false,
           rested: false,
           dodgeCount: 0,
+          digCount: 0,
+          hiddenCount: 0,
+          foundGarden: false,
+          foundCave: false,
+          toiletBalloonBlocks: 0,
+          toiletPanic: 0,
+          toiletEvent: null,
           balloonRuns: 0,
           balloon: null,
+          dug: new Set(),
           won: false,
           collected: new Set(),
           message: "小鸭子从家门口出发，今天要把日常安排好。",
@@ -470,11 +507,13 @@
 
       function tileAt(x, y) {
         if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return "G";
+        if (state && state.dug.has(`${x},${y}`)) return "U";
         return map[y][x];
       }
 
       function isWalkable(x, y) {
-        return tileAt(x, y) !== "G";
+        const tile = tileAt(x, y);
+        return tile !== "G" && tile !== "O";
       }
 
       function isInsideZone(zone, x, y) {
@@ -537,10 +576,17 @@
           state.collected.add(key);
           state.soaps += 1;
           state.message = "捡到一瓶清洁瓶，回家可以洗得香香的。";
+        } else if (tile === "C" && !state.collected.has(key)) {
+          state.collected.add(key);
+          state.hiddenCount += 1;
+          const names = ["亮晶晶纽扣", "地下地图碎片", "小鸭贴纸", "会发光的小石头", "菜市场优惠券"];
+          state.message = `发现隐藏东西：${names[(state.hiddenCount - 1) % names.length]}。`;
         } else if (tile === "V" && !state.collected.has(key)) {
           state.collected.add(key);
           if (state.veggies < 3) state.veggies += 1;
           state.message = "小鸭子把新鲜菜放进篮子里。";
+        } else if (tile === "U") {
+          state.message = "小鸭子钻进刚挖好的地道，脚步声咚咚咚。";
         } else if (tile === "M") {
           state.message = "到菜市场了，按 E 可以认真买菜。";
         } else if (tile === "K") {
@@ -551,7 +597,8 @@
           state.message = "这里是小河，去厕所要先过水。";
         } else if (tile === "T") {
           state.toiletVisited = true;
-          state.message = "到厕所啦，回去的时候也要注意小气球。";
+          startToiletEvent();
+          state.message = "到厕所啦。小气球会滚来，按回车挡住，不然地道会崩塌。";
         } else if (tile === "B") {
           state.message = "小床软软的，按 E 可以休息一下。";
         } else if (tile === "H") {
@@ -571,7 +618,43 @@
           }
         }
 
+        if (isInsideZone(gardenZone, x, y)) {
+          state.foundGarden = true;
+          state.message = "小鸭子走到远处小花园，发现花丛后面还有路。";
+        }
+        if (isInsideZone(caveZone, x, y)) {
+          state.foundCave = true;
+          state.message = "小鸭子发现地下小房间，里面凉凉的、亮亮的。";
+        }
+
         updateHud();
+      }
+
+      function digTunnel(silent = false) {
+        settleDuckMotion();
+        if (state.won || state.duck.moving > 0) return false;
+        const { x, y } = state.duck;
+        const key = `${x},${y}`;
+        const belowKey = `${x},${y + 1}`;
+        if (map[y]?.[x] === "O" && !state.dug.has(key)) {
+          state.dug.add(key);
+          state.digCount += 1;
+          state.message = `小鸭子往下挖了一段地道，已经挖了 ${state.digCount} 段。`;
+          updateHud();
+          return true;
+        }
+        if (map[y + 1]?.[x] === "O" && !state.dug.has(belowKey)) {
+          state.dug.add(belowKey);
+          state.digCount += 1;
+          state.message = `脚下开出小地道，已经挖了 ${state.digCount} 段。`;
+          updateHud();
+          return true;
+        }
+        if (!silent) {
+          state.message = "这里不是松软土地，挖不出地道。";
+          updateHud();
+        }
+        return false;
       }
 
       function interact() {
@@ -579,6 +662,7 @@
           resetGame();
           return;
         }
+        if (blockToiletBalloon()) return;
 
         const { x, y } = state.duck;
         if (isInsideZone(marketZone, x, y)) {
@@ -601,10 +685,20 @@
             state.message = "清洁瓶还不够，路上再找一找。";
           }
         } else if (isInsideZone(bedZone, x, y)) {
-          if (state.kitchen && state.washed && state.toiletVisited && state.dodgeCount >= 3) {
+          if (
+            state.kitchen &&
+            state.washed &&
+            state.toiletVisited &&
+            state.dodgeCount >= 3 &&
+            state.digCount >= 3 &&
+            state.hiddenCount >= 4 &&
+            state.foundGarden &&
+            state.foundCave &&
+            state.toiletBalloonBlocks >= 3
+          ) {
             state.rested = true;
             state.won = true;
-            state.message = "日常完成。小鸭子吃饱、洗好、躲过气球，窝进小床休息啦。";
+            state.message = "超长日常完成。小鸭子买菜、挖地道、找宝物、挡住气球，终于窝进小床休息啦。";
           } else {
             state.message = "小床在等小鸭子，先把家里的事情做完。";
           }
@@ -636,6 +730,11 @@
           state.kitchen,
           state.washed,
           state.dodgeCount >= 3,
+          state.digCount >= 3,
+          state.hiddenCount >= 4,
+          state.foundGarden,
+          state.foundCave,
+          state.toiletBalloonBlocks >= 3,
           state.rested,
         ].filter(Boolean).length;
         homeCountEl.textContent = `${doneCount}/${taskTotal}`;
@@ -650,6 +749,14 @@
         taskBathEl.classList.toggle("done", state.washed);
         taskBalloonsEl.classList.toggle("done", state.dodgeCount >= 3);
         taskBalloonsEl.textContent = `去厕所路上躲 ${Math.min(state.dodgeCount, 3)}/3 次小气球`;
+        taskDigEl.classList.toggle("done", state.digCount >= 3);
+        taskDigEl.textContent = `挖 ${Math.min(state.digCount, 3)}/3 段地道`;
+        taskHiddenEl.classList.toggle("done", state.hiddenCount >= 4);
+        taskHiddenEl.textContent = `找到 ${Math.min(state.hiddenCount, 4)}/4 个隐藏东西`;
+        taskGardenEl.classList.toggle("done", state.foundGarden);
+        taskCaveEl.classList.toggle("done", state.foundCave);
+        taskToiletBalloonEl.classList.toggle("done", state.toiletBalloonBlocks >= 3);
+        taskToiletBalloonEl.textContent = `上厕所时回车挡住 ${Math.min(state.toiletBalloonBlocks, 3)}/3 个气球`;
         taskRestEl.classList.toggle("done", state.rested);
       }
 
@@ -700,6 +807,50 @@
         if (balloon.x < balloonLane.toX) {
           state.balloon = null;
         }
+      }
+
+      function startToiletEvent() {
+        if (state.toiletBalloonBlocks >= 3 || state.toiletEvent) return;
+        state.toiletEvent = {
+          waitUntil: performance.now() + 850,
+          x: 5.2,
+          active: false,
+        };
+      }
+
+      function updateToiletEvent() {
+        if (!state.toiletEvent) {
+          if (tileAt(state.duck.x, state.duck.y) === "T" && state.toiletBalloonBlocks < 3) startToiletEvent();
+          return;
+        }
+        const event = state.toiletEvent;
+        if (!event.active) {
+          event.active = performance.now() >= event.waitUntil;
+          return;
+        }
+        event.x -= 0.035;
+        if (event.x < 1.1) {
+          state.toiletPanic += 1;
+          state.toiletEvent = null;
+          if (state.toiletPanic >= 2 && state.digCount > 0) {
+            state.digCount -= 1;
+            state.message = "哗啦，厕所气球没挡住，一段地道崩塌了。快按回车稳住。";
+          } else {
+            state.message = "小气球滚进厕所门口，故事差点崩塌，快按回车。";
+          }
+          updateHud();
+        }
+      }
+
+      function blockToiletBalloon() {
+        if (!state.toiletEvent || !state.toiletEvent.active) return false;
+        state.toiletBalloonBlocks += 1;
+        state.toiletEvent = null;
+        state.toiletPanic = 0;
+        state.message = `回车挡住了厕所小气球，第 ${state.toiletBalloonBlocks} 个安全。`;
+        if (state.toiletBalloonBlocks < 3) startToiletEvent();
+        updateHud();
+        return true;
       }
 
       function jumpDuck() {
@@ -763,6 +914,10 @@
             ? "#67b7dc"
             : tile === "H" || tile === "K" || tile === "B" || tile === "A"
               ? "#f4d99b"
+              : tile === "O"
+                ? "#9a7049"
+                : tile === "U"
+                  ? "#61442f"
               : tile === "D"
                 ? "#d1a366"
                 : tile === "M"
@@ -773,6 +928,8 @@
                       ? "#b5d58c"
                       : tile === "T"
                         ? "#dde7e8"
+                        : tile === "C"
+                          ? "#d9bf86"
                         : "#d9bf86";
         ctx.fillStyle = base;
         drawRoundedRect(x + 4, y + 4, size - 8, size - 8, 9);
@@ -791,6 +948,26 @@
           }
         }
 
+        if (tile === "O") {
+          ctx.fillStyle = "rgba(98,66,44,0.34)";
+          for (let i = 0; i < 5; i += 1) {
+            ctx.beginPath();
+            ctx.arc(x + size * (0.22 + i * 0.13), y + size * (0.34 + (i % 2) * 0.18), size * 0.035, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        if (tile === "U") {
+          ctx.fillStyle = "rgba(255,255,255,0.12)";
+          ctx.beginPath();
+          ctx.ellipse(x + size * 0.5, y + size * 0.54, size * 0.28, size * 0.18, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#3d2b20";
+          ctx.beginPath();
+          ctx.ellipse(x + size * 0.5, y + size * 0.54, size * 0.19, size * 0.12, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
         if (tile === "H") drawHouseMark(x, y, size);
         if (tile === "D") drawDoorMark(x, y, size);
         if (tile === "K") drawKitchenMark(x, y, size);
@@ -798,6 +975,7 @@
         if (tile === "B") drawBedMark(x, y, size);
         if (tile === "T") drawToiletMark(x, y, size);
         if (tile === "M") drawMarketMark(x, y, size);
+        if (tile === "C" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawHiddenMark(x, y, size);
         if (tile === "S" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawSoap(x, y, size);
         if (tile === "V" && !state.collected.has(`${Math.round((x - board.x) / size)},${Math.round((y - board.y) / size)}`)) drawVeggie(x, y, size);
       }
@@ -921,6 +1099,23 @@
         ctx.fillRect(x + size * 0.38, y + size * 0.57, size * 0.27, size * 0.08);
       }
 
+      function drawHiddenMark(x, y, size) {
+        ctx.fillStyle = "rgba(245, 204, 100, 0.85)";
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.5, y + size * 0.25);
+        ctx.lineTo(x + size * 0.57, y + size * 0.43);
+        ctx.lineTo(x + size * 0.76, y + size * 0.43);
+        ctx.lineTo(x + size * 0.6, y + size * 0.54);
+        ctx.lineTo(x + size * 0.66, y + size * 0.73);
+        ctx.lineTo(x + size * 0.5, y + size * 0.61);
+        ctx.lineTo(x + size * 0.34, y + size * 0.73);
+        ctx.lineTo(x + size * 0.4, y + size * 0.54);
+        ctx.lineTo(x + size * 0.24, y + size * 0.43);
+        ctx.lineTo(x + size * 0.43, y + size * 0.43);
+        ctx.closePath();
+        ctx.fill();
+      }
+
       function drawBalloon(size) {
         if (!state.balloon || !state.balloon.active) return;
         const cx = board.x + state.balloon.x * size;
@@ -952,6 +1147,28 @@
         ctx.beginPath();
         ctx.moveTo(cx, cy + size * 0.3 + wobble);
         ctx.quadraticCurveTo(cx - size * 0.08, cy + size * 0.42, cx + size * 0.03, cy + size * 0.52);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawToiletBalloon(size) {
+        if (!state.toiletEvent || !state.toiletEvent.active) return;
+        const cx = board.x + state.toiletEvent.x * size;
+        const cy = board.y + 7.45 * size;
+        ctx.save();
+        ctx.fillStyle = "#8a6fd1";
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#c1b4f1";
+        ctx.beginPath();
+        ctx.arc(cx - size * 0.06, cy - size * 0.06, size * 0.055, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#4d3f7d";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + size * 0.2);
+        ctx.lineTo(cx - size * 0.06, cy + size * 0.34);
         ctx.stroke();
         ctx.restore();
       }
@@ -1013,11 +1230,17 @@
         const height = canvas.clientHeight;
         ctx.clearRect(0, 0, width, height);
 
-        const size = Math.min(width / COLS, height / ROWS) * 0.94;
+        const visibleCols = width < 560 ? 11 : 16;
+        const visibleRows = width < 560 ? 12 : 11;
+        const size = Math.min(width / visibleCols, height / visibleRows) * 0.96;
+        const centerX = state.duck.x + 0.5;
+        const centerY = state.duck.y + 0.5;
+        const cameraX = Math.max(0, Math.min(centerX - visibleCols / 2, COLS - visibleCols));
+        const cameraY = Math.max(0, Math.min(centerY - visibleRows / 2, ROWS - visibleRows));
         board = {
           size,
-          x: (width - size * COLS) / 2,
-          y: (height - size * ROWS) / 2,
+          x: (width - size * visibleCols) / 2 - cameraX * size,
+          y: (height - size * visibleRows) / 2 - cameraY * size,
         };
 
         const sky = ctx.createLinearGradient(0, 0, 0, height);
@@ -1028,18 +1251,22 @@
 
         for (let y = 0; y < ROWS; y += 1) {
           for (let x = 0; x < COLS; x += 1) {
-            drawTile(tileAt(x, y), board.x + x * size, board.y + y * size, size);
+            const screenX = board.x + x * size;
+            const screenY = board.y + y * size;
+            if (screenX < -size || screenY < -size || screenX > width + size || screenY > height + size) continue;
+            drawTile(tileAt(x, y), screenX, screenY, size);
           }
         }
 
         drawBalloon(size);
+        drawToiletBalloon(size);
 
         const duck = state.duck;
         const t = 1 - duck.moving;
         const drawX = board.x + (duck.px + (duck.x - duck.px) * t + 0.5) * size;
         const drawY = board.y + (duck.py + (duck.y - duck.py) * t + 0.52) * size;
 
-        if (tileAt(duck.x, duck.y) === "W") {
+        if (tileAt(duck.x, duck.y) === "W" || tileAt(duck.x, duck.y) === "R") {
           ctx.fillStyle = "rgba(255,255,255,0.62)";
           ctx.beginPath();
           ctx.ellipse(drawX, drawY + size * 0.2, size * 0.28, size * 0.08, 0, 0, Math.PI * 2);
@@ -1064,6 +1291,7 @@
       function tick() {
         settleDuckMotion();
         updateBalloon();
+        updateToiletEvent();
         if (state.duck.moving > 0) {
           state.duck.moving = Math.max(0, state.duck.moving - 0.12);
           state.duck.hop = state.duck.moving;
@@ -1079,7 +1307,9 @@
 
       function handleHeldKeys() {
         if (keys.has("ArrowUp") || keys.has("KeyW")) tryMove(0, -1);
-        else if (keys.has("ArrowDown") || keys.has("KeyS")) tryMove(0, 1);
+        else if (keys.has("ArrowDown") || keys.has("KeyS")) {
+          if (!digTunnel(true)) tryMove(0, 1);
+        }
         else if (keys.has("ArrowLeft") || keys.has("KeyA")) tryMove(-1, 0);
         else if (keys.has("ArrowRight") || keys.has("KeyD")) tryMove(1, 0);
       }
@@ -1087,6 +1317,7 @@
       function handleKeyDown(event) {
         if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) {
           event.preventDefault();
+          if ((event.code === "ArrowDown" || event.code === "KeyS") && digTunnel(true)) return;
           keys.add(event.code);
           handleHeldKeys();
         } else if (event.code === "Space") {
@@ -1104,7 +1335,7 @@
 
       function touchAction(name) {
         if (name === "up") tryMove(0, -1);
-        if (name === "down") tryMove(0, 1);
+        if (name === "down" && !digTunnel(true)) tryMove(0, 1);
         if (name === "left") tryMove(-1, 0);
         if (name === "right") tryMove(1, 0);
         if (name === "jump") {
