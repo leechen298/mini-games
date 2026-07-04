@@ -271,6 +271,14 @@
         island: "岛屿",
         mine: "矿洞",
         city: "城市",
+        house: "房子",
+        portalShop: "传送门店",
+        itemShop: "道具店",
+        craftShop: "合成店",
+        underwaterCity: "地下水城",
+        worldShop: "世界商店",
+        deathLand: "死亡之地",
+        helperLand: "助手之地",
       };
       const oreTypes = [
         { key: "diamond", label: "钻石", color: "#7ee5ff" },
@@ -283,6 +291,21 @@
       const island = { x: 520, y: 382, w: 700, h: 210, holeX: 835 };
       const portal = { x: 1150, y: 465, w: 96, h: 130 };
       const city = { ground: 596 };
+      const cityDoors = [
+        { x: 265, w: 54, scene: "house", label: "家" },
+        { x: 495, w: 54, scene: "house", label: "家" },
+        { x: 725, w: 54, scene: "house", label: "家" },
+        { x: 955, w: 54, scene: "itemShop", label: "道具店" },
+        { x: 1185, w: 54, scene: "craftShop", label: "合成店" },
+        { x: 1415, w: 54, scene: "house", label: "家" },
+        { x: 1612, w: 80, scene: "portalShop", label: "传送门店" },
+      ];
+      const portalDestinations = [
+        { scene: "underwaterCity", label: "地下水城", color: "#3cc8ff" },
+        { scene: "worldShop", label: "世界商店", color: "#f5c84c" },
+        { scene: "deathLand", label: "死亡之地", color: "#40424d" },
+        { scene: "helperLand", label: "助手之地", color: "#8ad36a" },
+      ];
 
       let lastTime = 0;
       let cameraX = 0;
@@ -315,6 +338,12 @@
         score: 0,
         bread: 0,
         car: { x: 680, y: city.ground - 34, inCar: false },
+        allies: 0,
+        helperEnemies: Array.from({ length: 5 }, (_, index) => ({
+          x: 420 + index * 210,
+          y: city.ground - 46,
+          beaten: false,
+        })),
       });
 
       let state = startState();
@@ -412,6 +441,7 @@
 
       function toolText() {
         if (state.car.inCar) return "开车";
+        if (state.allies > 0) return `助手${state.allies}`;
         if (state.portalBuilt) return "传送门";
         if (state.materials.obsidian >= 4 && state.materials.water >= 1) return "可造门";
         return "无";
@@ -465,6 +495,31 @@
         if (scene === "city") {
           world.w = 2200;
           state.player.x = 100;
+          state.player.y = city.ground - state.player.h;
+        }
+        if (["house", "portalShop", "itemShop", "craftShop"].includes(scene)) {
+          world.w = 1280;
+          state.player.x = 120;
+          state.player.y = city.ground - state.player.h;
+        }
+        if (scene === "underwaterCity") {
+          world.w = 1600;
+          state.player.x = 120;
+          state.player.y = 430;
+        }
+        if (scene === "worldShop") {
+          world.w = 1600;
+          state.player.x = 120;
+          state.player.y = city.ground - state.player.h;
+        }
+        if (scene === "deathLand") {
+          world.w = 1600;
+          state.player.x = 120;
+          state.player.y = city.ground - state.player.h;
+        }
+        if (scene === "helperLand") {
+          world.w = 1600;
+          state.player.x = 120;
           state.player.y = city.ground - state.player.h;
         }
         cameraX = 0;
@@ -555,6 +610,87 @@
         }
       }
 
+      function nearX(x, distance = 62) {
+        return Math.abs(state.player.x - x) < distance;
+      }
+
+      function returnToCity(x = 1200) {
+        setScene("city");
+        state.player.x = x;
+        state.player.y = city.ground - state.player.h;
+        cameraX = Math.max(0, state.player.x - 420);
+      }
+
+      function tryEnterDoor() {
+        const p = state.player;
+        if (state.scene !== "city" || state.car.inCar) return false;
+        const door = cityDoors.find((item) => p.x + p.w > item.x && p.x < item.x + item.w);
+        if (!door) return false;
+        setScene(door.scene);
+        showFlash(`进入${door.label}`);
+        return true;
+      }
+
+      function usePortalShop() {
+        const index = Math.floor((state.player.x - 250) / 220);
+        const destination = portalDestinations[index];
+        if (!destination) return false;
+        setScene(destination.scene);
+        showFlash(destination.label);
+        return true;
+      }
+
+      function useItemShop() {
+        if (!nearX(620, 120)) return false;
+        if (state.score < 5) {
+          showFlash("要5金币");
+          return true;
+        }
+        state.score -= 5;
+        state.materials.diamond += 1;
+        showFlash("买到钻石");
+        return true;
+      }
+
+      function useCraftShop() {
+        if (!nearX(650, 160)) return false;
+        if (state.materials.diamond >= 1 && state.materials.emerald >= 1 && state.materials.obsidian >= 1) {
+          state.materials.diamond -= 1;
+          state.materials.emerald -= 1;
+          state.materials.obsidian -= 1;
+          state.portalBuilt = true;
+          showFlash("合成传送门");
+        } else {
+          showFlash("要钻石绿宝石黑曜石");
+        }
+        return true;
+      }
+
+      function useCurrentPlace() {
+        if (tryEnterDoor()) return;
+        if (["house", "portalShop", "itemShop", "craftShop", "worldShop"].includes(state.scene) && state.player.x < 80) {
+          returnToCity();
+          return;
+        }
+        if (state.scene === "portalShop" && usePortalShop()) return;
+        if (state.scene === "itemShop" && useItemShop()) return;
+        if (state.scene === "craftShop" && useCraftShop()) return;
+        if (state.scene === "worldShop" && nearX(620, 150)) {
+          state.score += 10;
+          showFlash("世界商店金币+10");
+        }
+      }
+
+      function attackHelper() {
+        if (state.scene !== "helperLand") return false;
+        const enemy = state.helperEnemies.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 70);
+        if (!enemy) return false;
+        enemy.beaten = true;
+        state.allies += 1;
+        showFlash("助手加入");
+        return true;
+      }
+
       function handleInput(dt) {
         const p = state.player;
         let move = 0;
@@ -562,7 +698,7 @@
         if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
         if (move !== 0) p.facing = move;
 
-        if (state.scene === "ocean") {
+        if (state.scene === "ocean" || state.scene === "underwaterCity") {
           const swim = 250;
           let swimY = 0;
           if (keys.has("ArrowUp")) swimY -= 1;
@@ -570,7 +706,12 @@
           p.x += move * swim * dt;
           p.y += swimY * swim * dt;
           p.y = Math.max(145, Math.min(550, p.y));
-          if (p.x > island.x - 40) setScene("island");
+          if (state.scene === "ocean" && p.x > island.x - 40) setScene("island");
+          return;
+        }
+
+        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene) && keys.has("ArrowDown")) {
+          returnToCity();
           return;
         }
 
@@ -622,6 +763,12 @@
         if (state.scene === "earth" && keys.has("ArrowDown")) burrow();
       }
 
+      function currentGround() {
+        if (state.scene === "island") return island.y;
+        if (state.scene === "city" || state.scene === "house" || state.scene === "portalShop" || state.scene === "itemShop" || state.scene === "craftShop" || state.scene === "worldShop" || state.scene === "deathLand" || state.scene === "helperLand") return city.ground;
+        return world.ground;
+      }
+
       function update(dt) {
         const p = state.player;
         flashTime = Math.max(0, flashTime - dt);
@@ -631,8 +778,8 @@
         handleInput(dt);
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
-        const ground = state.scene === "city" ? city.ground : state.scene === "island" ? island.y : world.ground;
-        if (!p.buried && state.scene !== "ocean" && !state.car.inCar) {
+        const ground = currentGround();
+        if (!p.buried && state.scene !== "ocean" && state.scene !== "underwaterCity" && !state.car.inCar) {
           p.vy += gravity * dt;
           p.y += p.vy * dt;
           if (p.y + p.h >= ground) {
@@ -889,13 +1036,18 @@
         ctx.fillRect(0, 0, w, world.h);
         ctx.fillStyle = "#6c737f";
         ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
-        for (let i = 0; i < 6; i += 1) drawHouse(220 + i * 230 - cameraX, city.ground - 170, i);
+        for (let i = 0; i < 6; i += 1) {
+          const houseX = 220 + i * 230;
+          const door = cityDoors[i];
+          drawHouse(houseX - cameraX, city.ground - 170, i, door?.label || "家");
+        }
         drawBakery(1480 - cameraX, city.ground - 288, "传送门店");
         drawDuck(1536 - cameraX, city.ground - 56, 0.78, -1);
+        drawLabel(1650 - cameraX, city.ground - 308, "按上进门");
         drawCar(state.car.x - cameraX, state.car.y);
       }
 
-      function drawHouse(x, y, i) {
+      function drawHouse(x, y, i, label = "家") {
         ctx.fillStyle = ["#b5d6a7", "#f1c27d", "#b9b0e8"][i % 3];
         ctx.fillRect(x, y, 120, 170);
         ctx.fillStyle = "#d84b44";
@@ -910,6 +1062,7 @@
         ctx.fillRect(x + 72, y + 46, 28, 34);
         ctx.fillStyle = "#5b3a2b";
         ctx.fillRect(x + 45, y + 104, 34, 66);
+        drawLabel(x + 60, y - 58, label);
       }
 
       function drawCar(x, y) {
@@ -926,6 +1079,143 @@
         ctx.fill();
       }
 
+      function drawLabel(x, y, text) {
+        ctx.fillStyle = "rgba(38,49,59,0.82)";
+        ctx.fillRect(x - 48, y - 18, 96, 26);
+        ctx.fillStyle = "#fffdf8";
+        ctx.font = "900 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x, y);
+      }
+
+      function drawInteriorBase(title, wall = "#fff0d2") {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = wall;
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#b77b53";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        ctx.fillStyle = "#5b3a2b";
+        ctx.fillRect(28 - cameraX, city.ground - 94, 58, 94);
+        ctx.fillStyle = "#26313b";
+        ctx.font = "900 24px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`${title}  下键出门`, 110 - cameraX, 86);
+      }
+
+      function drawHouseInterior() {
+        drawInteriorBase("小鸭的家", "#f4edda");
+        drawDuck(570 - cameraX, city.ground - 56, 0.8, -1);
+        drawLabel(610 - cameraX, city.ground - 88, "小鸭邻居");
+      }
+
+      function drawPortalShop() {
+        drawInteriorBase("传送门店", "#efe8ff");
+        portalDestinations.forEach((destination, index) => {
+          const x = 250 + index * 220 - cameraX;
+          ctx.strokeStyle = destination.color;
+          ctx.lineWidth = 10;
+          ctx.strokeRect(x, city.ground - 190, 92, 138);
+          ctx.fillStyle = `${destination.color}55`;
+          ctx.fillRect(x + 12, city.ground - 178, 68, 114);
+          drawLabel(x + 46, city.ground - 210, destination.label);
+        });
+        drawDuck(1080 - cameraX, city.ground - 56, 0.8, -1);
+      }
+
+      function drawItemShop() {
+        drawInteriorBase("道具店", "#e9f8ff");
+        ctx.fillStyle = "#cf7848";
+        ctx.fillRect(460 - cameraX, city.ground - 86, 330, 42);
+        ctx.fillStyle = "#7ee5ff";
+        ctx.beginPath();
+        ctx.arc(620 - cameraX, city.ground - 120, 24, 0, Math.PI * 2);
+        ctx.fill();
+        drawLabel(620 - cameraX, city.ground - 154, "钻石 5金币");
+        drawDuck(820 - cameraX, city.ground - 56, 0.8, -1);
+      }
+
+      function drawCraftShop() {
+        drawInteriorBase("合成店", "#eef9e8");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(392 - cameraX, 150, 500, 230);
+        ctx.strokeStyle = "#d8e2d8";
+        ctx.strokeRect(392 - cameraX, 150, 500, 230);
+        ctx.fillStyle = "#26313b";
+        ctx.font = "900 22px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`钻石 ${state.materials.diamond}`, 430 - cameraX, 205);
+        ctx.fillText(`绿宝石 ${state.materials.emerald}`, 430 - cameraX, 250);
+        ctx.fillText(`黑曜石 ${state.materials.obsidian}`, 430 - cameraX, 295);
+        ctx.fillText(`水 ${state.materials.water}`, 430 - cameraX, 340);
+        drawLabel(650 - cameraX, city.ground - 132, "按上合成");
+        drawDuck(900 - cameraX, city.ground - 56, 0.8, -1);
+      }
+
+      function drawUnderwaterCity() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#3daee9";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "rgba(255,255,255,0.28)";
+        for (let i = 0; i < 9; i += 1) ctx.fillRect(i * 190 - (cameraX % 190), 140 + (i % 6) * 70, 92, 7);
+        for (let i = 0; i < 5; i += 1) {
+          ctx.fillStyle = "#7dd5ff";
+          ctx.fillRect(260 + i * 240 - cameraX, 430 - i * 18, 130, 160 + i * 18);
+          ctx.strokeStyle = "#e6fbff";
+          ctx.strokeRect(260 + i * 240 - cameraX, 430 - i * 18, 130, 160 + i * 18);
+        }
+        drawLabel(640 - cameraX, 132, "地下水城");
+      }
+
+      function drawWorldShop() {
+        drawInteriorBase("世界商店", "#fff7d4");
+        drawLabel(620 - cameraX, city.ground - 150, "按上领金币");
+        ctx.fillStyle = "#f5c84c";
+        for (let i = 0; i < 7; i += 1) {
+          ctx.beginPath();
+          ctx.arc(460 + i * 44 - cameraX, city.ground - 100, 16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawDeathLand() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#27242b";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#4b3d4f";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        ctx.fillStyle = "#d84b44";
+        for (let i = 0; i < 12; i += 1) {
+          ctx.beginPath();
+          ctx.moveTo(i * 150 - (cameraX % 150), city.ground);
+          ctx.lineTo(i * 150 + 34 - (cameraX % 150), city.ground - 58);
+          ctx.lineTo(i * 150 + 68 - (cameraX % 150), city.ground);
+          ctx.fill();
+        }
+        drawLabel(620 - cameraX, 160, "死亡之地");
+      }
+
+      function drawHelperLand() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#cfe8c5";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#6aa963";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        state.helperEnemies.forEach((enemy) => {
+          if (enemy.beaten) {
+            drawDuck(enemy.x - cameraX, enemy.y, 0.72, -1);
+            return;
+          }
+          ctx.fillStyle = "#48625d";
+          ctx.fillRect(enemy.x - cameraX, enemy.y + 10, 44, 36);
+          drawDuck(enemy.x - cameraX - 2, enemy.y - 4, 0.64, -1);
+        });
+        drawLabel(610 - cameraX, 140, "空格打败助手");
+      }
+
       function drawSceneBackground() {
         if (state.scene === "earth") drawEarthBackground();
         if (state.scene === "ocean") drawOceanBackground();
@@ -934,6 +1224,14 @@
         }
         if (state.scene === "mine") drawMineBackground();
         if (state.scene === "city") drawCityBackground();
+        if (state.scene === "house") drawHouseInterior();
+        if (state.scene === "portalShop") drawPortalShop();
+        if (state.scene === "itemShop") drawItemShop();
+        if (state.scene === "craftShop") drawCraftShop();
+        if (state.scene === "underwaterCity") drawUnderwaterCity();
+        if (state.scene === "worldShop") drawWorldShop();
+        if (state.scene === "deathLand") drawDeathLand();
+        if (state.scene === "helperLand") drawHelperLand();
       }
 
       function draw() {
@@ -949,9 +1247,9 @@
         if (state.scene === "city") {
           ctx.fillStyle = "#ffffff";
           ctx.font = "900 18px sans-serif";
-          ctx.fillText("按回车上车/下车，传送门店会卖传送门", 900 - cameraX, 112);
+          ctx.fillText("每扇门都能按上进入；回车上车/下车", 780 - cameraX, 112);
         }
-        if (state.scene !== "mine") state.coins.forEach(drawCoin);
+        if (state.scene === "earth" || state.scene === "city") state.coins.forEach(drawCoin);
         drawPlayer();
         ctx.restore();
 
@@ -984,8 +1282,13 @@
           tryBuildPortal();
           tryUseCityThings();
         }
+        if (event.code === "ArrowUp") {
+          useCurrentPlace();
+        }
         if (event.code === "ArrowDown") burrow();
-        if (event.code === "Space" || /^Key[A-Z]$/.test(event.code)) jump();
+        if (event.code === "Space" || /^Key[A-Z]$/.test(event.code)) {
+          if (!attackHelper()) jump();
+        }
       });
       window.addEventListener("keyup", (event) => keys.delete(event.code));
       resetButton.addEventListener("click", resetGame);
@@ -997,6 +1300,7 @@
           if (action === "jump") jump();
           else {
             keys.add(map[action]);
+            if (action === "up") useCurrentPlace();
             if (action === "down") burrow();
           }
           canvas.focus();
