@@ -280,6 +280,8 @@
         deathLand: "死亡之地",
         helperLand: "助手之地",
         unknownWorld: "未知世界",
+        planet: "伙伴星球",
+        fallPlanet: "掉落星球",
       };
       const oreTypes = [
         { key: "diamond", label: "钻石", color: "#7ee5ff" },
@@ -362,10 +364,25 @@
           y: city.ground - 46,
           beaten: false,
         })),
+        planetDucks: Array.from({ length: 14 }, (_, index) => ({
+          x: 260 + index * 112,
+          y: city.ground - 46,
+          beaten: false,
+        })),
         hazards: Array.from({ length: 11 }, (_, index) => ({
           x: 300 + index * 132,
           y: 210 + (index % 4) * 82,
           size: 34,
+          offset: index * 0.7,
+        })),
+        fallBlocks: Array.from({ length: 13 }, (_, index) => ({
+          x: 180 + index * 118,
+          y: 500 - (index % 3) * 54,
+          w: 88,
+          h: 24,
+          bonus: index === 4 || index === 10,
+          claimed: false,
+          fall: 0,
         })),
         dead: false,
       });
@@ -465,6 +482,7 @@
 
       function toolText() {
         if (state.dead) return "死翘翘";
+        if (state.allies >= 20) return "无敌";
         if (state.car.inCar) return "开车";
         if (state.allies > 0) return `伙伴${state.allies}`;
         if (state.portalBuilt) return "传送门";
@@ -551,6 +569,16 @@
           world.w = 1900;
           state.player.x = 90;
           state.player.y = 420;
+        }
+        if (scene === "planet") {
+          world.w = 1900;
+          state.player.x = 110;
+          state.player.y = city.ground - state.player.h;
+        }
+        if (scene === "fallPlanet") {
+          world.w = 1800;
+          state.player.x = 120;
+          state.player.y = 440;
         }
         cameraX = 0;
         showFlash(sceneNames[scene]);
@@ -715,6 +743,14 @@
           setScene("unknownWorld");
           showFlash("未知世界");
         }
+        if (state.scene === "unknownWorld" && nearX(1580, 150)) {
+          setScene("planet");
+          showFlash("伙伴星球");
+        }
+        if (state.scene === "planet" && nearX(1580, 150)) {
+          setScene("fallPlanet");
+          showFlash("掉落星球");
+        }
       }
 
       function attackHelper() {
@@ -734,6 +770,14 @@
           showFlash("小鸭加入");
           return true;
         }
+        if (state.scene === "planet") {
+          const duck = state.planetDucks.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 82);
+          if (!duck) return false;
+          duck.beaten = true;
+          state.allies += 1;
+          showFlash(state.allies >= 20 ? "无敌开启" : "星球小鸭加入");
+          return true;
+        }
         if (state.scene !== "helperLand") return false;
         const enemy = state.helperEnemies.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 70);
         if (!enemy) return false;
@@ -750,7 +794,7 @@
         if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
         if (move !== 0) p.facing = move;
 
-        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene) && keys.has("ArrowDown")) {
+        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand", "unknownWorld", "planet", "fallPlanet"].includes(state.scene) && keys.has("ArrowDown")) {
           returnToCity();
           return;
         }
@@ -817,7 +861,8 @@
 
       function currentGround() {
         if (state.scene === "island") return island.y;
-        if (state.scene === "city" || state.scene === "house" || state.scene === "portalShop" || state.scene === "itemShop" || state.scene === "craftShop" || state.scene === "worldShop" || state.scene === "deathLand" || state.scene === "helperLand") return city.ground;
+        if (state.scene === "city" || state.scene === "house" || state.scene === "portalShop" || state.scene === "itemShop" || state.scene === "craftShop" || state.scene === "worldShop" || state.scene === "deathLand" || state.scene === "helperLand" || state.scene === "planet") return city.ground;
+        if (state.scene === "fallPlanet") return world.h + 200;
         return world.ground;
       }
 
@@ -888,14 +933,52 @@
           }
         }
 
+        if (state.scene === "planet" && state.allies > 0) {
+          for (const duck of state.planetDucks) {
+            if (!duck.beaten && Math.abs(duck.x - p.x) < 150) {
+              duck.beaten = true;
+              state.allies += 1;
+              showFlash(state.allies >= 20 ? "无敌开启" : "伙伴帮你收服星球小鸭");
+              break;
+            }
+          }
+        }
+
         if (state.scene === "unknownWorld") {
           for (const hazard of state.hazards) {
             const square = { x: hazard.x, y: hazard.y, w: hazard.size, h: hazard.size };
-            if (rectsOverlap(playerRect, square)) {
+            const safe = Math.sin(Date.now() / 520 + hazard.offset) > 0;
+            if (!safe && state.allies < 20 && rectsOverlap(playerRect, square)) {
               state.dead = true;
               showFlash("死翘翘");
               break;
             }
+          }
+        }
+
+        if (state.scene === "fallPlanet") {
+          let landed = false;
+          for (const block of state.fallBlocks) {
+            const hot = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
+            if (hot) block.fall = Math.min(150, block.fall + 90 * dt);
+            else block.fall = Math.max(0, block.fall - 120 * dt);
+            const platform = { x: block.x, y: block.y + block.fall, w: block.w, h: block.h };
+            const onTop = p.vy >= 0 && p.y + p.h <= platform.y + 26 && rectsOverlap(playerRect, platform);
+            if (onTop) {
+              p.y = platform.y - p.h;
+              p.vy = 0;
+              p.onGround = true;
+              landed = true;
+              if (block.bonus && !block.claimed) {
+                block.claimed = true;
+                state.score += 500;
+                showFlash("免费金币+500");
+              }
+            }
+          }
+          if (!landed && p.y > world.h - 35 && state.allies < 20) {
+            state.dead = true;
+            showFlash("掉下去了");
           }
         }
 
@@ -1348,10 +1431,65 @@
         ctx.fillStyle = "#222850";
         ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
         state.hazards.forEach((hazard) => {
-          ctx.fillStyle = "#ff4d6d";
+          const safe = Math.sin(Date.now() / 520 + hazard.offset) > 0;
+          ctx.fillStyle = safe ? "#4ee06f" : "#ff4d6d";
           ctx.fillRect(hazard.x - cameraX, hazard.y, hazard.size, hazard.size);
         });
+        ctx.strokeStyle = "#7d5cff";
+        ctx.lineWidth = 9;
+        ctx.strokeRect(1580 - cameraX, city.ground - 168, 92, 138);
+        ctx.fillStyle = "rgba(125, 92, 255, 0.45)";
+        ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
         drawLabel(650 - cameraX, 110, "未知世界：别碰小方块");
+        drawLabel(1626 - cameraX, city.ground - 190, "星球");
+        if (state.allies >= 20) drawLabel(920 - cameraX, 150, "无敌模式");
+      }
+
+      function drawPlanet() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#17284d";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#8ad36a";
+        ctx.beginPath();
+        ctx.ellipse(860 - cameraX, city.ground + 120, 950, 260, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#5aa56a";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        state.planetDucks.forEach((duck) => {
+          if (duck.beaten) drawDuck(duck.x - cameraX, duck.y, 0.68, -1);
+          else {
+            ctx.fillStyle = "#3b7c55";
+            ctx.beginPath();
+            ctx.ellipse(duck.x + 24 - cameraX, duck.y + 28, 26, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            drawDuck(duck.x - cameraX, duck.y - 2, 0.72, -1);
+          }
+        });
+        ctx.strokeStyle = "#f5c84c";
+        ctx.lineWidth = 9;
+        ctx.strokeRect(1580 - cameraX, city.ground - 168, 92, 138);
+        ctx.fillStyle = "rgba(245, 200, 76, 0.38)";
+        ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
+        drawLabel(720 - cameraX, 130, "伙伴星球：空格收服小鸭");
+        drawLabel(1626 - cameraX, city.ground - 190, "掉落星球");
+        if (state.allies >= 20) drawLabel(1020 - cameraX, 174, "20伙伴 无敌");
+      }
+
+      function drawFallPlanet() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#1c1838";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#3c2f70";
+        ctx.fillRect(-cameraX, world.h - 42, world.w, 42);
+        state.fallBlocks.forEach((block) => {
+          const hot = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
+          ctx.fillStyle = hot ? "#ff4d6d" : block.bonus && !block.claimed ? "#f5c84c" : "#4ee06f";
+          ctx.fillRect(block.x - cameraX, block.y + block.fall, block.w, block.h);
+          if (block.bonus && !block.claimed) drawLabel(block.x + block.w / 2 - cameraX, block.y + block.fall - 16, "500");
+        });
+        drawLabel(660 - cameraX, 120, "红方块会掉，跳到绿色方块");
       }
 
       function drawSceneBackground() {
@@ -1371,6 +1509,8 @@
         if (state.scene === "deathLand") drawDeathLand();
         if (state.scene === "helperLand") drawHelperLand();
         if (state.scene === "unknownWorld") drawUnknownWorld();
+        if (state.scene === "planet") drawPlanet();
+        if (state.scene === "fallPlanet") drawFallPlanet();
       }
 
       function draw() {
@@ -1426,7 +1566,7 @@
           useCurrentPlace();
         }
         if (event.code === "ArrowDown") {
-          if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene)) {
+          if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand", "unknownWorld", "planet", "fallPlanet"].includes(state.scene)) {
             returnToCity();
           } else {
             burrow();
