@@ -226,9 +226,9 @@
         <h1>云朵面包店</h1>
         <div class="stats" aria-live="polite">
           <div class="stat"><span>金币</span><strong id="coins">0</strong></div>
-          <div class="stat"><span>云朵</span><strong id="clouds">0/∞</strong></div>
-          <div class="stat"><span>面包</span><strong id="bread">0</strong></div>
-          <div class="stat"><span>等级</span><strong id="level">1</strong></div>
+          <div class="stat"><span>场景</span><strong id="clouds">地表</strong></div>
+          <div class="stat"><span>矿石</span><strong id="bread">0</strong></div>
+          <div class="stat"><span>道具</span><strong id="level">无</strong></div>
         </div>
       </section>
 
@@ -237,7 +237,7 @@
       </section>
 
       <section class="controls">
-        <p class="note">站上云朵后按回车启动，再用方向键开云飞。地面按下钻土，土里方向键移动拿金币；上键回到地面。</p>
+        <p class="note">小鸭子冒险：地表下键无限钻土，穿过地球到海洋；岛上洞口进矿洞，收矿石和水做传送门去城市，城市里可以开车串门。</p>
         <button id="reset" type="button">重新开始</button>
       </section>
     </main>
@@ -263,9 +263,26 @@
 
       const keys = new Set();
       const gravity = 1850;
-      const coinRespawnTime = 2.8;
-      const world = { w: 1680, h: 760, ground: 626 };
-      const bakery = { x: 1220, y: 306, w: 360, h: 320, inside: false };
+      const coinRespawnTime = 2.5;
+      const world = { w: 2500, h: 760, ground: 626 };
+      const sceneNames = {
+        earth: "地表",
+        ocean: "海洋",
+        island: "岛屿",
+        mine: "矿洞",
+        city: "城市",
+      };
+      const oreTypes = [
+        { key: "diamond", label: "钻石", color: "#7ee5ff" },
+        { key: "emerald", label: "绿宝石", color: "#45d16f" },
+        { key: "amethyst", label: "紫水晶", color: "#a26bf2" },
+        { key: "obsidian", label: "黑曜石", color: "#171923" },
+        { key: "water", label: "水", color: "#4db7ff" },
+      ];
+      const bakery = { x: 1220, y: 306, w: 360, h: 320 };
+      const island = { x: 520, y: 382, w: 700, h: 210, holeX: 835 };
+      const portal = { x: 1150, y: 465, w: 96, h: 130 };
+      const city = { ground: 596 };
 
       let lastTime = 0;
       let cameraX = 0;
@@ -275,28 +292,54 @@
       const startState = () => ({
         player: {
           x: 72,
-          y: world.ground - 54,
-          w: 42,
-          h: 54,
+          y: world.ground - 46,
+          w: 48,
+          h: 46,
           vx: 0,
           vy: 0,
           onGround: true,
           facing: 1,
           buried: false,
-          invincible: 0,
+          digDepth: 0,
         },
+        scene: "earth",
         coins: [],
         clouds: [],
         standingCloudId: null,
         activeCloudId: null,
         nextCloudId: 1,
         nextCloudX: 240,
+        ores: [],
+        materials: { diamond: 0, emerald: 0, amethyst: 0, obsidian: 0, water: 0 },
+        portalBuilt: false,
         score: 0,
         bread: 0,
-        level: 1,
+        car: { x: 680, y: city.ground - 34, inCar: false },
       });
 
       let state = startState();
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        canvas.width = Math.round(rect.width * ratio);
+        canvas.height = Math.round(rect.height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function viewScale() {
+        return canvas.clientHeight / world.h;
+      }
+
+      function resetGame() {
+        world.w = 2500;
+        state = startState();
+        buildWorld();
+        cameraX = 0;
+        showFlash("小鸭出发");
+        updateStats();
+        canvas.focus();
+      }
 
       function buildWorld() {
         state.coins = [
@@ -306,6 +349,7 @@
           ...makeCoinLine(250, 1600, world.ground + 118, 17, 84),
         ];
         ensureWorldAhead(2400);
+        buildMine();
       }
 
       function makeCoinLine(startX, endX, y, count, step) {
@@ -327,8 +371,6 @@
           y: ySteps[(index - 1) % ySteps.length],
           w: 164 + (index % 3) * 10,
           h: 34,
-          vx: 0,
-          vy: 0,
           active: true,
           visited: false,
         };
@@ -349,49 +391,37 @@
         world.w = Math.max(world.w, targetX + 520, bakery.x + bakery.w + 180);
       }
 
-      function resize() {
-        const rect = canvas.getBoundingClientRect();
-        const ratio = Math.max(1, window.devicePixelRatio || 1);
-        canvas.width = Math.round(rect.width * ratio);
-        canvas.height = Math.round(rect.height * ratio);
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      }
-
-      function viewScale() {
-        return canvas.clientHeight / world.h;
-      }
-
-      function resetGame() {
-        state = startState();
-        buildWorld();
-        bakery.inside = false;
-        cameraX = 0;
-        showFlash("开始");
-        updateStats();
-        canvas.focus();
+      function buildMine() {
+        const positions = [
+          ["diamond", 220, 574], ["diamond", 430, 552], ["emerald", 580, 574],
+          ["emerald", 760, 552], ["amethyst", 930, 574], ["amethyst", 1120, 552],
+          ["obsidian", 1260, 574], ["obsidian", 1390, 552], ["obsidian", 1510, 574],
+          ["obsidian", 1600, 552], ["water", 1700, 574], ["water", 1810, 552],
+        ];
+        state.ores = positions.map(([type, x, y], index) => ({ id: index, type, x, y, r: 18, got: false }));
       }
 
       function showFlash(text) {
         flash = text;
-        flashTime = 1.2;
+        flashTime = 1.3;
+      }
+
+      function materialCount() {
+        return Object.values(state.materials).reduce((sum, value) => sum + value, 0);
+      }
+
+      function toolText() {
+        if (state.car.inCar) return "开车";
+        if (state.portalBuilt) return "传送门";
+        if (state.materials.obsidian >= 4 && state.materials.water >= 1) return "可造门";
+        return "无";
       }
 
       function updateStats() {
         coinText.textContent = state.score;
-        cloudText.textContent = `${state.clouds.filter((cloud) => cloud.visited).length}/∞`;
-        breadText.textContent = state.bread;
-        levelText.textContent = state.level;
-      }
-
-      function jump(power = 690) {
-        const p = state.player;
-        if (p.buried) return;
-        if (p.onGround) {
-          state.activeCloudId = null;
-          state.standingCloudId = null;
-          p.vy = -power;
-          p.onGround = false;
-        }
+        cloudText.textContent = sceneNames[state.scene];
+        breadText.textContent = materialCount();
+        levelText.textContent = toolText();
       }
 
       function rectsOverlap(a, b) {
@@ -406,54 +436,50 @@
         return dx * dx + dy * dy < circle.r * circle.r;
       }
 
-      function enterBakeryIfNeeded() {
-        const p = state.player;
-        return p.x + p.w > bakery.x + 150 && p.x < bakery.x + 204 && p.y + p.h >= world.ground - 12;
-      }
-
-      function playerAtCounter() {
-        const p = state.player;
-        return p.x + p.w > bakery.x + 252 && p.x < bakery.x + 348;
-      }
-
-      function enterBakery() {
-        const p = state.player;
-        bakery.inside = true;
-        p.x = bakery.x + 78;
-        p.y = world.ground - p.h;
-        p.vx = 0;
-        p.vy = 0;
-        p.onGround = true;
-        p.buried = false;
-        showFlash("进店");
-      }
-
-      function leaveBakery() {
-        const p = state.player;
-        bakery.inside = false;
-        p.x = bakery.x + 152;
-        p.y = world.ground - p.h;
-        p.vx = 0;
-        p.vy = 0;
-        p.onGround = true;
-        showFlash("出店");
-      }
-
-      function buyBread() {
-        if (state.score < 3) {
-          showFlash("要 3 金币");
-          return;
+      function setScene(scene) {
+        state.scene = scene;
+        state.player.buried = false;
+        state.activeCloudId = null;
+        state.standingCloudId = null;
+        state.car.inCar = false;
+        if (scene === "earth") {
+          world.w = 2500;
+          state.player.x = 80;
+          state.player.y = world.ground - state.player.h;
         }
-        state.score -= 3;
-        state.bread += 1;
-        showFlash("买到面包");
+        if (scene === "ocean") {
+          world.w = 1600;
+          state.player.x = 80;
+          state.player.y = 420;
+        }
+        if (scene === "island") {
+          world.w = 1600;
+          state.player.x = 120;
+          state.player.y = island.y - state.player.h;
+        }
+        if (scene === "mine") {
+          world.w = 1900;
+          state.player.x = 90;
+          state.player.y = world.ground - state.player.h;
+        }
+        if (scene === "city") {
+          world.w = 2200;
+          state.player.x = 100;
+          state.player.y = city.ground - state.player.h;
+        }
+        cameraX = 0;
+        showFlash(sceneNames[scene]);
       }
 
-      function eatBread() {
-        if (!bakery.inside || state.bread <= 0) return;
-        state.bread -= 1;
-        state.level += 1;
-        showFlash(`升级 ${state.level}`);
+      function jump(power = 690) {
+        const p = state.player;
+        if (p.buried || state.car.inCar) return;
+        if (p.onGround && state.scene !== "ocean") {
+          state.activeCloudId = null;
+          state.standingCloudId = null;
+          p.vy = -power;
+          p.onGround = false;
+        }
       }
 
       function activeCloud() {
@@ -461,23 +487,22 @@
       }
 
       function startDrivingCloud() {
-        if (bakery.inside || state.player.buried || state.standingCloudId === null) return;
+        if (state.scene !== "earth" || state.player.buried || state.standingCloudId === null) return;
         state.activeCloudId = state.standingCloudId;
         showFlash("开云");
       }
 
       function burrow() {
         const p = state.player;
-        const onSoil = Math.abs(p.y + p.h - world.ground) < 5;
-        if (bakery.inside || p.buried || !p.onGround || state.activeCloudId !== null || !onSoil) return;
+        const onSoil = Math.abs(p.y + p.h - world.ground) < 7;
+        if (state.scene !== "earth" || p.buried || !p.onGround || state.activeCloudId !== null || !onSoil) return;
         state.activeCloudId = null;
         state.standingCloudId = null;
         p.buried = true;
-        p.x += 8;
-        p.y = world.ground + 46;
+        p.y = world.ground + 42;
         p.vx = 0;
         p.vy = 0;
-        showFlash("钻土");
+        showFlash("无限钻土");
       }
 
       function leaveSoil() {
@@ -490,112 +515,141 @@
         showFlash("出土");
       }
 
-      function handleInput(dt) {
+      function collectMaterial(type) {
+        state.materials[type] += 1;
+        const ore = oreTypes.find((item) => item.key === type);
+        showFlash(`${ore.label} +1`);
+      }
+
+      function tryBuildPortal() {
+        if (state.scene !== "mine") return;
         const p = state.player;
-        const speed = bakery.inside ? 265 : 230;
-        let move = 0;
-        const cloud = activeCloud();
-        if (p.buried) {
-          const digSpeed = 220;
-          if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
-          if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
-          p.x += move * digSpeed * dt;
-          if (move !== 0) p.facing = move;
-          if (keys.has("ArrowDown")) p.y += digSpeed * dt;
-          if (keys.has("ArrowUp")) p.y -= digSpeed * dt;
-          p.y = Math.max(world.ground + 18, Math.min(world.h - 42, p.y));
-          if (keys.has("ArrowUp") && p.y <= world.ground + 20) leaveSoil();
+        const nearPortal = Math.abs(p.x - portal.x) < 160;
+        if (!nearPortal) return;
+        if (state.portalBuilt) {
+          setScene("city");
           return;
         }
-        if (cloud && !bakery.inside) {
+        if (state.materials.obsidian >= 4 && state.materials.water >= 1) {
+          state.materials.obsidian -= 4;
+          state.materials.water -= 1;
+          state.portalBuilt = true;
+          showFlash("传送门做好了");
+        } else {
+          showFlash("要黑曜石4和水1");
+        }
+      }
+
+      function tryUseCityThings() {
+        const p = state.player;
+        if (state.scene !== "city") return;
+        if (Math.abs(p.x - state.car.x) < 70) {
+          state.car.inCar = !state.car.inCar;
+          p.y = city.ground - p.h;
+          showFlash(state.car.inCar ? "上车" : "下车");
+          return;
+        }
+        if (p.x > 1450 && p.x < 1660) {
+          showFlash("小鸭店员卖传送门");
+          state.portalBuilt = true;
+        }
+      }
+
+      function handleInput(dt) {
+        const p = state.player;
+        let move = 0;
+        if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
+        if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
+        if (move !== 0) p.facing = move;
+
+        if (state.scene === "ocean") {
+          const swim = 250;
+          let swimY = 0;
+          if (keys.has("ArrowUp")) swimY -= 1;
+          if (keys.has("ArrowDown")) swimY += 1;
+          p.x += move * swim * dt;
+          p.y += swimY * swim * dt;
+          p.y = Math.max(145, Math.min(550, p.y));
+          if (p.x > island.x - 40) setScene("island");
+          return;
+        }
+
+        if (state.car.inCar) {
+          const carSpeed = 360;
+          state.car.x += move * carSpeed * dt;
+          state.car.x = Math.max(90, Math.min(world.w - 140, state.car.x));
+          p.x = state.car.x + 28;
+          p.y = city.ground - p.h - 24;
+          return;
+        }
+
+        if (p.buried) {
+          const digSpeed = 230;
+          p.x += move * digSpeed * dt;
+          if (keys.has("ArrowDown")) {
+            p.digDepth += 42 * dt;
+            p.y = Math.min(world.h - 38, p.y + digSpeed * dt);
+          }
+          if (keys.has("ArrowUp")) p.y -= digSpeed * dt;
+          p.y = Math.max(world.ground + 18, Math.min(world.h - 38, p.y));
+          if (keys.has("ArrowUp") && p.y <= world.ground + 20) leaveSoil();
+          if (p.digDepth > 10) setScene("ocean");
+          return;
+        }
+
+        const cloud = activeCloud();
+        if (cloud && state.scene === "earth") {
           const cloudSpeed = 250;
-          let cloudMoveX = 0;
           let cloudMoveY = 0;
-          if (keys.has("ArrowLeft") || keys.has("KeyA")) cloudMoveX -= 1;
-          if (keys.has("ArrowRight") || keys.has("KeyD")) cloudMoveX += 1;
           if (keys.has("ArrowUp")) cloudMoveY -= 1;
           if (keys.has("ArrowDown")) cloudMoveY += 1;
           const oldX = cloud.x;
           const oldY = cloud.y;
-          cloud.vx = cloudMoveX * cloudSpeed;
-          cloud.vy = cloudMoveY * cloudSpeed;
-          cloud.x += cloud.vx * dt;
-          cloud.y += cloud.vy * dt;
+          cloud.x += move * cloudSpeed * dt;
+          cloud.y += cloudMoveY * cloudSpeed * dt;
           cloud.x = Math.max(24, Math.min(world.w - cloud.w - 24, cloud.x));
           cloud.y = Math.max(92, Math.min(world.ground - 74, cloud.y));
           p.x += cloud.x - oldX;
           p.y += cloud.y - oldY;
           p.y = cloud.y - p.h;
-          p.vx = cloud.vx;
           p.vy = 0;
           p.onGround = true;
-          if (cloudMoveX !== 0) p.facing = cloudMoveX;
           return;
         }
-        if (bakery.inside) {
-          if (keys.has("ArrowLeft")) move -= 1;
-          if (keys.has("ArrowRight")) move += 1;
-          if (keys.has("ArrowDown")) leaveBakery();
-        } else {
-          if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
-          if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
-          if (keys.has("ArrowDown")) burrow();
-        }
-        if (!p.buried) {
-          p.vx = move * speed;
-          if (move !== 0) p.facing = move;
-        }
-        p.x += p.vx * dt;
+
+        const walkSpeed = state.scene === "city" ? 260 : 230;
+        p.x += move * walkSpeed * dt;
+        if (state.scene === "earth" && keys.has("ArrowDown")) burrow();
       }
 
       function update(dt) {
         const p = state.player;
         flashTime = Math.max(0, flashTime - dt);
         if (flashTime === 0) flash = "";
-        p.invincible = Math.max(0, p.invincible - dt);
         const visibleWorldWidth = canvas.clientWidth / viewScale();
-        ensureWorldAhead(cameraX + visibleWorldWidth + 1200);
+        if (state.scene === "earth") ensureWorldAhead(cameraX + visibleWorldWidth + 1200);
         handleInput(dt);
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
-        if (bakery.inside) {
-          p.x = Math.max(bakery.x + 48, Math.min(bakery.x + bakery.w - p.w - 34, p.x));
-          p.y = world.ground - p.h;
-          p.vy = 0;
-          p.onGround = true;
-        } else if (p.buried) {
-          p.y = Math.max(world.ground + 18, Math.min(world.h - 42, p.y));
-          p.vy = 0;
-          p.onGround = true;
-          state.activeCloudId = null;
-          state.standingCloudId = null;
-        } else {
+        const ground = state.scene === "city" ? city.ground : state.scene === "island" ? island.y : world.ground;
+        if (!p.buried && state.scene !== "ocean" && !state.car.inCar) {
           p.vy += gravity * dt;
           p.y += p.vy * dt;
+          if (p.y + p.h >= ground) {
+            p.y = ground - p.h;
+            p.vy = 0;
+            p.onGround = true;
+            state.activeCloudId = null;
+            state.standingCloudId = null;
+          }
         }
 
-        if (!p.buried && p.y + p.h >= world.ground) {
-          p.y = world.ground - p.h;
-          p.vy = 0;
-          p.onGround = true;
-          state.activeCloudId = null;
-          state.standingCloudId = null;
-        }
-
-        const playerRect = { x: p.x, y: p.y, w: p.w, h: p.buried ? 20 : p.h };
-        if (!p.buried) {
+        const playerRect = { x: p.x, y: p.y, w: p.w, h: p.buried ? 22 : p.h };
+        if (state.scene === "earth" && !p.buried) {
           state.standingCloudId = state.activeCloudId;
           for (const cloud of state.clouds) {
-            const wasBelow = p.y >= cloud.y + cloud.h - 8;
-            const bumping = p.vy < 0 && wasBelow && rectsOverlap(playerRect, cloud);
-            if (bumping) {
-              state.activeCloudId = null;
-              state.standingCloudId = null;
-              p.y = cloud.y + cloud.h + 2;
-              p.vy = 220;
-            }
             const softCloudTop = { x: cloud.x - 20, y: cloud.y, w: cloud.w + 40, h: cloud.h };
-            const landing = cloud.active && p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
+            const landing = p.vy >= 0 && p.y + p.h <= cloud.y + 32 && rectsOverlap(playerRect, softCloudTop);
             if (landing) {
               cloud.visited = true;
               state.standingCloudId = cloud.id;
@@ -606,15 +660,23 @@
           }
         }
 
-        const bakeryRoof = { x: bakery.x + 10, y: bakery.y + 76, w: bakery.w - 20, h: 18 };
-        const onBakeryRoof = !bakery.inside && p.vy >= 0 && p.y + p.h <= bakeryRoof.y + 30 && rectsOverlap(playerRect, bakeryRoof);
-        if (onBakeryRoof) {
-          p.y = bakeryRoof.y - p.h;
-          p.vy = 0;
-          p.onGround = true;
+        if (state.scene === "island") {
+          const hole = { x: island.holeX, y: island.y - 4, w: 78, h: 26 };
+          if (p.vy >= 0 && rectsOverlap(playerRect, hole)) setScene("mine");
+        }
+
+        if (state.scene === "mine") {
+          for (const ore of state.ores) {
+            if (!ore.got && circleRectOverlap(ore, playerRect)) {
+              ore.got = true;
+              collectMaterial(ore.type);
+            }
+          }
         }
 
         for (const coin of state.coins) {
+          const visibleInScene = state.scene === "earth" || (state.scene === "city" && coin.y < city.ground);
+          if (!visibleInScene) continue;
           if (coin.got) {
             coin.respawn -= dt;
             if (coin.respawn <= 0) {
@@ -666,78 +728,74 @@
         ctx.fillRect(x - 3, coin.y - 9, 6, 18);
       }
 
-      function drawBakery() {
-        const x = bakery.x - cameraX;
-        ctx.fillStyle = "#f3a85e";
-        ctx.fillRect(x + 24, bakery.y + 58, bakery.w - 48, bakery.h - 58);
-        ctx.fillStyle = "#ffe4aa";
-        for (let i = 0; i < 7; i += 1) {
-          ctx.fillRect(x + 36 + i * 42, bakery.y + 66, 23, 42);
-        }
-        ctx.fillStyle = "#d84b44";
+      function drawDuck(x, y, scale = 1, facing = 1) {
+        ctx.save();
+        ctx.translate(x + (facing < 0 ? 46 * scale : 0), y);
+        ctx.scale(facing * scale, scale);
+        ctx.fillStyle = "#ffd84d";
         ctx.beginPath();
-        ctx.moveTo(x, bakery.y + 78);
-        ctx.lineTo(x + bakery.w / 2, bakery.y);
-        ctx.lineTo(x + bakery.w, bakery.y + 78);
-        ctx.closePath();
+        ctx.ellipse(24, 28, 22, 16, 0, 0, Math.PI * 2);
+        ctx.ellipse(34, 13, 13, 12, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#6f3b2a";
-        ctx.fillRect(x + 150, world.ground - 112, 72, 112);
-        ctx.fillStyle = "#f8e4bd";
-        ctx.fillRect(x + 42, world.ground - 206, 92, 76);
-        ctx.fillRect(x + 236, world.ground - 206, 82, 76);
-        ctx.fillStyle = "#75442e";
-        ctx.font = "900 22px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("面包店", x + bakery.w / 2, bakery.y + 118);
-        ctx.fillStyle = "#8c4f32";
-        ctx.fillRect(x + 292, world.ground - 92, 54, 72);
-        ctx.fillStyle = "#ffd77a";
+        ctx.fillStyle = "#f27a3a";
         ctx.beginPath();
-        ctx.arc(x + 319, world.ground - 54, 18, 0, Math.PI * 2);
+        ctx.ellipse(48, 14, 10, 5, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = "#26313b";
+        ctx.beginPath();
+        ctx.arc(38, 9, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f3a73a";
+        ctx.fillRect(13, 42, 8, 4);
+        ctx.fillRect(31, 42, 8, 4);
+        ctx.restore();
       }
 
       function drawPlayer() {
         const p = state.player;
         const x = p.x - cameraX;
-        const blink = p.invincible > 0 && Math.floor(p.invincible * 12) % 2 === 0;
-        if (blink) return;
         if (p.buried) {
-          ctx.fillStyle = "rgba(98, 66, 44, 0.38)";
+          ctx.fillStyle = "rgba(98, 66, 44, 0.42)";
           ctx.beginPath();
-          ctx.ellipse(x + p.w / 2, p.y + 28, 34, 13, 0, 0, Math.PI * 2);
+          ctx.ellipse(x + p.w / 2, p.y + 30, 34, 14, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#287990";
-          ctx.fillRect(x + 7, p.y + 8, p.w - 14, 18);
-          ctx.fillStyle = "#f5c84c";
-          ctx.fillRect(x + 14, p.y + 1, p.w - 28, 8);
+          drawDuck(x, p.y + 4, 0.72, p.facing);
           return;
         }
-        ctx.fillStyle = "#48a7c6";
-        ctx.fillRect(x + 4, p.y + 14, p.w - 8, p.h - 18);
-        ctx.fillStyle = "#287990";
-        ctx.fillRect(x + 9, p.y + 5, p.w - 18, 18);
-        ctx.fillStyle = "#f7e0bf";
-        ctx.fillRect(x + 11, p.y + 18, p.w - 22, 18);
-        ctx.fillStyle = "#26313b";
-        ctx.fillRect(x + (p.facing > 0 ? 26 : 13), p.y + 24, 4, 4);
-        ctx.fillStyle = "#f5c84c";
-        ctx.fillRect(x + 8, p.y + p.h - 7, 10, 7);
-        ctx.fillRect(x + p.w - 18, p.y + p.h - 7, 10, 7);
+        if (state.car.inCar) return;
+        drawDuck(x, p.y, 1, p.facing);
       }
 
-      function drawBackground() {
+      function drawBakery(x, y, title = "面包店") {
+        ctx.fillStyle = "#f3a85e";
+        ctx.fillRect(x + 24, y + 58, 280, 230);
+        ctx.fillStyle = "#d84b44";
+        ctx.beginPath();
+        ctx.moveTo(x, y + 78);
+        ctx.lineTo(x + 164, y);
+        ctx.lineTo(x + 328, y + 78);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#6f3b2a";
+        ctx.fillRect(x + 132, y + 176, 64, 112);
+        ctx.fillStyle = "#f8e4bd";
+        ctx.fillRect(x + 48, y + 130, 70, 58);
+        ctx.fillRect(x + 218, y + 130, 62, 58);
+        ctx.fillStyle = "#75442e";
+        ctx.font = "900 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(title, x + 164, y + 114);
+      }
+
+      function drawEarthBackground() {
         const scale = viewScale();
         const w = canvas.clientWidth / scale;
-        const h = world.h;
-        const skyGradient = ctx.createLinearGradient(0, 0, 0, h);
+        const skyGradient = ctx.createLinearGradient(0, 0, 0, world.h);
         skyGradient.addColorStop(0, "#9ed9f0");
         skyGradient.addColorStop(0.62, "#dff6f1");
         skyGradient.addColorStop(1, "#ecf5df");
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, w, h);
-
+        ctx.fillRect(0, 0, w, world.h);
         ctx.fillStyle = "rgba(255,255,255,0.42)";
         for (let i = 0; i < 7; i += 1) {
           const x = ((i * 270 - cameraX * 0.18) % (w + 180)) - 90;
@@ -746,57 +804,160 @@
           ctx.ellipse(x + 42, 74 + (i % 3) * 34, 38, 15, 0, 0, Math.PI * 2);
           ctx.fill();
         }
-
         ctx.fillStyle = "#6fc071";
         ctx.fillRect(-cameraX, world.ground, world.w, world.h - world.ground);
         ctx.fillStyle = "#8d6544";
         ctx.fillRect(-cameraX, world.ground + 34, world.w, world.h - world.ground - 34);
         ctx.fillStyle = "rgba(98, 66, 44, 0.36)";
-        for (let i = 0; i < 55; i += 1) {
+        for (let i = 0; i < 72; i += 1) {
           ctx.fillRect(i * 36 - (cameraX % 36), world.ground + 58 + (i % 5) * 18, 16, 5);
         }
       }
 
-      function drawBakeryInterior() {
-        const x = bakery.x - cameraX;
-        ctx.fillStyle = "#fff2d1";
-        ctx.fillRect(x + 24, bakery.y + 78, bakery.w - 48, bakery.h - 78);
-        ctx.fillStyle = "#cf7848";
-        ctx.fillRect(x + 54, world.ground - 76, bakery.w - 108, 34);
-        ctx.fillStyle = "#8c4f32";
-        ctx.fillRect(x + 282, world.ground - 128, 56, 86);
-        ctx.fillStyle = "#f5c84c";
-        for (let i = 0; i < 3; i += 1) {
-          ctx.beginPath();
-          ctx.arc(x + 126 + i * 36, world.ground - 98, 12, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.fillStyle = "#d98b4a";
+      function drawOceanBackground() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#9ed9f0";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#4db7ff";
+        ctx.fillRect(0, 190, w, world.h - 190);
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        for (let i = 0; i < 10; i += 1) ctx.fillRect(i * 180 - (cameraX % 180), 260 + (i % 5) * 42, 84, 7);
+        drawIsland();
+      }
+
+      function drawIsland() {
+        const x = island.x - cameraX;
+        ctx.fillStyle = "#e0b66c";
         ctx.beginPath();
-        ctx.ellipse(x + 310, world.ground - 112, 24, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + island.w / 2, island.y + 115, island.w / 2, 118, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#75442e";
-        ctx.font = "900 18px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("3 金币买面包", x + bakery.w / 2, bakery.y + 132);
-        ctx.fillText("按空格吃面包升级", x + bakery.w / 2, bakery.y + 164);
+        ctx.fillStyle = "#61b96f";
+        ctx.fillRect(x + 44, island.y - 12, island.w - 88, 40);
+        ctx.fillStyle = "#2b2f39";
+        ctx.beginPath();
+        ctx.ellipse(x + island.holeX - island.x + 40, island.y + 1, 42, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#6f4a2e";
+        ctx.fillRect(x + 250, island.y - 108, 18, 102);
+        ctx.fillStyle = "#2f8b56";
+        ctx.beginPath();
+        ctx.ellipse(x + 260, island.y - 128, 72, 34, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawMineBackground() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#2d3139";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#49423d";
+        ctx.fillRect(-cameraX, world.ground, world.w, world.h - world.ground);
+        ctx.fillStyle = "#3a3634";
+        for (let i = 0; i < 80; i += 1) ctx.fillRect(i * 42 - (cameraX % 42), 120 + (i % 12) * 44, 22, 8);
+        for (const ore of state.ores) {
+          if (ore.got) continue;
+          const type = oreTypes.find((item) => item.key === ore.type);
+          ctx.fillStyle = type.color;
+          ctx.beginPath();
+          ctx.arc(ore.x - cameraX, ore.y, ore.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.45)";
+          ctx.stroke();
+        }
+        drawPortal();
+      }
+
+      function drawPortal() {
+        const x = portal.x - cameraX;
+        ctx.strokeStyle = state.portalBuilt ? "#7d5cff" : "#171923";
+        ctx.lineWidth = 12;
+        ctx.strokeRect(x, portal.y, portal.w, portal.h);
+        if (state.portalBuilt) {
+          ctx.fillStyle = "rgba(125, 92, 255, 0.48)";
+          ctx.fillRect(x + 12, portal.y + 12, portal.w - 24, portal.h - 24);
+        } else {
+          ctx.fillStyle = "#4db7ff";
+          ctx.fillRect(x + 26, portal.y + portal.h + 8, 44, 18);
+        }
+      }
+
+      function drawCityBackground() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#b8d9ea";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#6c737f";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        for (let i = 0; i < 6; i += 1) drawHouse(220 + i * 230 - cameraX, city.ground - 170, i);
+        drawBakery(1480 - cameraX, city.ground - 288, "传送门店");
+        drawDuck(1536 - cameraX, city.ground - 56, 0.78, -1);
+        drawCar(state.car.x - cameraX, state.car.y);
+      }
+
+      function drawHouse(x, y, i) {
+        ctx.fillStyle = ["#b5d6a7", "#f1c27d", "#b9b0e8"][i % 3];
+        ctx.fillRect(x, y, 120, 170);
+        ctx.fillStyle = "#d84b44";
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y + 18);
+        ctx.lineTo(x + 60, y - 38);
+        ctx.lineTo(x + 132, y + 18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#fff0bd";
+        ctx.fillRect(x + 20, y + 46, 28, 34);
+        ctx.fillRect(x + 72, y + 46, 28, 34);
+        ctx.fillStyle = "#5b3a2b";
+        ctx.fillRect(x + 45, y + 104, 34, 66);
+      }
+
+      function drawCar(x, y) {
+        ctx.fillStyle = "#e85d52";
+        ctx.fillRect(x, y, 108, 28);
+        ctx.fillStyle = "#ffb44a";
+        ctx.fillRect(x + 22, y - 24, 54, 26);
+        ctx.fillStyle = "#dff6ff";
+        ctx.fillRect(x + 30, y - 18, 20, 16);
+        ctx.fillStyle = "#26313b";
+        ctx.beginPath();
+        ctx.arc(x + 24, y + 30, 12, 0, Math.PI * 2);
+        ctx.arc(x + 84, y + 30, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawSceneBackground() {
+        if (state.scene === "earth") drawEarthBackground();
+        if (state.scene === "ocean") drawOceanBackground();
+        if (state.scene === "island") {
+          drawOceanBackground();
+        }
+        if (state.scene === "mine") drawMineBackground();
+        if (state.scene === "city") drawCityBackground();
       }
 
       function draw() {
         ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         ctx.save();
         ctx.scale(viewScale(), viewScale());
-        drawBackground();
-        state.clouds.forEach(drawCloud);
-        state.coins.forEach(drawCoin);
-        drawBakery();
-        if (bakery.inside) drawBakeryInterior();
+        drawSceneBackground();
+        if (state.scene === "earth") {
+          state.clouds.forEach(drawCloud);
+          state.coins.forEach(drawCoin);
+          drawBakery(bakery.x - cameraX, bakery.y, "面包店");
+        }
+        if (state.scene === "city") {
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "900 18px sans-serif";
+          ctx.fillText("按回车上车/下车，传送门店会卖传送门", 900 - cameraX, 112);
+        }
+        if (state.scene !== "mine") state.coins.forEach(drawCoin);
         drawPlayer();
         ctx.restore();
 
         if (flash) {
           ctx.fillStyle = "rgba(38, 49, 59, 0.82)";
-          ctx.fillRect(canvas.clientWidth / 2 - 70, 18, 140, 38);
+          ctx.fillRect(canvas.clientWidth / 2 - 82, 18, 164, 38);
           ctx.fillStyle = "#fffdf8";
           ctx.font = "900 18px sans-serif";
           ctx.textAlign = "center";
@@ -815,28 +976,16 @@
 
       window.addEventListener("resize", resize);
       window.addEventListener("keydown", (event) => {
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter"].includes(event.code)) {
-          event.preventDefault();
-        }
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter"].includes(event.code)) event.preventDefault();
         keys.add(event.code);
         if (event.repeat) return;
-        if (!bakery.inside && event.code === "Enter") {
+        if (event.code === "Enter") {
           startDrivingCloud();
+          tryBuildPortal();
+          tryUseCityThings();
         }
-        if (!bakery.inside && event.code === "ArrowUp" && enterBakeryIfNeeded()) {
-          enterBakery();
-        }
-        if (!bakery.inside && event.code === "ArrowDown") {
-          burrow();
-        }
-        if (bakery.inside && event.code === "ArrowUp" && playerAtCounter()) {
-          buyBread();
-        }
-        if (bakery.inside && (event.code === "Space" || /^Key[A-Z]$/.test(event.code))) {
-          eatBread();
-        } else if (!bakery.inside && (event.code === "Space" || /^Key[A-Z]$/.test(event.code))) {
-          jump();
-        }
+        if (event.code === "ArrowDown") burrow();
+        if (event.code === "Space" || /^Key[A-Z]$/.test(event.code)) jump();
       });
       window.addEventListener("keyup", (event) => keys.delete(event.code));
       resetButton.addEventListener("click", resetGame);
@@ -845,18 +994,10 @@
         const map = { left: "ArrowLeft", right: "ArrowRight", up: "ArrowUp", down: "ArrowDown" };
         const press = () => {
           const action = button.dataset.touch;
-          if (action === "jump") {
-            if (bakery.inside) eatBread();
-            else jump();
-          } else if (action === "up" && !bakery.inside && enterBakeryIfNeeded()) {
-            enterBakery();
-          } else if (action === "up" && bakery.inside && playerAtCounter()) {
-            buyBread();
-          } else if (action === "down" && !bakery.inside && state.activeCloudId === null) {
-            burrow();
+          if (action === "jump") jump();
+          else {
             keys.add(map[action]);
-          } else {
-            keys.add(map[action]);
+            if (action === "down") burrow();
           }
           canvas.focus();
         };
