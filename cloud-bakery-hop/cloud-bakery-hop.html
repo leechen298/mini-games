@@ -698,6 +698,11 @@
         if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
         if (move !== 0) p.facing = move;
 
+        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene) && keys.has("ArrowDown")) {
+          returnToCity();
+          return;
+        }
+
         if (state.scene === "ocean" || state.scene === "underwaterCity") {
           const swim = 250;
           let swimY = 0;
@@ -707,11 +712,6 @@
           p.y += swimY * swim * dt;
           p.y = Math.max(145, Math.min(550, p.y));
           if (state.scene === "ocean" && p.x > island.x - 40) setScene("island");
-          return;
-        }
-
-        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene) && keys.has("ArrowDown")) {
-          returnToCity();
           return;
         }
 
@@ -1285,7 +1285,13 @@
         if (event.code === "ArrowUp") {
           useCurrentPlace();
         }
-        if (event.code === "ArrowDown") burrow();
+        if (event.code === "ArrowDown") {
+          if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand"].includes(state.scene)) {
+            returnToCity();
+          } else {
+            burrow();
+          }
+        }
         if (event.code === "Space" || /^Key[A-Z]$/.test(event.code)) {
           if (!attackHelper()) jump();
         }
