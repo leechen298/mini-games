@@ -279,6 +279,7 @@
         worldShop: "世界商店",
         deathLand: "死亡之地",
         helperLand: "助手之地",
+        unknownWorld: "未知世界",
       };
       const oreTypes = [
         { key: "diamond", label: "钻石", color: "#7ee5ff" },
@@ -305,6 +306,13 @@
         { scene: "worldShop", label: "世界商店", color: "#f5c84c" },
         { scene: "deathLand", label: "死亡之地", color: "#40424d" },
         { scene: "helperLand", label: "助手之地", color: "#8ad36a" },
+      ];
+      const itemShopGoods = [
+        { key: "diamond", label: "钻石", x: 320, price: 5, color: "#7ee5ff" },
+        { key: "emerald", label: "绿宝石", x: 470, price: 5, color: "#45d16f" },
+        { key: "obsidian", label: "黑曜石", x: 620, price: 7, color: "#171923" },
+        { key: "water", label: "水", x: 770, price: 3, color: "#4db7ff" },
+        { key: "portal", label: "传送门", x: 930, price: 12, color: "#7d5cff" },
       ];
 
       let lastTime = 0;
@@ -339,11 +347,27 @@
         bread: 0,
         car: { x: 680, y: city.ground - 34, inCar: false },
         allies: 0,
+        robots: Array.from({ length: 4 }, (_, index) => ({
+          x: 360 + index * 220,
+          y: 360 + (index % 2) * 70,
+          beaten: false,
+        })),
+        wildDucks: Array.from({ length: 6 }, (_, index) => ({
+          x: 360 + index * 180,
+          y: city.ground - 46,
+          beaten: false,
+        })),
         helperEnemies: Array.from({ length: 5 }, (_, index) => ({
           x: 420 + index * 210,
           y: city.ground - 46,
           beaten: false,
         })),
+        hazards: Array.from({ length: 11 }, (_, index) => ({
+          x: 300 + index * 132,
+          y: 210 + (index % 4) * 82,
+          size: 34,
+        })),
+        dead: false,
       });
 
       let state = startState();
@@ -440,8 +464,9 @@
       }
 
       function toolText() {
+        if (state.dead) return "死翘翘";
         if (state.car.inCar) return "开车";
-        if (state.allies > 0) return `助手${state.allies}`;
+        if (state.allies > 0) return `伙伴${state.allies}`;
         if (state.portalBuilt) return "传送门";
         if (state.materials.obsidian >= 4 && state.materials.water >= 1) return "可造门";
         return "无";
@@ -521,6 +546,11 @@
           world.w = 1600;
           state.player.x = 120;
           state.player.y = city.ground - state.player.h;
+        }
+        if (scene === "unknownWorld") {
+          world.w = 1900;
+          state.player.x = 90;
+          state.player.y = 420;
         }
         cameraX = 0;
         showFlash(sceneNames[scene]);
@@ -641,14 +671,16 @@
       }
 
       function useItemShop() {
-        if (!nearX(620, 120)) return false;
-        if (state.score < 5) {
-          showFlash("要5金币");
+        const good = itemShopGoods.find((item) => nearX(item.x, 64));
+        if (!good) return false;
+        if (state.score < good.price) {
+          showFlash(`要${good.price}金币`);
           return true;
         }
-        state.score -= 5;
-        state.materials.diamond += 1;
-        showFlash("买到钻石");
+        state.score -= good.price;
+        if (good.key === "portal") state.portalBuilt = true;
+        else state.materials[good.key] += 1;
+        showFlash(`买到${good.label}`);
         return true;
       }
 
@@ -679,9 +711,29 @@
           state.score += 10;
           showFlash("世界商店金币+10");
         }
+        if (state.scene === "deathLand" && nearX(1420, 150)) {
+          setScene("unknownWorld");
+          showFlash("未知世界");
+        }
       }
 
       function attackHelper() {
+        if (state.scene === "underwaterCity") {
+          const robot = state.robots.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 82 && Math.abs(item.y - state.player.y) < 90);
+          if (!robot) return false;
+          robot.beaten = true;
+          state.allies += 1;
+          showFlash("机器人加入");
+          return true;
+        }
+        if (state.scene === "deathLand") {
+          const duck = state.wildDucks.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 80);
+          if (!duck) return false;
+          duck.beaten = true;
+          state.allies += 1;
+          showFlash("小鸭加入");
+          return true;
+        }
         if (state.scene !== "helperLand") return false;
         const enemy = state.helperEnemies.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 70);
         if (!enemy) return false;
@@ -771,6 +823,10 @@
 
       function update(dt) {
         const p = state.player;
+        if (state.dead) {
+          updateStats();
+          return;
+        }
         flashTime = Math.max(0, flashTime - dt);
         if (flashTime === 0) flash = "";
         const visibleWorldWidth = canvas.clientWidth / viewScale();
@@ -817,6 +873,28 @@
             if (!ore.got && circleRectOverlap(ore, playerRect)) {
               ore.got = true;
               collectMaterial(ore.type);
+            }
+          }
+        }
+
+        if (state.scene === "deathLand" && state.allies > 0) {
+          for (const duck of state.wildDucks) {
+            if (!duck.beaten && Math.abs(duck.x - p.x) < 170) {
+              duck.beaten = true;
+              state.allies += 1;
+              showFlash("伙伴帮你收服小鸭");
+              break;
+            }
+          }
+        }
+
+        if (state.scene === "unknownWorld") {
+          for (const hazard of state.hazards) {
+            const square = { x: hazard.x, y: hazard.y, w: hazard.size, h: hazard.size };
+            if (rectsOverlap(playerRect, square)) {
+              state.dead = true;
+              showFlash("死翘翘");
+              break;
             }
           }
         }
@@ -1126,13 +1204,15 @@
       function drawItemShop() {
         drawInteriorBase("道具店", "#e9f8ff");
         ctx.fillStyle = "#cf7848";
-        ctx.fillRect(460 - cameraX, city.ground - 86, 330, 42);
-        ctx.fillStyle = "#7ee5ff";
-        ctx.beginPath();
-        ctx.arc(620 - cameraX, city.ground - 120, 24, 0, Math.PI * 2);
-        ctx.fill();
-        drawLabel(620 - cameraX, city.ground - 154, "钻石 5金币");
-        drawDuck(820 - cameraX, city.ground - 56, 0.8, -1);
+        ctx.fillRect(230 - cameraX, city.ground - 86, 850, 42);
+        itemShopGoods.forEach((good) => {
+          ctx.fillStyle = good.color;
+          ctx.beginPath();
+          ctx.arc(good.x - cameraX, city.ground - 120, 22, 0, Math.PI * 2);
+          ctx.fill();
+          drawLabel(good.x - cameraX, city.ground - 158, `${good.label}${good.price}`);
+        });
+        drawDuck(1120 - cameraX, city.ground - 56, 0.8, -1);
       }
 
       function drawCraftShop() {
@@ -1165,7 +1245,12 @@
           ctx.strokeStyle = "#e6fbff";
           ctx.strokeRect(260 + i * 240 - cameraX, 430 - i * 18, 130, 160 + i * 18);
         }
+        state.robots.forEach((robot) => {
+          if (robot.beaten) return;
+          drawRobot(robot.x - cameraX, robot.y);
+        });
         drawLabel(640 - cameraX, 132, "地下水城");
+        drawLabel(760 - cameraX, 176, "空格收服机器人");
       }
 
       function drawWorldShop() {
@@ -1194,7 +1279,24 @@
           ctx.lineTo(i * 150 + 68 - (cameraX % 150), city.ground);
           ctx.fill();
         }
+        state.wildDucks.forEach((duck) => {
+          if (duck.beaten) {
+            drawDuck(duck.x - cameraX, duck.y, 0.72, -1);
+          } else {
+            ctx.fillStyle = "#6f2e42";
+            ctx.beginPath();
+            ctx.ellipse(duck.x + 24 - cameraX, duck.y + 28, 26, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            drawDuck(duck.x - cameraX, duck.y - 2, 0.72, -1);
+          }
+        });
+        ctx.strokeStyle = "#7d5cff";
+        ctx.lineWidth = 9;
+        ctx.strokeRect(1420 - cameraX, city.ground - 168, 92, 138);
+        ctx.fillStyle = "rgba(125, 92, 255, 0.45)";
+        ctx.fillRect(1432 - cameraX, city.ground - 156, 68, 114);
         drawLabel(620 - cameraX, 160, "死亡之地");
+        drawLabel(1466 - cameraX, city.ground - 190, "未知世界");
       }
 
       function drawHelperLand() {
@@ -1216,6 +1318,42 @@
         drawLabel(610 - cameraX, 140, "空格打败助手");
       }
 
+      function drawRobot(x, y) {
+        ctx.fillStyle = "#dbe8f2";
+        ctx.fillRect(x, y, 42, 34);
+        ctx.fillStyle = "#69c9ff";
+        ctx.fillRect(x + 8, y + 8, 8, 8);
+        ctx.fillRect(x + 26, y + 8, 8, 8);
+        ctx.fillStyle = "#5f6d78";
+        ctx.fillRect(x + 6, y + 34, 8, 10);
+        ctx.fillRect(x + 28, y + 34, 8, 10);
+      }
+
+      function drawFlyingAllies() {
+        const count = Math.min(state.allies, 6);
+        for (let i = 0; i < count; i += 1) {
+          const angle = performance.now() / 520 + i * 1.08;
+          const x = state.player.x - cameraX - 42 + Math.cos(angle) * 42;
+          const y = state.player.y - 34 + Math.sin(angle) * 18;
+          if (i % 2 === 0) drawRobot(x, y);
+          else drawDuck(x, y, 0.58, state.player.facing);
+        }
+      }
+
+      function drawUnknownWorld() {
+        const scale = viewScale();
+        const w = canvas.clientWidth / scale;
+        ctx.fillStyle = "#080912";
+        ctx.fillRect(0, 0, w, world.h);
+        ctx.fillStyle = "#222850";
+        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        state.hazards.forEach((hazard) => {
+          ctx.fillStyle = "#ff4d6d";
+          ctx.fillRect(hazard.x - cameraX, hazard.y, hazard.size, hazard.size);
+        });
+        drawLabel(650 - cameraX, 110, "未知世界：别碰小方块");
+      }
+
       function drawSceneBackground() {
         if (state.scene === "earth") drawEarthBackground();
         if (state.scene === "ocean") drawOceanBackground();
@@ -1232,6 +1370,7 @@
         if (state.scene === "worldShop") drawWorldShop();
         if (state.scene === "deathLand") drawDeathLand();
         if (state.scene === "helperLand") drawHelperLand();
+        if (state.scene === "unknownWorld") drawUnknownWorld();
       }
 
       function draw() {
@@ -1251,6 +1390,7 @@
         }
         if (state.scene === "earth" || state.scene === "city") state.coins.forEach(drawCoin);
         drawPlayer();
+        if (!state.dead) drawFlyingAllies();
         ctx.restore();
 
         if (flash) {
