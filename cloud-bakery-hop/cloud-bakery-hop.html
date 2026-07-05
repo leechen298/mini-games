@@ -384,6 +384,7 @@
           claimed: false,
           fall: 0,
         })),
+        unknownPortalOpen: false,
         dead: false,
       });
 
@@ -744,8 +745,12 @@
           showFlash("未知世界");
         }
         if (state.scene === "unknownWorld" && nearX(1580, 150)) {
-          setScene("planet");
-          showFlash("伙伴星球");
+          if (state.unknownPortalOpen) {
+            setScene("fallPlanet");
+            showFlash("掉落星球");
+          } else {
+            showFlash("先碰绿色方块");
+          }
         }
         if (state.scene === "planet" && nearX(1580, 150)) {
           setScene("fallPlanet");
@@ -854,6 +859,12 @@
           return;
         }
 
+        if (state.allies >= 20 && keys.has("ArrowUp")) {
+          p.y = Math.max(72, p.y - 330 * dt);
+          p.vy = 0;
+          p.onGround = false;
+        }
+
         const walkSpeed = state.scene === "city" ? 260 : 230;
         p.x += move * walkSpeed * dt;
         if (state.scene === "earth" && keys.has("ArrowDown")) burrow();
@@ -880,7 +891,8 @@
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
         const ground = currentGround();
-        if (!p.buried && state.scene !== "ocean" && state.scene !== "underwaterCity" && !state.car.inCar) {
+        const flyingInvincible = state.allies >= 20 && p.y + p.h < ground - 2;
+        if (!p.buried && state.scene !== "ocean" && state.scene !== "underwaterCity" && !state.car.inCar && !flyingInvincible) {
           p.vy += gravity * dt;
           p.y += p.vy * dt;
           if (p.y + p.h >= ground) {
@@ -948,6 +960,13 @@
           for (const hazard of state.hazards) {
             const square = { x: hazard.x, y: hazard.y, w: hazard.size, h: hazard.size };
             const safe = Math.sin(Date.now() / 520 + hazard.offset) > 0;
+            if (safe && rectsOverlap(playerRect, square)) {
+              if (!state.unknownPortalOpen) {
+                state.unknownPortalOpen = true;
+                showFlash("传送门打开");
+              }
+              continue;
+            }
             if (!safe && state.allies < 20 && rectsOverlap(playerRect, square)) {
               state.dead = true;
               showFlash("死翘翘");
@@ -1435,14 +1454,18 @@
           ctx.fillStyle = safe ? "#4ee06f" : "#ff4d6d";
           ctx.fillRect(hazard.x - cameraX, hazard.y, hazard.size, hazard.size);
         });
-        ctx.strokeStyle = "#7d5cff";
-        ctx.lineWidth = 9;
-        ctx.strokeRect(1580 - cameraX, city.ground - 168, 92, 138);
-        ctx.fillStyle = "rgba(125, 92, 255, 0.45)";
-        ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
-        drawLabel(650 - cameraX, 110, "未知世界：别碰小方块");
-        drawLabel(1626 - cameraX, city.ground - 190, "星球");
-        if (state.allies >= 20) drawLabel(920 - cameraX, 150, "无敌模式");
+        drawLabel(650 - cameraX, 110, "未知世界：碰绿色方块开门");
+        if (state.unknownPortalOpen) {
+          ctx.strokeStyle = "#7d5cff";
+          ctx.lineWidth = 9;
+          ctx.strokeRect(1580 - cameraX, city.ground - 168, 92, 138);
+          ctx.fillStyle = "rgba(125, 92, 255, 0.45)";
+          ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
+          drawLabel(1626 - cameraX, city.ground - 190, "掉落星球");
+        } else {
+          drawLabel(1580 - cameraX, city.ground - 178, "门还没打开");
+        }
+        if (state.allies >= 20) drawLabel(920 - cameraX, 150, "无敌飞行");
       }
 
       function drawPlanet() {
