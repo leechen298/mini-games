@@ -294,6 +294,7 @@
       const island = { x: 520, y: 382, w: 700, h: 210, holeX: 835 };
       const portal = { x: 1150, y: 465, w: 96, h: 130 };
       const city = { ground: 596 };
+      const cityBlockWidth = 1840;
       const cityDoors = [
         { x: 265, w: 54, scene: "house", label: "家" },
         { x: 495, w: 54, scene: "house", label: "家" },
@@ -348,6 +349,8 @@
         score: 0,
         bread: 0,
         car: { x: 680, y: city.ground - 34, inCar: false },
+        cityReturnX: 1200,
+        nextCityCoinX: 210,
         allies: 0,
         robots: Array.from({ length: 4 }, (_, index) => ({
           x: 360 + index * 220,
@@ -376,9 +379,9 @@
           offset: index * 0.7,
         })),
         fallBlocks: Array.from({ length: 13 }, (_, index) => ({
-          x: 180 + index * 118,
-          y: 500 - (index % 3) * 54,
-          w: 88,
+          x: 150 + index * 106,
+          y: 500 - (index % 3) * 38,
+          w: 104,
           h: 24,
           bonus: index === 4 || index === 10,
           claimed: false,
@@ -414,22 +417,22 @@
 
       function buildWorld() {
         state.coins = [
-          ...makeCoinLine(150, 1040, world.ground - 42, 16, 56),
-          ...makeCoinLine(1292, 1532, world.ground - 44, 5, 54),
-          ...makeCoinLine(180, 1540, world.ground + 74, 18, 78),
-          ...makeCoinLine(250, 1600, world.ground + 118, 17, 84),
+          ...makeCoinLine(150, 1040, world.ground - 42, 16, 56, "earth"),
+          ...makeCoinLine(1292, 1532, world.ground - 44, 5, 54, "earth"),
         ];
         ensureWorldAhead(2400);
+        ensureCityAhead(2400);
         buildMine();
       }
 
-      function makeCoinLine(startX, endX, y, count, step) {
+      function makeCoinLine(startX, endX, y, count, step, scene = "earth") {
         return Array.from({ length: count }, (_, index) => ({
           x: count === 1 ? startX : startX + index * step,
           y,
           r: 13,
           got: false,
           respawn: 0,
+          scene,
         })).filter((coin) => coin.x <= endX);
       }
 
@@ -453,13 +456,18 @@
         while (state.nextCloudX < targetX) {
           const cloud = makeCloud(state.nextCloudX);
           state.clouds.push(cloud);
-          state.coins.push(...makeCoinLine(cloud.x + 38, cloud.x + cloud.w - 30, cloud.y - 46, 3, 38));
-          if (cloud.id % 2 === 0) {
-            state.coins.push(...makeCoinLine(cloud.x + 8, cloud.x + 240, world.ground + 92, 4, 72));
-          }
+          state.coins.push(...makeCoinLine(cloud.x + 38, cloud.x + cloud.w - 30, cloud.y - 46, 3, 38, "earth"));
           state.nextCloudX += 146 + (cloud.id % 4) * 18;
         }
         world.w = Math.max(world.w, targetX + 520, bakery.x + bakery.w + 180);
+      }
+
+      function ensureCityAhead(targetX) {
+        while (state.nextCityCoinX < targetX) {
+          state.coins.push(...makeCoinLine(state.nextCityCoinX, state.nextCityCoinX + 190, city.ground - 42, 4, 54, "city"));
+          state.nextCityCoinX += 360;
+        }
+        if (state.scene === "city") world.w = Math.max(world.w, targetX + 900);
       }
 
       function buildMine() {
@@ -537,7 +545,7 @@
           state.player.y = world.ground - state.player.h;
         }
         if (scene === "city") {
-          world.w = 2200;
+          world.w = Math.max(2600, state.cityReturnX + 1000);
           state.player.x = 100;
           state.player.y = city.ground - state.player.h;
         }
@@ -673,18 +681,34 @@
         return Math.abs(state.player.x - x) < distance;
       }
 
-      function returnToCity(x = 1200) {
+      function cityDoorAt(x, w = 48) {
+        const startBlock = Math.floor((x - cityBlockWidth) / cityBlockWidth);
+        for (let block = startBlock; block <= startBlock + 3; block += 1) {
+          const offset = block * cityBlockWidth;
+          const door = cityDoors.find((item) => x + w > offset + item.x && x < offset + item.x + item.w);
+          if (door) return { ...door, worldX: offset + door.x };
+        }
+        return null;
+      }
+
+      function cityDoorCenter(door) {
+        return door.worldX + door.w / 2 - state.player.w / 2;
+      }
+
+      function returnToCity(x = state.cityReturnX || 1200) {
         setScene("city");
         state.player.x = x;
         state.player.y = city.ground - state.player.h;
+        ensureCityAhead(state.player.x + 1200);
         cameraX = Math.max(0, state.player.x - 420);
       }
 
       function tryEnterDoor() {
         const p = state.player;
         if (state.scene !== "city" || state.car.inCar) return false;
-        const door = cityDoors.find((item) => p.x + p.w > item.x && p.x < item.x + item.w);
+        const door = cityDoorAt(p.x, p.w);
         if (!door) return false;
+        state.cityReturnX = cityDoorCenter(door);
         setScene(door.scene);
         showFlash(`进入${door.label}`);
         return true;
@@ -887,6 +911,7 @@
         if (flashTime === 0) flash = "";
         const visibleWorldWidth = canvas.clientWidth / viewScale();
         if (state.scene === "earth") ensureWorldAhead(cameraX + visibleWorldWidth + 1200);
+        if (state.scene === "city") ensureCityAhead(cameraX + visibleWorldWidth + 1400);
         handleInput(dt);
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
@@ -978,10 +1003,8 @@
         if (state.scene === "fallPlanet") {
           let landed = false;
           for (const block of state.fallBlocks) {
-            const hot = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
-            if (hot) block.fall = Math.min(150, block.fall + 90 * dt);
-            else block.fall = Math.max(0, block.fall - 120 * dt);
-            const platform = { x: block.x, y: block.y + block.fall, w: block.w, h: block.h };
+            block.fall = 0;
+            const platform = { x: block.x, y: block.y, w: block.w, h: block.h };
             const onTop = p.vy >= 0 && p.y + p.h <= platform.y + 26 && rectsOverlap(playerRect, platform);
             if (onTop) {
               p.y = platform.y - p.h;
@@ -1002,7 +1025,7 @@
         }
 
         for (const coin of state.coins) {
-          const visibleInScene = state.scene === "earth" || (state.scene === "city" && coin.y < city.ground);
+          const visibleInScene = coin.scene === state.scene;
           if (!visibleInScene) continue;
           if (coin.got) {
             coin.respawn -= dt;
@@ -1216,14 +1239,19 @@
         ctx.fillRect(0, 0, w, world.h);
         ctx.fillStyle = "#6c737f";
         ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
-        for (let i = 0; i < 6; i += 1) {
-          const houseX = 220 + i * 230;
-          const door = cityDoors[i];
-          drawHouse(houseX - cameraX, city.ground - 170, i, door?.label || "家");
+        const firstBlock = Math.max(0, Math.floor(cameraX / cityBlockWidth) - 1);
+        const lastBlock = Math.ceil((cameraX + w) / cityBlockWidth) + 1;
+        for (let block = firstBlock; block <= lastBlock; block += 1) {
+          const offset = block * cityBlockWidth;
+          for (let i = 0; i < 6; i += 1) {
+            const houseX = offset + 220 + i * 230;
+            const door = cityDoors[i];
+            drawHouse(houseX - cameraX, city.ground - 170, i, door?.label || "家");
+          }
+          drawBakery(offset + 1480 - cameraX, city.ground - 288, "传送门店");
+          drawDuck(offset + 1536 - cameraX, city.ground - 56, 0.78, -1);
+          drawLabel(offset + 1650 - cameraX, city.ground - 308, "按上进门");
         }
-        drawBakery(1480 - cameraX, city.ground - 288, "传送门店");
-        drawDuck(1536 - cameraX, city.ground - 56, 0.78, -1);
-        drawLabel(1650 - cameraX, city.ground - 308, "按上进门");
         drawCar(state.car.x - cameraX, state.car.y);
       }
 
@@ -1507,12 +1535,12 @@
         ctx.fillStyle = "#3c2f70";
         ctx.fillRect(-cameraX, world.h - 42, world.w, 42);
         state.fallBlocks.forEach((block) => {
-          const hot = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
-          ctx.fillStyle = hot ? "#ff4d6d" : block.bonus && !block.claimed ? "#f5c84c" : "#4ee06f";
-          ctx.fillRect(block.x - cameraX, block.y + block.fall, block.w, block.h);
-          if (block.bonus && !block.claimed) drawLabel(block.x + block.w / 2 - cameraX, block.y + block.fall - 16, "500");
+          const glow = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
+          ctx.fillStyle = block.bonus && !block.claimed ? "#f5c84c" : glow ? "#80f08e" : "#4ee06f";
+          ctx.fillRect(block.x - cameraX, block.y, block.w, block.h);
+          if (block.bonus && !block.claimed) drawLabel(block.x + block.w / 2 - cameraX, block.y - 16, "500");
         });
-        drawLabel(660 - cameraX, 120, "红方块会掉，跳到绿色方块");
+        drawLabel(660 - cameraX, 120, "方块不会掉，什么时候都能跳");
       }
 
       function drawSceneBackground() {
@@ -1543,15 +1571,15 @@
         drawSceneBackground();
         if (state.scene === "earth") {
           state.clouds.forEach(drawCloud);
-          state.coins.forEach(drawCoin);
+          state.coins.filter((coin) => coin.scene === "earth").forEach(drawCoin);
           drawBakery(bakery.x - cameraX, bakery.y, "面包店");
         }
         if (state.scene === "city") {
           ctx.fillStyle = "#ffffff";
           ctx.font = "900 18px sans-serif";
           ctx.fillText("每扇门都能按上进入；回车上车/下车", 780 - cameraX, 112);
+          state.coins.filter((coin) => coin.scene === "city").forEach(drawCoin);
         }
-        if (state.scene === "earth" || state.scene === "city") state.coins.forEach(drawCoin);
         drawPlayer();
         if (!state.dead) drawFlyingAllies();
         ctx.restore();
