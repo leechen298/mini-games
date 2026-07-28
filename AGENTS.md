@@ -8,7 +8,7 @@
 
 - `word-spelling-practice-duck/word-spelling-practice-duck.html`
 - `duck-letter-hop/duck-letter-hop.html`
-- `cloud-bakery-hop/cloud-bakery-hop.html`
+- `duck-world-adventure/duck-world-adventure.html`
 - `duck-market-hop/duck-market-hop.html`
 - `xiao-yaya-daily/xiao-yaya-daily.html`
 
@@ -58,7 +58,7 @@ python3 -m http.server 8000
 
 - `http://localhost:8000/word-spelling-practice-duck/word-spelling-practice-duck.html`
 - `http://localhost:8000/duck-letter-hop/duck-letter-hop.html`
-- `http://localhost:8000/cloud-bakery-hop/cloud-bakery-hop.html`
+- `http://localhost:8000/duck-world-adventure/duck-world-adventure.html`
 - `http://localhost:8000/duck-market-hop/duck-market-hop.html`
 - `http://localhost:8000/xiao-yaya-daily/xiao-yaya-daily.html`
 
