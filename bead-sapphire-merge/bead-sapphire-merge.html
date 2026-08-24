@@ -222,6 +222,11 @@
         border-radius: 7px 7px 12px 12px;
         background: radial-gradient(circle at 50% 65%, #ef5b63 0 18%, transparent 20%), #f4fdff;
       }
+      .token.earth { border: 2px solid #fff; background: radial-gradient(ellipse at 35% 38%, #4fbd70 0 20%, transparent 22%), #2e91dd; }
+      .token.sun { background: radial-gradient(circle, #fff4a0, #f8b42c 62%, #ee7624); box-shadow: 0 0 8px #f8b42c; }
+      .token.uranus { background: #7ce0e4; box-shadow: inset -4px -5px 6px rgba(0,0,0,.12), 0 0 0 3px #b8f4f5; }
+      .token.solar { background: radial-gradient(circle, #ffd44d 0 16%, #29396f 18% 100%); border: 2px solid #8ea7ff; }
+      .token.black { background: #080b12; box-shadow: 0 0 9px #7656d9; }
 
       .stats {
         display: grid;
@@ -302,8 +307,8 @@
   <body>
     <main class="app">
       <header class="topbar">
-        <h1>滚滚宝石合成</h1>
-        <div class="goal">🏺 纪念瓷瓶 <span id="bottleCount">0</span>/1</div>
+        <h1 id="gameTitle">滚滚宝石合成</h1>
+        <div class="goal"><span id="goalEmoji">🏺</span> <span id="goalLabel">纪念瓷瓶</span> <span id="goalCount">0</span><span id="goalTotal">/1</span></div>
       </header>
 
       <section class="layout">
@@ -335,6 +340,11 @@
               <div class="chain-step"><i class="token gem emerald"></i><span>两颗绿宝石</span><i class="token gem ice"></i></div>
               <div class="chain-step"><i class="token gem ice"></i><span>第一遍两颗冰宝石</span><i class="token bomb"></i></div>
               <div class="chain-step"><i class="token gem ice"></i><span>第二遍两颗冰宝石</span><i class="token bottle"></i></div>
+              <div class="chain-step"><i class="token bottle"></i><span>瓷瓶分裂</span><i class="token earth"></i></div>
+              <div class="chain-step"><i class="token earth"></i><span>两颗地球</span><i class="token sun"></i></div>
+              <div class="chain-step"><i class="token sun"></i><span>太阳分裂</span><i class="token uranus"></i></div>
+              <div class="chain-step"><i class="token uranus"></i><span>两颗天王星</span><i class="token solar"></i></div>
+              <div class="chain-step"><i class="token solar"></i><span>太阳系爆出</span><i class="token black"></i></div>
             </div>
           </section>
 
@@ -361,9 +371,9 @@
 
     <div id="win" class="win" hidden>
       <div class="win-card">
-        <div class="big-gem">🏺</div>
-        <h2>得到纪念瓷瓶啦！</h2>
-        <p>你完成了两遍宝石合成，小瓷瓶里装着一颗特别的纪念珠！</p>
+        <div class="big-gem">🧒 ✨</div>
+        <h2>丢失的物品全找回啦！</h2>
+        <p>黑色珠子变成的小人找回了所有珠子和宝石，宇宙寻物任务完成！</p>
         <button id="againButton" class="action primary" type="button">再玩一次</button>
       </div>
     </div>
@@ -378,7 +388,12 @@
         emerald: { name: "绿宝石", color: "#07986a", next: "ice", radius: 30, gem: true },
         ice: { name: "冰宝石", color: "#76dff5", next: null, radius: 31, gem: true },
         bomb: { name: "炸弹", color: "#202b36", next: null, radius: 35, gem: false },
-        bottle: { name: "纪念瓷瓶", color: "#eafaff", next: null, radius: 34, gem: false }
+        bottle: { name: "纪念瓷瓶", color: "#eafaff", next: null, radius: 34, gem: false },
+        earth: { name: "地球", color: "#2e91dd", next: "sun", radius: 36, gem: false },
+        sun: { name: "太阳", color: "#f8b42c", next: null, radius: 39, gem: false },
+        uranus: { name: "天王星", color: "#7ce0e4", next: "solar", radius: 35, gem: false },
+        solar: { name: "太阳系", color: "#29396f", next: null, radius: 43, gem: false },
+        black: { name: "黑色珠子", color: "#080b12", next: null, radius: 35, gem: false }
       };
 
       const START_TYPES = ["blue", "green", "red"];
@@ -389,9 +404,14 @@
       const nextNameElement = document.querySelector("#nextName");
       const queueCountElement = document.querySelector("#queueCount");
       const ballCountElement = document.querySelector("#ballCount");
-      const bottleCountElement = document.querySelector("#bottleCount");
+      const gameTitleElement = document.querySelector("#gameTitle");
+      const goalEmojiElement = document.querySelector("#goalEmoji");
+      const goalLabelElement = document.querySelector("#goalLabel");
+      const goalCountElement = document.querySelector("#goalCount");
+      const goalTotalElement = document.querySelector("#goalTotal");
       const roundNumberElement = document.querySelector("#roundNumber");
       const winElement = document.querySelector("#win");
+      const shakeButton = document.querySelector("#shakeButton");
 
       let width = 700;
       let height = 620;
@@ -405,6 +425,12 @@
       let idCounter = 0;
       let mergeFlash = [];
       let sparks = [];
+      let gameMode = "merge";
+      let hero = null;
+      let lostItems = [];
+      let foundCount = 0;
+      let hintGlow = 0;
+      const pressedKeys = new Set();
 
       function shuffledQueue() {
         const items = START_TYPES.flatMap(type => Array(20).fill(type));
@@ -434,6 +460,14 @@
             ball.y *= scaleY;
           });
         }
+        if (oldWidth && oldHeight && hero) {
+          hero.x *= width / oldWidth;
+          hero.y *= height / oldHeight;
+          lostItems.forEach(item => {
+            item.x *= width / oldWidth;
+            item.y *= height / oldHeight;
+          });
+        }
         dropX = Math.max(40, Math.min(width - 40, dropX * (width / oldWidth)));
       }
 
@@ -442,11 +476,30 @@
       }
 
       function updateInfo() {
+        if (gameMode === "search") {
+          gameTitleElement.textContent = "小人的寻物冒险";
+          goalEmojiElement.textContent = "🔎";
+          goalLabelElement.textContent = "找回物品";
+          goalCountElement.textContent = foundCount;
+          goalTotalElement.textContent = `/${lostItems.length}`;
+          queueCountElement.textContent = "—";
+          ballCountElement.textContent = lostItems.length - foundCount;
+          roundNumberElement.textContent = "寻物";
+          nextBallElement.hidden = true;
+          nextNameElement.textContent = "用四个方向键寻找";
+          shakeButton.textContent = "✨ 提示位置";
+          return;
+        }
         const nextType = queue[0];
+        gameTitleElement.textContent = "滚滚宝石合成";
+        goalEmojiElement.textContent = "🏺";
+        goalLabelElement.textContent = "宇宙变化";
+        goalCountElement.textContent = balls.some(ball => ["bottle", "earth", "sun", "uranus", "solar", "black"].includes(ball.type)) ? 1 : 0;
+        goalTotalElement.textContent = "/1";
         queueCountElement.textContent = queue.length;
         ballCountElement.textContent = balls.length;
-        bottleCountElement.textContent = balls.filter(ball => ball.type === "bottle").length;
         roundNumberElement.textContent = round;
+        shakeButton.textContent = "↔ 晃一晃";
         nextBallElement.hidden = !nextType;
         nextNameElement.textContent = nextType ? TYPE_INFO[nextType].name : "全部落下了";
         if (nextType) nextBallElement.style.background = TYPE_INFO[nextType].color;
@@ -468,7 +521,7 @@
       }
 
       function dropBall() {
-        if (!queue.length || won) return;
+        if (!queue.length || won || gameMode !== "merge") return;
         const type = queue.shift();
         balls.push(makeBall(type, dropX, 82, (Math.random() - .5) * 1.2, 0));
         setMessage(`${TYPE_INFO[type].name}落下来了，左右晃一晃让相同的碰到！`);
@@ -576,8 +629,79 @@
         }
       }
 
+      function splitBall(ball, newType, spread = 28) {
+        balls = balls.filter(item => item.id !== ball.id);
+        balls.push(
+          makeBall(newType, ball.x - spread, ball.y, -2.3, -4.8),
+          makeBall(newType, ball.x + spread, ball.y, 2.3, -4.8)
+        );
+        mergeFlash.push({ x: ball.x, y: ball.y, life: 1.8, color: TYPE_INFO[newType].color });
+        updateInfo();
+      }
+
+      function createLostItems() {
+        const types = ["blue", "green", "red", "sapphire", "ruby", "emerald", "ice", "bottle"];
+        return types.map((type, index) => {
+          const column = index % 4;
+          const row = Math.floor(index / 4);
+          return {
+            id: `lost-${index}`,
+            type,
+            x: width * (.16 + column * .225) + (Math.random() - .5) * 24,
+            y: height * (.28 + row * .46) + (Math.random() - .5) * 26,
+            radius: Math.min(23, TYPE_INFO[type].radius),
+            angle: Math.random() * Math.PI * 2,
+            found: false
+          };
+        });
+      }
+
+      function startSearchGame(x, y) {
+        gameMode = "search";
+        queue = [];
+        balls = [];
+        sparks = [];
+        hero = { x: Math.max(34, Math.min(width - 34, x)), y: Math.max(100, Math.min(height - 40, y)), radius: 22 };
+        lostItems = createLostItems();
+        foundCount = 0;
+        hintGlow = 2;
+        setMessage("黑色珠子变成了小人！用四个方向键寻找 8 件丢失的物品！");
+        updateInfo();
+      }
+
+      function updateSearch(step) {
+        if (!hero || won) return;
+        const speed = 4.2 * step;
+        if (pressedKeys.has("ArrowLeft")) hero.x -= speed;
+        if (pressedKeys.has("ArrowRight")) hero.x += speed;
+        if (pressedKeys.has("ArrowUp")) hero.y -= speed;
+        if (pressedKeys.has("ArrowDown")) hero.y += speed;
+        hero.x = Math.max(hero.radius + 12, Math.min(width - hero.radius - 12, hero.x));
+        hero.y = Math.max(92 + hero.radius, Math.min(height - hero.radius - 12, hero.y));
+        hintGlow = Math.max(0, hintGlow - .012 * step);
+
+        lostItems.forEach(item => {
+          if (item.found) return;
+          const dx = item.x - hero.x;
+          const dy = item.y - hero.y;
+          if (Math.hypot(dx, dy) < hero.radius + item.radius + 7) {
+            item.found = true;
+            foundCount += 1;
+            mergeFlash.push({ x: item.x, y: item.y, life: 1.4, color: TYPE_INFO[item.type].color });
+            setMessage(`找到了${TYPE_INFO[item.type].name}！还差 ${lostItems.length - foundCount} 件。`);
+            updateInfo();
+          }
+        });
+
+        if (foundCount === lostItems.length && !won) {
+          won = true;
+          setMessage("所有丢失的物品都找回来啦！");
+          window.setTimeout(() => { winElement.hidden = false; }, 650);
+        }
+      }
+
       function handleSpecialStages() {
-        if (won) return;
+        if (won || gameMode !== "merge") return;
         const bomb = balls.find(ball => ball.type === "bomb");
         if (bomb && performance.now() - bomb.bornAt > 950) {
           makeExplosion(bomb.x, bomb.y);
@@ -594,15 +718,58 @@
 
         const bottle = balls.find(ball => ball.type === "bottle");
         if (bottle && performance.now() - bottle.bornAt > 800) {
-          balls = [bottle];
-          setMessage("纪念瓷瓶完成啦，里面装着一颗特别的纪念珠！");
+          splitBall(bottle, "earth", 30);
+          setMessage("纪念瓷瓶分裂成了两个会滚动的地球！");
+          return;
+        }
+
+        const sun = balls.find(ball => ball.type === "sun");
+        if (sun && performance.now() - sun.bornAt > 950) {
+          splitBall(sun, "uranus", 32);
+          setMessage("太阳分裂成了两个天王星！");
+          return;
+        }
+
+        const solar = balls.find(ball => ball.type === "solar");
+        if (solar && performance.now() - solar.bornAt > 950) {
+          balls = balls.filter(ball => ball.id !== solar.id);
+          balls.push(makeBall("black", solar.x, solar.y, 0, -2.5));
+          queue = [];
+          mergeFlash.push({ x: solar.x, y: solar.y, life: 2, color: "#7656d9" });
+          setMessage("太阳系爆出了一颗黑色珠子，它开始吸走所有东西！");
           updateInfo();
-          won = true;
-          window.setTimeout(() => { winElement.hidden = false; }, 650);
+          return;
+        }
+
+        const black = balls.find(ball => ball.type === "black");
+        if (black) {
+          const others = balls.filter(ball => ball.id !== black.id);
+          others.forEach(ball => {
+            const dx = black.x - ball.x;
+            const dy = black.y - ball.y;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            ball.vx += dx / distance * .2;
+            ball.vy += dy / distance * .2;
+          });
+          const swallowed = new Set(others.filter(ball => Math.hypot(ball.x - black.x, ball.y - black.y) < black.radius + 9).map(ball => ball.id));
+          if (swallowed.size) {
+            balls = balls.filter(ball => !swallowed.has(ball.id));
+            black.radius = Math.min(54, black.radius + swallowed.size * 2);
+          }
+          const blackAge = performance.now() - black.bornAt;
+          if ((balls.length === 1 && blackAge > 900) || blackAge > 4200) {
+            startSearchGame(black.x, black.y);
+          }
         }
       }
 
       function updatePhysics(step) {
+        if (gameMode === "search") {
+          updateSearch(step);
+          mergeFlash.forEach(flash => { flash.life -= .035 * step; });
+          mergeFlash = mergeFlash.filter(flash => flash.life > 0);
+          return;
+        }
         const wall = 15;
         horizontalPush *= .972;
         balls.forEach(ball => {
@@ -720,6 +887,119 @@
           return;
         }
 
+        if (ball.type === "earth") {
+          const ocean = context.createRadialGradient(-12, -14, 2, 0, 0, ball.radius * 1.15);
+          ocean.addColorStop(0, "#a2ecff");
+          ocean.addColorStop(.3, "#2e91dd");
+          ocean.addColorStop(1, "#13539c");
+          context.fillStyle = ocean;
+          context.strokeStyle = "rgba(255,255,255,.85)";
+          context.lineWidth = 3;
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+          context.shadowColor = "transparent";
+          context.fillStyle = "#50bd70";
+          context.beginPath();
+          context.ellipse(-10, -5, 13, 19, -.55, 0, Math.PI * 2);
+          context.ellipse(15, 13, 12, 8, .4, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+          return;
+        }
+
+        if (ball.type === "sun") {
+          context.shadowColor = "#f8b42c";
+          context.shadowBlur = 18;
+          context.strokeStyle = "#f8b42c";
+          context.lineWidth = 5;
+          for (let index = 0; index < 12; index += 1) {
+            const angle = index * Math.PI / 6;
+            context.beginPath();
+            context.moveTo(Math.cos(angle) * 43, Math.sin(angle) * 43);
+            context.lineTo(Math.cos(angle) * 52, Math.sin(angle) * 52);
+            context.stroke();
+          }
+          const sunGlow = context.createRadialGradient(-10, -12, 2, 0, 0, ball.radius);
+          sunGlow.addColorStop(0, "#fff9bd");
+          sunGlow.addColorStop(.55, "#ffd34f");
+          sunGlow.addColorStop(1, "#ed7625");
+          context.fillStyle = sunGlow;
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+          return;
+        }
+
+        if (ball.type === "uranus") {
+          context.shadowColor = "transparent";
+          context.strokeStyle = "rgba(75,139,169,.7)";
+          context.lineWidth = 6;
+          context.beginPath();
+          context.ellipse(0, 0, ball.radius + 12, 12, -.35, 0, Math.PI * 2);
+          context.stroke();
+          const planet = context.createRadialGradient(-10, -12, 2, 0, 0, ball.radius);
+          planet.addColorStop(0, "#e4ffff");
+          planet.addColorStop(.4, "#7ce0e4");
+          planet.addColorStop(1, "#328ca7");
+          context.fillStyle = planet;
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.strokeStyle = "rgba(255,255,255,.8)";
+          context.lineWidth = 3;
+          context.stroke();
+          context.restore();
+          return;
+        }
+
+        if (ball.type === "solar") {
+          context.shadowColor = "#7186e8";
+          context.shadowBlur = 16;
+          context.fillStyle = "#17234d";
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.shadowColor = "transparent";
+          context.strokeStyle = "#8ea7ff";
+          context.lineWidth = 2;
+          [15, 25, 35].forEach(radius => {
+            context.beginPath();
+            context.ellipse(0, 0, radius, radius * .42, -.35, 0, Math.PI * 2);
+            context.stroke();
+          });
+          context.fillStyle = "#ffd44d";
+          context.beginPath();
+          context.arc(0, 0, 7, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "#76dff5";
+          context.beginPath();
+          context.arc(24, -8, 4, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+          return;
+        }
+
+        if (ball.type === "black") {
+          context.shadowColor = "#7656d9";
+          context.shadowBlur = 22;
+          const darkness = context.createRadialGradient(-8, -10, 1, 0, 0, ball.radius);
+          darkness.addColorStop(0, "#4b4a64");
+          darkness.addColorStop(.35, "#111521");
+          darkness.addColorStop(1, "#000000");
+          context.fillStyle = darkness;
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.strokeStyle = "#8b6ee8";
+          context.lineWidth = 3;
+          context.stroke();
+          context.restore();
+          return;
+        }
+
         const gradient = context.createRadialGradient(-ball.radius * .35, -ball.radius * .38, 2, 0, 0, ball.radius * 1.15);
         gradient.addColorStop(0, "#ffffff");
         gradient.addColorStop(.2, info.color);
@@ -767,24 +1047,117 @@
         context.restore();
       }
 
-      function draw(now) {
-        context.clearRect(0, 0, width, height);
+      function drawHero(now) {
+        if (!hero) return;
+        const bob = Math.sin(now / 150) * 2;
+        context.save();
+        context.translate(hero.x, hero.y + bob);
+        context.strokeStyle = "#173451";
+        context.lineWidth = 5;
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(-8, 17);
+        context.lineTo(-13, 32);
+        context.moveTo(8, 17);
+        context.lineTo(13, 32);
+        context.moveTo(-14, 3);
+        context.lineTo(-25, 13);
+        context.moveTo(14, 3);
+        context.lineTo(25, 13);
+        context.stroke();
+        context.fillStyle = "#ffd45e";
+        context.beginPath();
+        context.roundRect(-16, -2, 32, 25, 9);
+        context.fill();
+        context.fillStyle = "#080b12";
+        context.beginPath();
+        context.arc(0, 10, 6, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#ffd5b4";
+        context.beginPath();
+        context.arc(0, -17, 17, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#29394d";
+        context.beginPath();
+        context.arc(0, -22, 17, Math.PI, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#173451";
+        context.beginPath();
+        context.arc(-6, -16, 2, 0, Math.PI * 2);
+        context.arc(6, -16, 2, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
 
-        const background = context.createLinearGradient(0, 0, 0, height);
-        background.addColorStop(0, "#eefbff");
-        background.addColorStop(1, "#c7e8f4");
-        context.fillStyle = background;
+      function drawSearchScene(now) {
+        const searchSky = context.createLinearGradient(0, 0, 0, height);
+        searchSky.addColorStop(0, "#263b72");
+        searchSky.addColorStop(.55, "#557ec0");
+        searchSky.addColorStop(1, "#78b87c");
+        context.fillStyle = searchSky;
         context.fillRect(0, 0, width, height);
 
-        context.fillStyle = "rgba(72, 135, 164, .12)";
-        for (let x = 38; x < width; x += 54) {
+        context.fillStyle = "rgba(255,255,255,.72)";
+        for (let index = 0; index < 28; index += 1) {
+          const x = (index * 83 + 31) % width;
+          const y = 78 + ((index * 47) % Math.max(100, height * .42));
+          const size = 1 + (index % 3);
           context.beginPath();
-          context.arc(x, height - 28, 3, 0, Math.PI * 2);
+          context.arc(x, y, size, 0, Math.PI * 2);
           context.fill();
         }
 
-        drawPreview(now);
-        balls.forEach(drawBall);
+        context.fillStyle = "#78b87c";
+        context.beginPath();
+        context.moveTo(0, height * .72);
+        for (let x = 0; x <= width; x += 50) {
+          context.lineTo(x, height * .72 + Math.sin(x * .025) * 18);
+        }
+        context.lineTo(width, height);
+        context.lineTo(0, height);
+        context.closePath();
+        context.fill();
+
+        lostItems.forEach(item => {
+          if (item.found) return;
+          if (hintGlow > 0) {
+            context.save();
+            context.globalAlpha = .35 + Math.sin(now / 100) * .18;
+            context.strokeStyle = "#fff5a3";
+            context.lineWidth = 5;
+            context.beginPath();
+            context.arc(item.x, item.y, item.radius + 12, 0, Math.PI * 2);
+            context.stroke();
+            context.restore();
+          }
+          drawBall(item);
+        });
+        drawHero(now);
+      }
+
+      function draw(now) {
+        context.clearRect(0, 0, width, height);
+
+        if (gameMode === "search") {
+          drawSearchScene(now);
+        } else {
+
+          const background = context.createLinearGradient(0, 0, 0, height);
+          background.addColorStop(0, "#eefbff");
+          background.addColorStop(1, "#c7e8f4");
+          context.fillStyle = background;
+          context.fillRect(0, 0, width, height);
+
+          context.fillStyle = "rgba(72, 135, 164, .12)";
+          for (let x = 38; x < width; x += 54) {
+            context.beginPath();
+            context.arc(x, height - 28, 3, 0, Math.PI * 2);
+            context.fill();
+          }
+
+          drawPreview(now);
+          balls.forEach(drawBall);
+        }
 
         mergeFlash.forEach(flash => {
           const radius = (1.8 - Math.min(1.8, flash.life)) * 55 + 18;
@@ -828,6 +1201,12 @@
         round = 1;
         mergeFlash = [];
         sparks = [];
+        gameMode = "merge";
+        hero = null;
+        lostItems = [];
+        foundCount = 0;
+        hintGlow = 0;
+        pressedKeys.clear();
         winElement.hidden = true;
         setMessage("按左右方向键调位置，按下方向键放下珠子！");
         updateInfo();
@@ -840,23 +1219,45 @@
       }
 
       canvas.addEventListener("pointermove", event => {
-        dropX = pointerPosition(event);
+        if (gameMode === "merge") dropX = pointerPosition(event);
       });
 
       canvas.addEventListener("pointerdown", event => {
-        dropX = pointerPosition(event);
-        dropBall();
+        if (gameMode === "search") {
+          const rect = canvas.getBoundingClientRect();
+          hero.x = Math.max(hero.radius + 12, Math.min(width - hero.radius - 12, event.clientX - rect.left));
+          hero.y = Math.max(92 + hero.radius, Math.min(height - hero.radius - 12, event.clientY - rect.top));
+          updateSearch(1);
+        } else {
+          dropX = pointerPosition(event);
+          dropBall();
+        }
       });
 
       document.addEventListener("keydown", event => {
-        if (["ArrowLeft", "ArrowRight", "ArrowDown"].includes(event.key)) event.preventDefault();
+        if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"].includes(event.key)) event.preventDefault();
+        if (gameMode === "search") {
+          pressedKeys.add(event.key);
+          return;
+        }
         if (event.key === "ArrowLeft") moveDrop(-24);
         if (event.key === "ArrowRight") moveDrop(24);
         if (event.key === "ArrowDown") dropBall();
         if (event.key === "ArrowUp") shake(Math.random() > .5 ? 1 : -1);
       });
 
-      document.querySelector("#shakeButton").addEventListener("click", () => shake(Math.random() > .5 ? 1 : -1));
+      document.addEventListener("keyup", event => {
+        pressedKeys.delete(event.key);
+      });
+
+      shakeButton.addEventListener("click", () => {
+        if (gameMode === "search") {
+          hintGlow = 2;
+          setMessage("丢失的物品亮起来啦，快去找它们！");
+        } else {
+          shake(Math.random() > .5 ? 1 : -1);
+        }
+      });
       document.querySelector("#restartButton").addEventListener("click", restart);
       document.querySelector("#againButton").addEventListener("click", restart);
       window.addEventListener("resize", resizeCanvas);
