@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>三角珠珠消消乐</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #24324a;
+        --muted: #68728a;
+        --cream: #fff8e8;
+        --panel: rgba(255, 255, 255, 0.92);
+        --line: #ead9c4;
+        --purple: #7357d9;
+        --purple-dark: #5239b4;
+        --yellow: #ffd35d;
+        --shadow: rgba(63, 42, 91, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at 10% 8%, rgba(255,255,255,.9) 0 5%, transparent 17%),
+          radial-gradient(circle at 88% 12%, #e9ddff 0 7%, transparent 22%),
+          linear-gradient(155deg, #fff4cd, #f7ecff 52%, #dff7ff);
+      }
+
+      button { font: inherit; }
+
+      .app {
+        width: min(1020px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 14px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(25px, 4vw, 40px);
+        line-height: 1.05;
+      }
+
+      .rule-pill {
+        flex: 0 0 auto;
+        padding: 9px 14px;
+        border: 2px solid #ffb84e;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 7px 18px var(--shadow);
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .layout {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(300px, 580px) minmax(250px, 1fr);
+        justify-content: center;
+        gap: 14px;
+      }
+
+      .game-card,
+      .side-card {
+        border: 1px solid var(--line);
+        border-radius: 25px;
+        background: var(--panel);
+        box-shadow: 0 18px 50px var(--shadow);
+      }
+
+      .game-card { padding: 12px; }
+
+      .board-wrap {
+        position: relative;
+        width: min(100%, 500px);
+        margin: 0 auto;
+      }
+
+      canvas {
+        width: 100%;
+        aspect-ratio: 4 / 7;
+        display: block;
+        border: 8px solid #a88ddd;
+        border-top-color: #cbb7f0;
+        border-radius: 22px;
+        background: #34285d;
+        box-shadow: inset 0 0 0 3px rgba(255,255,255,.2), 0 8px 18px rgba(50,35,88,.2);
+        outline: none;
+        touch-action: none;
+      }
+
+      canvas:focus-visible { border-color: var(--yellow); }
+
+      .overlay {
+        position: absolute;
+        inset: 8px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: rgba(38, 27, 72, .78);
+        transition: opacity .2s;
+      }
+
+      .overlay[hidden] { display: none; }
+
+      .overlay-box {
+        width: min(290px, 82%);
+        padding: 24px 18px;
+        border: 3px solid #fff;
+        border-radius: 22px;
+        background: #fff8e9;
+        text-align: center;
+        box-shadow: 0 18px 38px rgba(0,0,0,.25);
+      }
+
+      .overlay-box h2 { margin: 0 0 8px; font-size: 30px; }
+      .overlay-box p { margin: 0 0 15px; color: var(--muted); font-weight: 750; }
+
+      .side-card {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .stat {
+        padding: 10px 6px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--cream);
+        color: var(--muted);
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .stat strong { display: block; margin-top: 3px; color: var(--ink); font-size: 22px; }
+
+      .next-box {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: #faf7ff;
+      }
+
+      #nextCanvas { width: 110px; height: 82px; border: 0; border-radius: 12px; background: #ede6fb; box-shadow: none; }
+      .next-box span { color: var(--muted); font-size: 13px; font-weight: 800; }
+      .next-box strong { display: block; margin-top: 4px; font-size: 18px; }
+
+      .message {
+        min-height: 55px;
+        padding: 10px 12px;
+        display: grid;
+        place-items: center;
+        border-radius: 15px;
+        background: #e9f8f2;
+        color: #23745d;
+        text-align: center;
+        font-weight: 850;
+      }
+
+      .tips {
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: #fff6df;
+      }
+
+      .tips h2 { margin: 0 0 7px; font-size: 18px; }
+      .tips p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; font-weight: 700; }
+
+      .controls {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9px;
+      }
+
+      .control,
+      .primary {
+        min-height: 50px;
+        border: 0;
+        border-radius: 15px;
+        cursor: pointer;
+        font-weight: 900;
+        box-shadow: 0 5px 0 #d6c8b8;
+        transition: transform .08s, box-shadow .08s;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .control { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+      .control.rotate { grid-column: span 2; color: #fff; background: var(--purple); box-shadow: 0 5px 0 var(--purple-dark); }
+      .control:active, .primary:active { transform: translateY(4px); box-shadow: 0 1px 0 #c4b3a2; }
+      .primary { width: 100%; color: #4b3500; background: var(--yellow); box-shadow: 0 5px 0 #e5a92d; }
+
+      @media (max-width: 720px) {
+        .app { padding: 9px; }
+        .topbar { align-items: flex-start; }
+        .rule-pill { padding: 7px 10px; font-size: 13px; }
+        .layout { grid-template-columns: 1fr; }
+        .game-card { padding: 8px; }
+        .board-wrap { width: min(100%, 390px); }
+        .side-card { padding: 11px; gap: 10px; }
+        .tips { display: none; }
+        .controls { margin-top: 0; }
+        .control { min-height: 54px; }
+      }
+
+      @media (max-height: 760px) and (min-width: 721px) {
+        .app { padding: 8px 14px; gap: 7px; }
+        .board-wrap { width: min(100%, 390px); }
+        .side-card { gap: 9px; }
+        .tips p { line-height: 1.35; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>🔮 三角珠珠消消乐</h1>
+        <div class="rule-pill">同色 6 颗就消除！</div>
+      </header>
+
+      <section class="layout">
+        <div class="game-card">
+          <div class="board-wrap">
+            <canvas id="gameCanvas" width="480" height="840" tabindex="0" aria-label="三角珠珠游戏区"></canvas>
+            <div class="overlay" id="overlay">
+              <div class="overlay-box">
+                <h2 id="overlayTitle">准备好了吗？</h2>
+                <p id="overlayText">转动三角珠，让同色珠珠连在一起。</p>
+                <button class="primary" id="startButton" type="button">开始游戏</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-card">
+          <div class="stats" aria-label="游戏成绩">
+            <div class="stat">分数<strong id="score">0</strong></div>
+            <div class="stat">已消除<strong id="cleared">0</strong></div>
+            <div class="stat">等级<strong id="level">1</strong></div>
+          </div>
+
+          <div class="next-box">
+            <canvas id="nextCanvas" width="220" height="164" aria-label="下一组三角珠"></canvas>
+            <div><span>下一组</span><strong>三颗不同颜色</strong></div>
+          </div>
+
+          <div class="message" id="message" aria-live="polite">按“开始游戏”，珠珠就会掉下来！</div>
+
+          <div class="tips">
+            <h2>怎么玩</h2>
+            <p>← → 移动　↓ 加速下落<br />↑ 或空格：转动三角珠<br />同色珠上下左右连成 6 颗就会消除。</p>
+          </div>
+
+          <div class="controls" aria-label="触屏按钮">
+            <button class="control" data-action="left" type="button">⬅ 左移</button>
+            <button class="control" data-action="down" type="button">⬇ 下落</button>
+            <button class="control" data-action="right" type="button">右移 ➡</button>
+            <button class="control rotate" data-action="rotate" type="button">↻ 转动三角珠</button>
+            <button class="control" data-action="drop" type="button">⚡ 快速落下</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const COLS = 8;
+        const ROWS = 14;
+        const CELL = 60;
+        const MATCH_SIZE = 6;
+        const COLORS = [
+          { fill: "#ff5d73", shine: "#ffc4cc", edge: "#c92f4b" },
+          { fill: "#ffbd36", shine: "#fff0ad", edge: "#d47a0f" },
+          { fill: "#47c979", shine: "#bff5cf", edge: "#168b4c" },
+          { fill: "#48a9ff", shine: "#c7e8ff", edge: "#176fc5" },
+          { fill: "#a56af0", shine: "#e5cdfc", edge: "#6837b7" }
+        ];
+        const SHAPES = [
+          [[0, 0], [-1, 1], [0, 1]],
+          [[0, 0], [1, 0], [1, 1]],
+          [[0, 0], [1, 0], [0, 1]],
+          [[0, 0], [0, 1], [1, 1]]
+        ];
+
+        const canvas = document.querySelector("#gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const nextCanvas = document.querySelector("#nextCanvas");
+        const nextCtx = nextCanvas.getContext("2d");
+        const overlay = document.querySelector("#overlay");
+        const overlayTitle = document.querySelector("#overlayTitle");
+        const overlayText = document.querySelector("#overlayText");
+        const startButton = document.querySelector("#startButton");
+        const message = document.querySelector("#message");
+        const scoreEl = document.querySelector("#score");
+        const clearedEl = document.querySelector("#cleared");
+        const levelEl = document.querySelector("#level");
+
+        let board = [];
+        let current = null;
+        let nextColors = [];
+        let score = 0;
+        let cleared = 0;
+        let level = 1;
+        let running = false;
+        let resolving = false;
+        let lastFall = 0;
+        let animationId = 0;
+        let pointerStart = null;
+
+        function emptyBoard() {
+          return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        }
+
+        function makeColors() {
+          const choices = COLORS.map((_, index) => index);
+          for (let i = choices.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [choices[i], choices[j]] = [choices[j], choices[i]];
+          }
+          return choices.slice(0, 3);
+        }
+
+        function cellsFor(piece, rotation = piece.rotation, x = piece.x, y = piece.y) {
+          return SHAPES[rotation].map(([dx, dy], index) => ({
+            x: x + dx,
+            y: y + dy,
+            color: piece.colors[index]
+          }));
+        }
+
+        function isValid(piece, rotation = piece.rotation, x = piece.x, y = piece.y) {
+          return cellsFor(piece, rotation, x, y).every(cell =>
+            cell.x >= 0 && cell.x < COLS && cell.y < ROWS &&
+            (cell.y < 0 || board[cell.y][cell.x] === null)
+          );
+        }
+
+        function spawnPiece() {
+          current = { x: 3, y: -1, rotation: 0, colors: nextColors };
+          nextColors = makeColors();
+          drawNext();
+          if (!isValid(current)) endGame();
+        }
+
+        function resetGame() {
+          cancelAnimationFrame(animationId);
+          board = emptyBoard();
+          score = 0;
+          cleared = 0;
+          level = 1;
+          running = true;
+          resolving = false;
+          nextColors = makeColors();
+          spawnPiece();
+          lastFall = performance.now();
+          overlay.hidden = true;
+          message.textContent = "转一转，找好位置让同色珠珠碰在一起！";
+          updateStats();
+          canvas.focus();
+          animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function move(dx, dy) {
+          if (!running || resolving || !current) return false;
+          if (isValid(current, current.rotation, current.x + dx, current.y + dy)) {
+            current.x += dx;
+            current.y += dy;
+            draw();
+            return true;
+          }
+          if (dy > 0) lockPiece();
+          return false;
+        }
+
+        function rotatePiece() {
+          if (!running || resolving || !current) return;
+          const nextRotation = (current.rotation + 1) % SHAPES.length;
+          const kicks = [0, -1, 1, -2, 2];
+          for (const kick of kicks) {
+            if (isValid(current, nextRotation, current.x + kick, current.y)) {
+              current.rotation = nextRotation;
+              current.x += kick;
+              message.textContent = "三角珠转好啦！";
+              draw();
+              return;
+            }
+          }
+        }
+
+        function hardDrop() {
+          if (!running || resolving || !current) return;
+          let steps = 0;
+          while (isValid(current, current.rotation, current.x, current.y + 1)) {
+            current.y += 1;
+            steps += 1;
+          }
+          score += steps * 2;
+          updateStats();
+          lockPiece();
+        }
+
+        function lockPiece() {
+          if (!current || resolving) return;
+          const cells = cellsFor(current);
+          if (cells.some(cell => cell.y < 0)) {
+            endGame();
+            return;
+          }
+          cells.forEach(cell => { board[cell.y][cell.x] = cell.color; });
+          current = null;
+          resolving = true;
+          draw();
+          resolveMatches(1);
+        }
+
+        function findMatches() {
+          const seen = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+          const matches = [];
+          const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+          for (let y = 0; y < ROWS; y += 1) {
+            for (let x = 0; x < COLS; x += 1) {
+              if (board[y][x] === null || seen[y][x]) continue;
+              const color = board[y][x];
+              const group = [];
+              const queue = [{ x, y }];
+              seen[y][x] = true;
+              while (queue.length) {
+                const cell = queue.shift();
+                group.push(cell);
+                directions.forEach(([dx, dy]) => {
+                  const nx = cell.x + dx;
+                  const ny = cell.y + dy;
+                  if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !seen[ny][nx] && board[ny][nx] === color) {
+                    seen[ny][nx] = true;
+                    queue.push({ x: nx, y: ny });
+                  }
+                });
+              }
+              if (group.length >= MATCH_SIZE) matches.push(...group);
+            }
+          }
+          return matches;
+        }
+
+        function resolveMatches(chain) {
+          const matches = findMatches();
+          if (!matches.length) {
+            resolving = false;
+            spawnPiece();
+            lastFall = performance.now();
+            draw();
+            return;
+          }
+
+          message.textContent = chain === 1
+            ? `太棒了！消除了 ${matches.length} 颗珠珠！`
+            : `连锁 ×${chain}！又消除了 ${matches.length} 颗！`;
+          score += matches.length * 100 * chain;
+          cleared += matches.length;
+          level = Math.floor(cleared / 24) + 1;
+          updateStats();
+          draw(matches);
+
+          setTimeout(() => {
+            matches.forEach(({ x, y }) => { board[y][x] = null; });
+            collapseBoard();
+            draw();
+            setTimeout(() => resolveMatches(chain + 1), 220);
+          }, 380);
+        }
+
+        function collapseBoard() {
+          for (let x = 0; x < COLS; x += 1) {
+            const beads = [];
+            for (let y = ROWS - 1; y >= 0; y -= 1) {
+              if (board[y][x] !== null) beads.push(board[y][x]);
+            }
+            for (let y = ROWS - 1; y >= 0; y -= 1) {
+              board[y][x] = beads[ROWS - 1 - y] ?? null;
+            }
+          }
+        }
+
+        function endGame() {
+          running = false;
+          resolving = false;
+          current = null;
+          overlayTitle.textContent = "珠珠装满啦！";
+          overlayText.textContent = `这次得到 ${score} 分，消除了 ${cleared} 颗珠珠。`;
+          startButton.textContent = "再玩一次";
+          overlay.hidden = false;
+          message.textContent = "别灰心，再试一次一定能连得更多！";
+          draw();
+        }
+
+        function updateStats() {
+          scoreEl.textContent = score;
+          clearedEl.textContent = cleared;
+          levelEl.textContent = level;
+        }
+
+        function drawBead(context, cx, cy, radius, colorIndex, alpha = 1, sparkle = false) {
+          const color = COLORS[colorIndex];
+          context.save();
+          context.globalAlpha = alpha;
+          context.shadowColor = "rgba(0,0,0,.28)";
+          context.shadowBlur = radius * .22;
+          context.shadowOffsetY = radius * .14;
+          const gradient = context.createRadialGradient(cx - radius * .35, cy - radius * .4, radius * .08, cx, cy, radius);
+          gradient.addColorStop(0, color.shine);
+          gradient.addColorStop(.35, color.fill);
+          gradient.addColorStop(1, color.edge);
+          context.fillStyle = gradient;
+          context.beginPath();
+          context.arc(cx, cy, radius, 0, Math.PI * 2);
+          context.fill();
+          context.shadowColor = "transparent";
+          context.strokeStyle = "rgba(255,255,255,.72)";
+          context.lineWidth = Math.max(2, radius * .1);
+          context.stroke();
+          context.fillStyle = "rgba(255,255,255,.78)";
+          context.beginPath();
+          context.ellipse(cx - radius * .3, cy - radius * .34, radius * .19, radius * .3, .7, 0, Math.PI * 2);
+          context.fill();
+          if (sparkle) {
+            context.strokeStyle = "#fff";
+            context.lineWidth = 4;
+            context.beginPath();
+            context.moveTo(cx - radius, cy); context.lineTo(cx + radius, cy);
+            context.moveTo(cx, cy - radius); context.lineTo(cx, cy + radius);
+            context.stroke();
+          }
+          context.restore();
+        }
+
+        function draw(matching = []) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          background.addColorStop(0, "#493775");
+          background.addColorStop(1, "#241b48");
+          ctx.fillStyle = background;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.strokeStyle = "rgba(255,255,255,.055)";
+          ctx.lineWidth = 1;
+          for (let x = 1; x < COLS; x += 1) {
+            ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, canvas.height); ctx.stroke();
+          }
+          for (let y = 1; y < ROWS; y += 1) {
+            ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(canvas.width, y * CELL); ctx.stroke();
+          }
+
+          const matchingKeys = new Set(matching.map(cell => `${cell.x},${cell.y}`));
+          for (let y = 0; y < ROWS; y += 1) {
+            for (let x = 0; x < COLS; x += 1) {
+              if (board[y][x] !== null) {
+                drawBead(ctx, x * CELL + CELL / 2, y * CELL + CELL / 2, CELL * .4, board[y][x], 1, matchingKeys.has(`${x},${y}`));
+              }
+            }
+          }
+
+          if (current) {
+            let ghostY = current.y;
+            while (isValid(current, current.rotation, current.x, ghostY + 1)) ghostY += 1;
+            if (ghostY !== current.y) {
+              cellsFor(current, current.rotation, current.x, ghostY).forEach(cell => {
+                if (cell.y >= 0) drawBead(ctx, cell.x * CELL + CELL / 2, cell.y * CELL + CELL / 2, CELL * .38, cell.color, .18);
+              });
+            }
+            cellsFor(current).forEach(cell => {
+              if (cell.y >= 0) drawBead(ctx, cell.x * CELL + CELL / 2, cell.y * CELL + CELL / 2, CELL * .4, cell.color);
+            });
+          }
+        }
+
+        function drawNext() {
+          nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+          nextCtx.fillStyle = "#ede6fb";
+          nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+          const positions = [[112, 45], [72, 112], [152, 112]];
+          positions.forEach(([x, y], index) => drawBead(nextCtx, x, y, 30, nextColors[index]));
+        }
+
+        function gameLoop(now) {
+          if (!running) return;
+          const fallDelay = Math.max(180, 760 - (level - 1) * 55);
+          if (!resolving && now - lastFall >= fallDelay) {
+            move(0, 1);
+            lastFall = now;
+          }
+          draw();
+          animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function doAction(action) {
+          if (action === "left") move(-1, 0);
+          if (action === "right") move(1, 0);
+          if (action === "down") { if (move(0, 1)) score += 1; updateStats(); }
+          if (action === "rotate") rotatePiece();
+          if (action === "drop") hardDrop();
+        }
+
+        document.addEventListener("keydown", event => {
+          const keyActions = {
+            ArrowLeft: "left", ArrowRight: "right", ArrowDown: "down",
+            ArrowUp: "rotate", " ": "rotate", Enter: "drop"
+          };
+          if (keyActions[event.key]) {
+            event.preventDefault();
+            doAction(keyActions[event.key]);
+          }
+        });
+
+        document.querySelectorAll("[data-action]").forEach(button => {
+          button.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            doAction(button.dataset.action);
+          });
+        });
+
+        canvas.addEventListener("pointerdown", event => {
+          pointerStart = { x: event.clientX, y: event.clientY };
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointerup", event => {
+          if (!pointerStart) return;
+          const dx = event.clientX - pointerStart.x;
+          const dy = event.clientY - pointerStart.y;
+          if (Math.abs(dx) < 22 && Math.abs(dy) < 22) rotatePiece();
+          else if (Math.abs(dx) > Math.abs(dy)) doAction(dx > 0 ? "right" : "left");
+          else if (dy > 35) hardDrop();
+          pointerStart = null;
+        });
+
+        startButton.addEventListener("click", resetGame);
+        board = emptyBoard();
+        nextColors = makeColors();
+        drawNext();
+        draw();
+      })();
+    </script>
+  </body>
+</html>
