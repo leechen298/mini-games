@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>彩珠变蓝宝石</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --sky: #e7f6ff;
+        --panel: rgba(255, 255, 255, 0.9);
+        --ink: #183153;
+        --muted: #61718a;
+        --line: #cde2f0;
+        --blue: #3b8df5;
+        --red: #ef5b62;
+        --green: #40b87a;
+        --gem: #1767d2;
+        --gold: #f6bd3c;
+        --shadow: rgba(31, 82, 125, 0.18);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at 12% 8%, #fff 0 4%, transparent 16%),
+          radial-gradient(circle at 88% 16%, #d5f2ff 0 7%, transparent 24%),
+          linear-gradient(180deg, var(--sky), #f7fbff 65%, #dff5e9);
+      }
+
+      button { font: inherit; }
+
+      .app {
+        width: min(1120px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 14px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(25px, 4vw, 38px);
+        line-height: 1.1;
+      }
+
+      .gem-score {
+        min-width: 130px;
+        padding: 9px 14px;
+        border: 2px solid #9ecbff;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 8px 18px var(--shadow);
+        text-align: center;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .layout {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 310px;
+        gap: 12px;
+      }
+
+      .game-card,
+      .side {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--panel);
+        box-shadow: 0 18px 45px var(--shadow);
+      }
+
+      .game-card {
+        min-height: 600px;
+        padding: 14px;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        gap: 10px;
+        overflow: hidden;
+      }
+
+      .bead-box {
+        position: relative;
+        min-height: 520px;
+        padding: 38px 12px 14px;
+        border: 9px solid #7eafca;
+        border-top-color: #a9d5e9;
+        border-radius: 25px;
+        background: #c6e8f5;
+        box-shadow:
+          inset 0 0 0 3px rgba(255,255,255,.72),
+          inset 0 -16px 24px rgba(49, 113, 143, .16),
+          0 8px 18px rgba(47, 99, 126, .16);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .box-label {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        top: -2px;
+        transform: translateX(-50%);
+        padding: 5px 18px 7px;
+        border-radius: 0 0 14px 14px;
+        background: #7eafca;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .08em;
+      }
+
+      .drop-zone {
+        min-height: 92px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        align-items: center;
+        border: 2px dashed #a9cfe7;
+        border-radius: 15px;
+        background: linear-gradient(180deg, #f8fdff, #eaf8ff);
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .drop-choice {
+        height: 100%;
+        border: 0;
+        border-right: 1px dashed #c6deec;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .drop-choice:last-child { border-right: 0; }
+      .drop-choice:hover,
+      .drop-choice:focus-visible { background: rgba(73, 168, 230, 0.12); outline: 3px solid #83c7f1; outline-offset: -3px; }
+
+      .next-bead {
+        position: absolute;
+        z-index: 4;
+        width: 58px;
+        height: 58px;
+        left: 50%;
+        top: 31px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        transition: left 180ms ease;
+      }
+
+      .drop-wrap { position: relative; }
+
+      .board {
+        min-height: 410px;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        padding: 13px 10px 16px;
+        border: 3px solid rgba(73, 135, 165, .28);
+        border-radius: 16px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.55), transparent 42%),
+          #d6edf7;
+        box-shadow: inset 0 -12px 20px rgba(64, 126, 157, 0.13);
+      }
+
+      .column {
+        min-width: 0;
+        padding: 8px 4px;
+        border: 2px solid rgba(100, 162, 191, 0.24);
+        border-top: 0;
+        border-radius: 0 0 20px 20px;
+        background: rgba(255,255,255,.24);
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        overflow: hidden;
+      }
+
+      .column.selected { background: rgba(246, 189, 60, 0.22); border-color: var(--gold); }
+
+      .bead {
+        position: relative;
+        flex: 0 0 auto;
+        width: clamp(42px, 7.4vw, 62px);
+        height: clamp(42px, 7.4vw, 62px);
+        border: 3px solid rgba(255,255,255,.72);
+        border-radius: 50%;
+        box-shadow: inset -9px -11px 14px rgba(0,0,0,.18), 0 5px 8px rgba(39,78,105,.2);
+        animation: pop-in 300ms cubic-bezier(.18,.86,.33,1.25);
+      }
+
+      .bead::before {
+        content: "";
+        position: absolute;
+        width: 28%;
+        height: 22%;
+        left: 18%;
+        top: 13%;
+        border-radius: 50%;
+        background: rgba(255,255,255,.72);
+        transform: rotate(-28deg);
+      }
+
+      .bead.blue { background: linear-gradient(145deg, #7dc5ff, var(--blue) 57%, #1763bf); }
+      .bead.red { background: linear-gradient(145deg, #ff9a9d, var(--red) 57%, #bf2f42); }
+      .bead.green { background: linear-gradient(145deg, #8ee9b9, var(--green) 57%, #188654); }
+      .bead.top { outline: 3px solid rgba(255,255,255,.85); outline-offset: -6px; }
+
+      .bead.merging { animation: merge-pop 420ms ease; }
+
+      .game-card footer {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 14px;
+        background: #eff8e9;
+        color: #32633c;
+        font-weight: 850;
+        text-align: center;
+      }
+
+      .side {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .side h2 { margin: 0 0 9px; font-size: 19px; }
+      .side p { margin: 0; color: var(--muted); line-height: 1.55; font-weight: 700; }
+
+      .rules { display: grid; gap: 8px; }
+
+      .rule {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 54px;
+        padding: 8px;
+        border-radius: 14px;
+        background: #f3f9fc;
+        font-weight: 900;
+      }
+
+      .dot, .mini-gem {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        box-shadow: inset -4px -5px 6px rgba(0,0,0,.18);
+      }
+
+      .dot.blue { background: var(--blue); }
+      .dot.red { background: var(--red); }
+      .dot.green { background: var(--green); }
+      .mini-gem { border-radius: 5px 50% 50%; background: linear-gradient(135deg, #74d5ff, var(--gem) 62%); transform: rotate(45deg); }
+
+      .counts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+      }
+
+      .count {
+        padding: 9px 5px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .count strong { display: block; margin-top: 3px; color: var(--ink); font-size: 20px; }
+
+      .actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+      .action {
+        min-height: 46px;
+        border: 0;
+        border-radius: 14px;
+        background: #e7f1f7;
+        color: var(--ink);
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .action.primary { background: var(--gem); color: #fff; }
+      .action:disabled { opacity: .42; cursor: not-allowed; }
+
+      .win {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: rgba(15, 42, 70, .45);
+        backdrop-filter: blur(5px);
+      }
+
+      .win[hidden] { display: none; }
+
+      .win-card {
+        width: min(440px, 100%);
+        padding: 28px;
+        border-radius: 26px;
+        background: #fff;
+        box-shadow: 0 24px 80px rgba(15,42,70,.35);
+        text-align: center;
+      }
+
+      .big-gem { font-size: 76px; filter: drop-shadow(0 9px 8px rgba(23,103,210,.28)); }
+      .win-card h2 { margin: 4px 0 8px; font-size: 30px; }
+      .win-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-weight: 750; }
+
+      @keyframes pop-in {
+        from { opacity: 0; transform: translateY(-90px) scale(.72); }
+        70% { opacity: 1; transform: translateY(5px) scale(1.05); }
+        to { transform: translateY(0) scale(1); }
+      }
+
+      @keyframes merge-pop {
+        50% { transform: scale(1.3); filter: brightness(1.35); }
+      }
+
+      @media (max-width: 780px) {
+        .app { padding: 9px; }
+        .layout { grid-template-columns: 1fr; }
+        .game-card { min-height: 540px; padding: 9px; }
+        .bead-box { min-height: 485px; padding: 36px 6px 8px; border-width: 7px; }
+        .board { min-height: 360px; gap: 4px; padding-inline: 5px; }
+        .column { padding-inline: 1px; }
+        .side { padding: 13px; }
+        .rules { grid-template-columns: 1fr; }
+        .topbar { align-items: flex-start; }
+        .gem-score { min-width: 108px; padding-inline: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <h1>彩珠变蓝宝石</h1>
+        </div>
+        <div class="gem-score">💎 蓝宝石 <span id="gemCount">0</span>/9</div>
+      </header>
+
+      <section class="layout">
+        <article class="game-card">
+          <div class="bead-box">
+            <div class="box-label">珠 子 框</div>
+            <div class="drop-wrap">
+              <div id="dropZone" class="drop-zone" aria-label="选择珠子落下的位置"></div>
+              <div id="nextBead" class="next-bead bead blue" aria-hidden="true"></div>
+            </div>
+            <div id="board" class="board" aria-label="珠子合成盘"></div>
+          </div>
+          <footer id="message" aria-live="polite">点一下上方任意入口，让珠子从这里落下吧！</footer>
+        </article>
+
+        <aside class="side">
+          <section>
+            <h2>合成方法</h2>
+            <div class="rules">
+              <div class="rule"><i class="dot blue"></i>＋<i class="dot blue"></i>＝<i class="dot red"></i></div>
+              <div class="rule"><i class="dot red"></i>＋<i class="dot red"></i>＝<i class="dot green"></i></div>
+              <div class="rule"><i class="dot green"></i>＋<i class="dot green"></i>＝<i class="mini-gem"></i></div>
+            </div>
+          </section>
+
+          <section>
+            <h2>还没落下</h2>
+            <div class="counts">
+              <div class="count">蓝珠<strong id="blueLeft">10</strong></div>
+              <div class="count">红珠<strong id="redLeft">10</strong></div>
+              <div class="count">绿珠<strong id="greenLeft">10</strong></div>
+            </div>
+          </section>
+
+          <section>
+            <h2>怎么玩</h2>
+            <p>点上方入口决定落点。只有同一列最上面的两颗相同珠子会合成。珠子落完后，可以点一列最上面的珠子，再点另一列搬过去。</p>
+          </section>
+
+          <div class="actions">
+            <button id="undoButton" class="action" type="button">↩ 撤销一步</button>
+            <button id="restartButton" class="action primary" type="button">重新开始</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <div id="win" class="win" hidden>
+      <div class="win-card">
+        <div class="big-gem">💎</div>
+        <h2>全部变成蓝宝石啦！</h2>
+        <p>你合成了 8 颗蓝宝石，最后的红珠和绿珠借来两格星光，变成了第 9 颗蓝宝石！</p>
+        <button id="againButton" class="action primary" type="button">再玩一次</button>
+      </div>
+    </div>
+
+    <script>
+      const TYPES = ["blue", "red", "green"];
+      const TYPE_NAMES = { blue: "蓝珠", red: "红珠", green: "绿珠" };
+      const NEXT_TYPE = { blue: "red", red: "green", green: "gem" };
+      const COLUMN_COUNT = 6;
+
+      const boardElement = document.querySelector("#board");
+      const dropZone = document.querySelector("#dropZone");
+      const nextBeadElement = document.querySelector("#nextBead");
+      const messageElement = document.querySelector("#message");
+      const gemCountElement = document.querySelector("#gemCount");
+      const undoButton = document.querySelector("#undoButton");
+      const winElement = document.querySelector("#win");
+      const leftElements = {
+        blue: document.querySelector("#blueLeft"),
+        red: document.querySelector("#redLeft"),
+        green: document.querySelector("#greenLeft")
+      };
+
+      let columns = Array.from({ length: COLUMN_COUNT }, () => []);
+      let queue = [];
+      let gems = 0;
+      let selectedColumn = null;
+      let history = [];
+      let busy = false;
+
+      function shuffledBeads() {
+        const beads = TYPES.flatMap(type => Array(10).fill(type));
+        for (let index = beads.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [beads[index], beads[randomIndex]] = [beads[randomIndex], beads[index]];
+        }
+        return beads;
+      }
+
+      function makeDropButtons() {
+        dropZone.replaceChildren();
+        for (let index = 0; index < COLUMN_COUNT; index += 1) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "drop-choice";
+          button.textContent = `${index + 1}号入口`;
+          button.dataset.column = index;
+          button.setAttribute("aria-label", `让珠子从第${index + 1}个入口落下`);
+          dropZone.append(button);
+        }
+      }
+
+      function snapshot() {
+        return {
+          columns: columns.map(column => [...column]),
+          queue: [...queue],
+          gems,
+          selectedColumn
+        };
+      }
+
+      function saveHistory() {
+        history.push(snapshot());
+        if (history.length > 80) history.shift();
+      }
+
+      function restore(state) {
+        columns = state.columns.map(column => [...column]);
+        queue = [...state.queue];
+        gems = state.gems;
+        selectedColumn = state.selectedColumn;
+        busy = false;
+        winElement.hidden = true;
+        render();
+      }
+
+      function remainingCounts() {
+        return TYPES.reduce((counts, type) => {
+          counts[type] = queue.filter(bead => bead === type).length;
+          return counts;
+        }, {});
+      }
+
+      function render() {
+        boardElement.replaceChildren();
+        columns.forEach((column, columnIndex) => {
+          const columnElement = document.createElement("div");
+          columnElement.className = `column${selectedColumn === columnIndex ? " selected" : ""}`;
+          columnElement.dataset.column = columnIndex;
+          columnElement.setAttribute("role", "button");
+          columnElement.setAttribute("tabindex", "0");
+          columnElement.setAttribute("aria-label", `第${columnIndex + 1}列，有${column.length}颗珠子`);
+
+          column.forEach((type, beadIndex) => {
+            const bead = document.createElement("div");
+            bead.className = `bead ${type}${beadIndex === column.length - 1 ? " top" : ""}`;
+            bead.title = TYPE_NAMES[type];
+            columnElement.append(bead);
+          });
+          boardElement.append(columnElement);
+        });
+
+        const counts = remainingCounts();
+        TYPES.forEach(type => { leftElements[type].textContent = counts[type]; });
+        gemCountElement.textContent = gems;
+        undoButton.disabled = history.length === 0 || busy;
+
+        const nextType = queue[0];
+        nextBeadElement.hidden = !nextType;
+        if (nextType) nextBeadElement.className = `next-bead bead ${nextType}`;
+      }
+
+      function setMessage(text) {
+        messageElement.textContent = text;
+      }
+
+      function setPreviewPosition(columnIndex) {
+        nextBeadElement.style.left = `${((columnIndex + 0.5) / COLUMN_COUNT) * 100}%`;
+      }
+
+      function resolveColumn(columnIndex) {
+        const column = columns[columnIndex];
+        let merged = false;
+        while (column.length >= 2) {
+          const top = column[column.length - 1];
+          const below = column[column.length - 2];
+          if (top !== below) break;
+          column.pop();
+          column.pop();
+          const nextType = NEXT_TYPE[top];
+          if (nextType === "gem") {
+            gems += 1;
+            setMessage("叮！两颗绿珠变成了一颗蓝宝石！");
+          } else {
+            column.push(nextType);
+            setMessage(`合成成功！两颗${TYPE_NAMES[top]}变成了${TYPE_NAMES[nextType]}。`);
+          }
+          merged = true;
+        }
+        return merged;
+      }
+
+      function tryStarFinish() {
+        if (queue.length > 0) return false;
+        const beads = columns.flat();
+        if (beads.length === 2 && beads.includes("red") && beads.includes("green") && gems === 8) {
+          columns = Array.from({ length: COLUMN_COUNT }, () => []);
+          gems = 9;
+          render();
+          setMessage("星光收尾！最后两颗珠子也变成蓝宝石啦！");
+          window.setTimeout(() => { winElement.hidden = false; }, 500);
+          return true;
+        }
+        if (queue.length === 0) {
+          setMessage("珠子都落下了！点一列最上面的珠子，再点另一列，把相同珠子凑在一起。你也可以撤销一步。 ");
+        }
+        return false;
+      }
+
+      function dropBead(columnIndex) {
+        if (busy || queue.length === 0) return;
+        saveHistory();
+        busy = true;
+        selectedColumn = null;
+        const type = queue.shift();
+        columns[columnIndex].push(type);
+        setMessage(`${TYPE_NAMES[type]}从第 ${columnIndex + 1} 个入口落下来了。`);
+        render();
+        window.setTimeout(() => {
+          resolveColumn(columnIndex);
+          busy = false;
+          render();
+          tryStarFinish();
+        }, 330);
+      }
+
+      function moveTopBead(columnIndex) {
+        if (busy || queue.length > 0) return;
+        if (selectedColumn === null) {
+          if (columns[columnIndex].length === 0) {
+            setMessage("这一列是空的，请选一列有珠子的。 ");
+            return;
+          }
+          selectedColumn = columnIndex;
+          setMessage(`选中了第 ${columnIndex + 1} 列最上面的珠子，再点它要去的列。`);
+          render();
+          return;
+        }
+
+        if (selectedColumn === columnIndex) {
+          selectedColumn = null;
+          setMessage("已取消选择。 ");
+          render();
+          return;
+        }
+
+        saveHistory();
+        const type = columns[selectedColumn].pop();
+        columns[columnIndex].push(type);
+        selectedColumn = null;
+        setMessage(`${TYPE_NAMES[type]}搬到了第 ${columnIndex + 1} 列。`);
+        resolveColumn(columnIndex);
+        render();
+        tryStarFinish();
+      }
+
+      function handleColumn(columnIndex) {
+        if (queue.length > 0) dropBead(columnIndex);
+        else moveTopBead(columnIndex);
+      }
+
+      function restart() {
+        columns = Array.from({ length: COLUMN_COUNT }, () => []);
+        queue = shuffledBeads();
+        gems = 0;
+        selectedColumn = null;
+        history = [];
+        busy = false;
+        winElement.hidden = true;
+        setPreviewPosition(2);
+        setMessage("点一下上方任意入口，让珠子从这里落下吧！");
+        render();
+      }
+
+      dropZone.addEventListener("pointermove", event => {
+        const button = event.target.closest(".drop-choice");
+        if (button && queue.length > 0) setPreviewPosition(Number(button.dataset.column));
+      });
+
+      dropZone.addEventListener("click", event => {
+        const button = event.target.closest(".drop-choice");
+        if (button) handleColumn(Number(button.dataset.column));
+      });
+
+      boardElement.addEventListener("click", event => {
+        const column = event.target.closest(".column");
+        if (column && queue.length === 0) handleColumn(Number(column.dataset.column));
+      });
+
+      boardElement.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const column = event.target.closest(".column");
+        if (column && queue.length === 0) {
+          event.preventDefault();
+          handleColumn(Number(column.dataset.column));
+        }
+      });
+
+      undoButton.addEventListener("click", () => {
+        const state = history.pop();
+        if (!state) return;
+        restore(state);
+        setMessage("已经撤销上一步。 ");
+      });
+
+      document.querySelector("#restartButton").addEventListener("click", restart);
+      document.querySelector("#againButton").addEventListener("click", restart);
+
+      document.addEventListener("keydown", event => {
+        if (busy || queue.length === 0) return;
+        const number = Number(event.key);
+        if (number >= 1 && number <= COLUMN_COUNT) {
+          setPreviewPosition(number - 1);
+          handleColumn(number - 1);
+        }
+      });
+
+      makeDropButtons();
+      restart();
+    </script>
+  </body>
+</html>
