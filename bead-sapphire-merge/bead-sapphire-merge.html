@@ -3,21 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>彩珠变蓝宝石</title>
+    <title>滚滚宝石合成</title>
     <style>
       :root {
         color-scheme: light;
-        --sky: #e7f6ff;
-        --panel: rgba(255, 255, 255, 0.9);
-        --ink: #183153;
-        --muted: #61718a;
-        --line: #cde2f0;
-        --blue: #3b8df5;
-        --red: #ef5b62;
-        --green: #40b87a;
-        --gem: #1767d2;
-        --gold: #f6bd3c;
-        --shadow: rgba(31, 82, 125, 0.18);
+        --sky: #eaf8ff;
+        --panel: rgba(255, 255, 255, 0.92);
+        --ink: #173451;
+        --muted: #60758a;
+        --line: #c8dfec;
+        --blue: #368cf4;
+        --green: #45bc78;
+        --red: #ef5b63;
+        --sapphire: #205dda;
+        --ruby: #d92755;
+        --emerald: #07986a;
+        --gold: #f3b936;
+        --shadow: rgba(37, 86, 118, 0.18);
       }
 
       * { box-sizing: border-box; }
@@ -28,15 +30,15 @@
         color: var(--ink);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
         background:
-          radial-gradient(circle at 12% 8%, #fff 0 4%, transparent 16%),
-          radial-gradient(circle at 88% 16%, #d5f2ff 0 7%, transparent 24%),
-          linear-gradient(180deg, var(--sky), #f7fbff 65%, #dff5e9);
+          radial-gradient(circle at 12% 10%, rgba(255,255,255,.95) 0 5%, transparent 18%),
+          radial-gradient(circle at 88% 18%, #d5f3ff 0 8%, transparent 24%),
+          linear-gradient(180deg, var(--sky), #f9fcff 70%, #e4f7ea);
       }
 
       button { font: inherit; }
 
       .app {
-        width: min(1120px, 100%);
+        width: min(1180px, 100%);
         min-height: 100vh;
         margin: 0 auto;
         padding: 14px;
@@ -54,17 +56,17 @@
 
       h1 {
         margin: 0;
-        font-size: clamp(25px, 4vw, 38px);
-        line-height: 1.1;
+        font-size: clamp(26px, 4vw, 40px);
+        line-height: 1.08;
       }
 
-      .gem-score {
-        min-width: 130px;
-        padding: 9px 14px;
-        border: 2px solid #9ecbff;
+      .goal {
+        min-width: 138px;
+        padding: 9px 13px;
+        border: 2px solid #78d4ad;
         border-radius: 18px;
         background: #fff;
-        box-shadow: 0 8px 18px var(--shadow);
+        box-shadow: 0 8px 20px var(--shadow);
         text-align: center;
         font-weight: 900;
         white-space: nowrap;
@@ -73,7 +75,7 @@
       .layout {
         min-height: 0;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 310px;
+        grid-template-columns: minmax(0, 1fr) 320px;
         gap: 12px;
       }
 
@@ -86,158 +88,85 @@
       }
 
       .game-card {
-        min-height: 600px;
+        min-width: 0;
         padding: 14px;
         display: grid;
-        grid-template-rows: 1fr auto;
+        grid-template-rows: auto auto;
+        align-content: start;
         gap: 10px;
-        overflow: hidden;
       }
 
-      .bead-box {
+      .box-wrap {
         position: relative;
-        min-height: 520px;
-        padding: 38px 12px 14px;
-        border: 9px solid #7eafca;
-        border-top-color: #a9d5e9;
-        border-radius: 25px;
-        background: #c6e8f5;
-        box-shadow:
-          inset 0 0 0 3px rgba(255,255,255,.72),
-          inset 0 -16px 24px rgba(49, 113, 143, .16),
-          0 8px 18px rgba(47, 99, 126, .16);
-        display: grid;
-        grid-template-rows: auto 1fr;
-        gap: 8px;
-        overflow: hidden;
+        min-height: 0;
       }
+
+      canvas {
+        width: 100%;
+        height: min(70vh, 680px);
+        min-height: 500px;
+        display: block;
+        border: 10px solid #70a8c3;
+        border-top-color: #9bcbe0;
+        border-radius: 26px;
+        background: #d9f1fa;
+        box-shadow:
+          inset 0 0 0 3px rgba(255,255,255,.75),
+          inset 0 -18px 28px rgba(54, 121, 151, .15),
+          0 8px 18px rgba(47, 99, 126, .16);
+        outline: none;
+        touch-action: none;
+      }
+
+      canvas:focus-visible { border-color: var(--gold); }
 
       .box-label {
         position: absolute;
-        z-index: 5;
+        z-index: 2;
         left: 50%;
-        top: -2px;
+        top: 10px;
         transform: translateX(-50%);
         padding: 5px 18px 7px;
         border-radius: 0 0 14px 14px;
-        background: #7eafca;
+        background: #70a8c3;
         color: #fff;
         font-size: 13px;
         font-weight: 900;
-        letter-spacing: .08em;
-      }
-
-      .drop-zone {
-        min-height: 92px;
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        align-items: center;
-        border: 2px dashed #a9cfe7;
-        border-radius: 15px;
-        background: linear-gradient(180deg, #f8fdff, #eaf8ff);
-        cursor: pointer;
-        touch-action: manipulation;
-      }
-
-      .drop-choice {
-        height: 100%;
-        border: 0;
-        border-right: 1px dashed #c6deec;
-        background: transparent;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 850;
-        cursor: pointer;
-      }
-
-      .drop-choice:last-child { border-right: 0; }
-      .drop-choice:hover,
-      .drop-choice:focus-visible { background: rgba(73, 168, 230, 0.12); outline: 3px solid #83c7f1; outline-offset: -3px; }
-
-      .next-bead {
-        position: absolute;
-        z-index: 4;
-        width: 58px;
-        height: 58px;
-        left: 50%;
-        top: 31px;
-        transform: translate(-50%, -50%);
+        letter-spacing: .12em;
         pointer-events: none;
-        transition: left 180ms ease;
       }
 
-      .drop-wrap { position: relative; }
-
-      .board {
-        min-height: 410px;
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 8px;
-        padding: 13px 10px 16px;
-        border: 3px solid rgba(73, 135, 165, .28);
-        border-radius: 16px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,.55), transparent 42%),
-          #d6edf7;
-        box-shadow: inset 0 -12px 20px rgba(64, 126, 157, 0.13);
-      }
-
-      .column {
-        min-width: 0;
-        padding: 8px 4px;
-        border: 2px solid rgba(100, 162, 191, 0.24);
-        border-top: 0;
-        border-radius: 0 0 20px 20px;
-        background: rgba(255,255,255,.24);
-        display: flex;
-        flex-direction: column-reverse;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-        overflow: hidden;
-      }
-
-      .column.selected { background: rgba(246, 189, 60, 0.22); border-color: var(--gold); }
-
-      .bead {
-        position: relative;
-        flex: 0 0 auto;
-        width: clamp(42px, 7.4vw, 62px);
-        height: clamp(42px, 7.4vw, 62px);
-        border: 3px solid rgba(255,255,255,.72);
-        border-radius: 50%;
-        box-shadow: inset -9px -11px 14px rgba(0,0,0,.18), 0 5px 8px rgba(39,78,105,.2);
-        animation: pop-in 300ms cubic-bezier(.18,.86,.33,1.25);
-      }
-
-      .bead::before {
-        content: "";
+      .auto-meter {
         position: absolute;
-        width: 28%;
-        height: 22%;
-        left: 18%;
-        top: 13%;
-        border-radius: 50%;
-        background: rgba(255,255,255,.72);
-        transform: rotate(-28deg);
+        z-index: 2;
+        left: 24px;
+        right: 24px;
+        top: 55px;
+        height: 5px;
+        border-radius: 5px;
+        background: rgba(71, 134, 164, .16);
+        overflow: hidden;
+        pointer-events: none;
       }
 
-      .bead.blue { background: linear-gradient(145deg, #7dc5ff, var(--blue) 57%, #1763bf); }
-      .bead.red { background: linear-gradient(145deg, #ff9a9d, var(--red) 57%, #bf2f42); }
-      .bead.green { background: linear-gradient(145deg, #8ee9b9, var(--green) 57%, #188654); }
-      .bead.top { outline: 3px solid rgba(255,255,255,.85); outline-offset: -6px; }
+      .auto-meter span {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--gold);
+        transform-origin: left;
+      }
 
-      .bead.merging { animation: merge-pop 420ms ease; }
-
-      .game-card footer {
-        min-height: 46px;
+      .message {
+        min-height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 8px 14px;
-        border-radius: 14px;
-        background: #eff8e9;
-        color: #32633c;
+        padding: 9px 14px;
+        border-radius: 15px;
+        background: #edf8e9;
+        color: #32643d;
         font-weight: 850;
         text-align: center;
       }
@@ -246,72 +175,106 @@
         padding: 16px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 15px;
       }
 
-      .side h2 { margin: 0 0 9px; font-size: 19px; }
+      .side h2 { margin: 0 0 8px; font-size: 19px; }
       .side p { margin: 0; color: var(--muted); line-height: 1.55; font-weight: 700; }
 
-      .rules { display: grid; gap: 8px; }
-
-      .rule {
-        display: flex;
+      .next-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
         align-items: center;
-        justify-content: center;
-        gap: 7px;
-        min-height: 54px;
-        padding: 8px;
-        border-radius: 14px;
-        background: #f3f9fc;
-        font-weight: 900;
+        gap: 12px;
+        min-height: 76px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #f6fbfe;
       }
 
-      .dot, .mini-gem {
-        display: inline-block;
-        width: 24px;
-        height: 24px;
+      .next-ball {
+        width: 52px;
+        height: 52px;
+        border: 3px solid rgba(255,255,255,.8);
+        border-radius: 50%;
+        background: var(--blue);
+        box-shadow: inset -9px -10px 12px rgba(0,0,0,.17), 0 5px 8px rgba(30,75,105,.2);
+      }
+
+      .next-card span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+      .next-card strong { display: block; margin-top: 3px; font-size: 21px; }
+
+      .chain {
+        display: grid;
+        gap: 6px;
+      }
+
+      .chain-step {
+        display: grid;
+        grid-template-columns: 34px 1fr 34px;
+        align-items: center;
+        min-height: 42px;
+        padding: 5px 9px;
+        border-radius: 12px;
+        background: #f2f8fb;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .token {
+        justify-self: center;
+        width: 25px;
+        height: 25px;
         border-radius: 50%;
         box-shadow: inset -4px -5px 6px rgba(0,0,0,.18);
       }
 
-      .dot.blue { background: var(--blue); }
-      .dot.red { background: var(--red); }
-      .dot.green { background: var(--green); }
-      .mini-gem { border-radius: 5px 50% 50%; background: linear-gradient(135deg, #74d5ff, var(--gem) 62%); transform: rotate(45deg); }
+      .token.blue { background: var(--blue); }
+      .token.green { background: var(--green); }
+      .token.red { background: var(--red); }
+      .token.gem { border-radius: 5px 50% 50%; transform: rotate(45deg); }
+      .token.sapphire { background: linear-gradient(135deg, #70d2ff, var(--sapphire) 62%); }
+      .token.ruby { background: linear-gradient(135deg, #ff7590, var(--ruby) 62%); }
+      .token.emerald { background: linear-gradient(135deg, #6ff1bd, var(--emerald) 62%); }
 
-      .counts {
+      .stats {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 7px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
       }
 
-      .count {
-        padding: 9px 5px;
+      .stat {
+        padding: 9px;
         border: 1px solid var(--line);
-        border-radius: 12px;
+        border-radius: 13px;
         background: #fff;
-        text-align: center;
         color: var(--muted);
+        text-align: center;
         font-size: 12px;
         font-weight: 800;
       }
 
-      .count strong { display: block; margin-top: 3px; color: var(--ink); font-size: 20px; }
+      .stat strong { display: block; margin-top: 3px; color: var(--ink); font-size: 21px; }
 
-      .actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .actions {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
 
       .action {
         min-height: 46px;
         border: 0;
         border-radius: 14px;
-        background: #e7f1f7;
+        background: #e5f0f6;
         color: var(--ink);
         font-weight: 900;
         cursor: pointer;
       }
 
-      .action.primary { background: var(--gem); color: #fff; }
-      .action:disabled { opacity: .42; cursor: not-allowed; }
+      .action.primary { background: var(--emerald); color: #fff; }
 
       .win {
         position: fixed;
@@ -327,7 +290,7 @@
       .win[hidden] { display: none; }
 
       .win-card {
-        width: min(440px, 100%);
+        width: min(430px, 100%);
         padding: 28px;
         border-radius: 26px;
         background: #fff;
@@ -335,82 +298,73 @@
         text-align: center;
       }
 
-      .big-gem { font-size: 76px; filter: drop-shadow(0 9px 8px rgba(23,103,210,.28)); }
+      .big-gem { font-size: 78px; filter: drop-shadow(0 9px 8px rgba(0,135,92,.28)); }
       .win-card h2 { margin: 4px 0 8px; font-size: 30px; }
       .win-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-weight: 750; }
 
-      @keyframes pop-in {
-        from { opacity: 0; transform: translateY(-90px) scale(.72); }
-        70% { opacity: 1; transform: translateY(5px) scale(1.05); }
-        to { transform: translateY(0) scale(1); }
-      }
-
-      @keyframes merge-pop {
-        50% { transform: scale(1.3); filter: brightness(1.35); }
-      }
-
-      @media (max-width: 780px) {
+      @media (max-width: 800px) {
         .app { padding: 9px; }
         .layout { grid-template-columns: 1fr; }
-        .game-card { min-height: 540px; padding: 9px; }
-        .bead-box { min-height: 485px; padding: 36px 6px 8px; border-width: 7px; }
-        .board { min-height: 360px; gap: 4px; padding-inline: 5px; }
-        .column { padding-inline: 1px; }
+        .game-card { padding: 8px; }
+        canvas { height: 61vh; min-height: 470px; border-width: 7px; }
         .side { padding: 13px; }
-        .rules { grid-template-columns: 1fr; }
+        .chain { grid-template-columns: 1fr; }
         .topbar { align-items: flex-start; }
-        .gem-score { min-width: 108px; padding-inline: 8px; }
+        .goal { min-width: 120px; padding-inline: 8px; }
       }
     </style>
   </head>
   <body>
     <main class="app">
       <header class="topbar">
-        <div>
-          <h1>彩珠变蓝宝石</h1>
-        </div>
-        <div class="gem-score">💎 蓝宝石 <span id="gemCount">0</span>/9</div>
+        <h1>滚滚宝石合成</h1>
+        <div class="goal">💚 绿宝石 <span id="emeraldCount">0</span>/3</div>
       </header>
 
       <section class="layout">
         <article class="game-card">
-          <div class="bead-box">
-            <div class="box-label">珠 子 框</div>
-            <div class="drop-wrap">
-              <div id="dropZone" class="drop-zone" aria-label="选择珠子落下的位置"></div>
-              <div id="nextBead" class="next-bead bead blue" aria-hidden="true"></div>
-            </div>
-            <div id="board" class="board" aria-label="珠子合成盘"></div>
+          <div class="box-wrap">
+            <div class="box-label">滚 动 大 框</div>
+            <div class="auto-meter" aria-hidden="true"><span id="dropMeter"></span></div>
+            <canvas id="gameCanvas" tabindex="0" aria-label="宝石滚动合成大框"></canvas>
           </div>
-          <footer id="message" aria-live="polite">点一下上方任意入口，让珠子从这里落下吧！</footer>
+          <div id="message" class="message" aria-live="polite">按左右方向键调位置，按空格或下方向键放下珠子！</div>
         </article>
 
         <aside class="side">
           <section>
-            <h2>合成方法</h2>
-            <div class="rules">
-              <div class="rule"><i class="dot blue"></i>＋<i class="dot blue"></i>＝<i class="dot red"></i></div>
-              <div class="rule"><i class="dot red"></i>＋<i class="dot red"></i>＝<i class="dot green"></i></div>
-              <div class="rule"><i class="dot green"></i>＋<i class="dot green"></i>＝<i class="mini-gem"></i></div>
+            <h2>下一颗</h2>
+            <div class="next-card">
+              <i id="nextBall" class="next-ball"></i>
+              <div><span>随机出现</span><strong id="nextName">蓝珠</strong></div>
             </div>
           </section>
 
           <section>
-            <h2>还没落下</h2>
-            <div class="counts">
-              <div class="count">蓝珠<strong id="blueLeft">10</strong></div>
-              <div class="count">红珠<strong id="redLeft">10</strong></div>
-              <div class="count">绿珠<strong id="greenLeft">10</strong></div>
+            <h2>合成顺序</h2>
+            <div class="chain">
+              <div class="chain-step"><i class="token blue"></i><span>两颗蓝珠</span><i class="token green"></i></div>
+              <div class="chain-step"><i class="token green"></i><span>两颗绿珠</span><i class="token red"></i></div>
+              <div class="chain-step"><i class="token red"></i><span>两颗红珠</span><i class="token gem sapphire"></i></div>
+              <div class="chain-step"><i class="token gem sapphire"></i><span>两颗蓝宝石</span><i class="token gem ruby"></i></div>
+              <div class="chain-step"><i class="token gem ruby"></i><span>两颗红宝石</span><i class="token gem emerald"></i></div>
+            </div>
+          </section>
+
+          <section>
+            <div class="stats">
+              <div class="stat">还没落下<strong id="queueCount">30</strong></div>
+              <div class="stat">框内物品<strong id="ballCount">0</strong></div>
             </div>
           </section>
 
           <section>
             <h2>怎么玩</h2>
-            <p>点上方入口决定落点。只有同一列最上面的两颗相同珠子会合成。珠子落完后，可以点一列最上面的珠子，再点另一列搬过去。</p>
+            <p>左右键移动落点，也会让框里的珠子滚动。空格键或下方向键立刻落下。鼠标和手指也能选择落点。相同物品碰到就会自动合成。</p>
           </section>
 
           <div class="actions">
-            <button id="undoButton" class="action" type="button">↩ 撤销一步</button>
+            <button id="shakeButton" class="action" type="button">↔ 晃一晃</button>
             <button id="restartButton" class="action primary" type="button">重新开始</button>
           </div>
         </aside>
@@ -419,278 +373,419 @@
 
     <div id="win" class="win" hidden>
       <div class="win-card">
-        <div class="big-gem">💎</div>
-        <h2>全部变成蓝宝石啦！</h2>
-        <p>你合成了 8 颗蓝宝石，最后的红珠和绿珠借来两格星光，变成了第 9 颗蓝宝石！</p>
+        <div class="big-gem">💚</div>
+        <h2>全都变成绿宝石啦！</h2>
+        <p>你让珠子一路滚动合成，得到了 3 颗闪闪发亮的绿宝石！</p>
         <button id="againButton" class="action primary" type="button">再玩一次</button>
       </div>
     </div>
 
     <script>
-      const TYPES = ["blue", "red", "green"];
-      const TYPE_NAMES = { blue: "蓝珠", red: "红珠", green: "绿珠" };
-      const NEXT_TYPE = { blue: "red", red: "green", green: "gem" };
-      const COLUMN_COUNT = 6;
-
-      const boardElement = document.querySelector("#board");
-      const dropZone = document.querySelector("#dropZone");
-      const nextBeadElement = document.querySelector("#nextBead");
-      const messageElement = document.querySelector("#message");
-      const gemCountElement = document.querySelector("#gemCount");
-      const undoButton = document.querySelector("#undoButton");
-      const winElement = document.querySelector("#win");
-      const leftElements = {
-        blue: document.querySelector("#blueLeft"),
-        red: document.querySelector("#redLeft"),
-        green: document.querySelector("#greenLeft")
+      const TYPE_INFO = {
+        blue: { name: "蓝珠", color: "#368cf4", next: "green", radius: 22, gem: false },
+        green: { name: "绿珠", color: "#45bc78", next: "red", radius: 23, gem: false },
+        red: { name: "红珠", color: "#ef5b63", next: "sapphire", radius: 24, gem: false },
+        sapphire: { name: "蓝宝石", color: "#205dda", next: "ruby", radius: 26, gem: true },
+        ruby: { name: "红宝石", color: "#d92755", next: "emerald", radius: 28, gem: true },
+        emerald: { name: "绿宝石", color: "#07986a", next: null, radius: 30, gem: true }
       };
 
-      let columns = Array.from({ length: COLUMN_COUNT }, () => []);
+      const START_TYPES = ["blue", "green", "red"];
+      const AUTO_DROP_TIME = 3600;
+      const canvas = document.querySelector("#gameCanvas");
+      const context = canvas.getContext("2d");
+      const messageElement = document.querySelector("#message");
+      const nextBallElement = document.querySelector("#nextBall");
+      const nextNameElement = document.querySelector("#nextName");
+      const queueCountElement = document.querySelector("#queueCount");
+      const ballCountElement = document.querySelector("#ballCount");
+      const emeraldCountElement = document.querySelector("#emeraldCount");
+      const dropMeterElement = document.querySelector("#dropMeter");
+      const winElement = document.querySelector("#win");
+
+      let width = 700;
+      let height = 620;
       let queue = [];
-      let gems = 0;
-      let selectedColumn = null;
-      let history = [];
-      let busy = false;
+      let balls = [];
+      let dropX = width / 2;
+      let nextDropAt = 0;
+      let lastTime = 0;
+      let horizontalPush = 0;
+      let running = false;
+      let won = false;
+      let idCounter = 0;
+      let mergeFlash = [];
 
-      function shuffledBeads() {
-        const beads = TYPES.flatMap(type => Array(10).fill(type));
-        for (let index = beads.length - 1; index > 0; index -= 1) {
+      function shuffledQueue() {
+        const items = START_TYPES.flatMap(type => Array(10).fill(type));
+        for (let index = items.length - 1; index > 0; index -= 1) {
           const randomIndex = Math.floor(Math.random() * (index + 1));
-          [beads[index], beads[randomIndex]] = [beads[randomIndex], beads[index]];
+          [items[index], items[randomIndex]] = [items[randomIndex], items[index]];
         }
-        return beads;
+        return items;
       }
 
-      function makeDropButtons() {
-        dropZone.replaceChildren();
-        for (let index = 0; index < COLUMN_COUNT; index += 1) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "drop-choice";
-          button.textContent = `${index + 1}号入口`;
-          button.dataset.column = index;
-          button.setAttribute("aria-label", `让珠子从第${index + 1}个入口落下`);
-          dropZone.append(button);
-        }
-      }
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const oldWidth = width;
+        const oldHeight = height;
+        width = Math.max(280, rect.width);
+        height = Math.max(420, rect.height);
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-      function snapshot() {
-        return {
-          columns: columns.map(column => [...column]),
-          queue: [...queue],
-          gems,
-          selectedColumn
-        };
-      }
-
-      function saveHistory() {
-        history.push(snapshot());
-        if (history.length > 80) history.shift();
-      }
-
-      function restore(state) {
-        columns = state.columns.map(column => [...column]);
-        queue = [...state.queue];
-        gems = state.gems;
-        selectedColumn = state.selectedColumn;
-        busy = false;
-        winElement.hidden = true;
-        render();
-      }
-
-      function remainingCounts() {
-        return TYPES.reduce((counts, type) => {
-          counts[type] = queue.filter(bead => bead === type).length;
-          return counts;
-        }, {});
-      }
-
-      function render() {
-        boardElement.replaceChildren();
-        columns.forEach((column, columnIndex) => {
-          const columnElement = document.createElement("div");
-          columnElement.className = `column${selectedColumn === columnIndex ? " selected" : ""}`;
-          columnElement.dataset.column = columnIndex;
-          columnElement.setAttribute("role", "button");
-          columnElement.setAttribute("tabindex", "0");
-          columnElement.setAttribute("aria-label", `第${columnIndex + 1}列，有${column.length}颗珠子`);
-
-          column.forEach((type, beadIndex) => {
-            const bead = document.createElement("div");
-            bead.className = `bead ${type}${beadIndex === column.length - 1 ? " top" : ""}`;
-            bead.title = TYPE_NAMES[type];
-            columnElement.append(bead);
+        if (oldWidth && oldHeight && balls.length) {
+          const scaleX = width / oldWidth;
+          const scaleY = height / oldHeight;
+          balls.forEach(ball => {
+            ball.x *= scaleX;
+            ball.y *= scaleY;
           });
-          boardElement.append(columnElement);
-        });
-
-        const counts = remainingCounts();
-        TYPES.forEach(type => { leftElements[type].textContent = counts[type]; });
-        gemCountElement.textContent = gems;
-        undoButton.disabled = history.length === 0 || busy;
-
-        const nextType = queue[0];
-        nextBeadElement.hidden = !nextType;
-        if (nextType) nextBeadElement.className = `next-bead bead ${nextType}`;
+        }
+        dropX = Math.max(40, Math.min(width - 40, dropX * (width / oldWidth)));
       }
 
       function setMessage(text) {
         messageElement.textContent = text;
       }
 
-      function setPreviewPosition(columnIndex) {
-        nextBeadElement.style.left = `${((columnIndex + 0.5) / COLUMN_COUNT) * 100}%`;
+      function updateInfo() {
+        const nextType = queue[0];
+        queueCountElement.textContent = queue.length;
+        ballCountElement.textContent = balls.length;
+        emeraldCountElement.textContent = balls.filter(ball => ball.type === "emerald").length;
+        nextBallElement.hidden = !nextType;
+        nextNameElement.textContent = nextType ? TYPE_INFO[nextType].name : "全部落下了";
+        if (nextType) nextBallElement.style.background = TYPE_INFO[nextType].color;
       }
 
-      function resolveColumn(columnIndex) {
-        const column = columns[columnIndex];
-        let merged = false;
-        while (column.length >= 2) {
-          const top = column[column.length - 1];
-          const below = column[column.length - 2];
-          if (top !== below) break;
-          column.pop();
-          column.pop();
-          const nextType = NEXT_TYPE[top];
-          if (nextType === "gem") {
-            gems += 1;
-            setMessage("叮！两颗绿珠变成了一颗蓝宝石！");
-          } else {
-            column.push(nextType);
-            setMessage(`合成成功！两颗${TYPE_NAMES[top]}变成了${TYPE_NAMES[nextType]}。`);
-          }
-          merged = true;
-        }
+      function makeBall(type, x, y, vx = 0, vy = 0) {
+        return {
+          id: ++idCounter,
+          type,
+          x,
+          y,
+          vx,
+          vy,
+          radius: TYPE_INFO[type].radius,
+          angle: Math.random() * Math.PI * 2,
+          spin: (Math.random() - .5) * .08,
+          bornAt: performance.now()
+        };
+      }
+
+      function dropBall() {
+        if (!queue.length || won) return;
+        running = true;
+        const type = queue.shift();
+        balls.push(makeBall(type, dropX, 82, (Math.random() - .5) * 1.2, 0));
+        nextDropAt = performance.now() + AUTO_DROP_TIME;
+        setMessage(`${TYPE_INFO[type].name}落下来了，左右晃一晃让相同的碰到！`);
+        updateInfo();
+        canvas.focus();
+      }
+
+      function moveDrop(amount) {
+        dropX = Math.max(42, Math.min(width - 42, dropX + amount));
+        horizontalPush = Math.max(-.24, Math.min(.24, horizontalPush + amount * .003));
+        running = true;
+        if (!nextDropAt) nextDropAt = performance.now() + AUTO_DROP_TIME;
+      }
+
+      function shake(direction = 1) {
+        running = true;
+        balls.forEach((ball, index) => {
+          ball.vx += direction * (2.6 + (index % 3) * .35);
+          ball.vy -= .8 + Math.random() * 1.4;
+        });
+        horizontalPush = direction * .18;
+        setMessage("框子晃起来啦，珠子和宝石正在滚动！");
+      }
+
+      function mergeBalls(first, second) {
+        const nextType = TYPE_INFO[first.type].next;
+        if (!nextType) return null;
+        const merged = makeBall(
+          nextType,
+          (first.x + second.x) / 2,
+          (first.y + second.y) / 2,
+          (first.vx + second.vx) / 2,
+          -3.7
+        );
+        mergeFlash.push({ x: merged.x, y: merged.y, life: 1, color: TYPE_INFO[nextType].color });
+        setMessage(`叮！两颗${TYPE_INFO[first.type].name}变成了${TYPE_INFO[nextType].name}！`);
         return merged;
       }
 
-      function tryStarFinish() {
-        if (queue.length > 0) return false;
-        const beads = columns.flat();
-        if (beads.length === 2 && beads.includes("red") && beads.includes("green") && gems === 8) {
-          columns = Array.from({ length: COLUMN_COUNT }, () => []);
-          gems = 9;
-          render();
-          setMessage("星光收尾！最后两颗珠子也变成蓝宝石啦！");
-          window.setTimeout(() => { winElement.hidden = false; }, 500);
-          return true;
-        }
-        if (queue.length === 0) {
-          setMessage("珠子都落下了！点一列最上面的珠子，再点另一列，把相同珠子凑在一起。你也可以撤销一步。 ");
-        }
-        return false;
-      }
+      function solveCollisions() {
+        const removed = new Set();
+        const additions = [];
 
-      function dropBead(columnIndex) {
-        if (busy || queue.length === 0) return;
-        saveHistory();
-        busy = true;
-        selectedColumn = null;
-        const type = queue.shift();
-        columns[columnIndex].push(type);
-        setMessage(`${TYPE_NAMES[type]}从第 ${columnIndex + 1} 个入口落下来了。`);
-        render();
-        window.setTimeout(() => {
-          resolveColumn(columnIndex);
-          busy = false;
-          render();
-          tryStarFinish();
-        }, 330);
-      }
+        for (let firstIndex = 0; firstIndex < balls.length; firstIndex += 1) {
+          const first = balls[firstIndex];
+          if (removed.has(first.id)) continue;
+          for (let secondIndex = firstIndex + 1; secondIndex < balls.length; secondIndex += 1) {
+            const second = balls[secondIndex];
+            if (removed.has(second.id)) continue;
+            const dx = second.x - first.x;
+            const dy = second.y - first.y;
+            const minDistance = first.radius + second.radius;
+            const distanceSquared = dx * dx + dy * dy;
+            if (distanceSquared >= minDistance * minDistance) continue;
 
-      function moveTopBead(columnIndex) {
-        if (busy || queue.length > 0) return;
-        if (selectedColumn === null) {
-          if (columns[columnIndex].length === 0) {
-            setMessage("这一列是空的，请选一列有珠子的。 ");
-            return;
+            const distance = Math.max(.01, Math.sqrt(distanceSquared));
+            if (first.type === second.type && TYPE_INFO[first.type].next && performance.now() - first.bornAt > 180 && performance.now() - second.bornAt > 180) {
+              removed.add(first.id);
+              removed.add(second.id);
+              additions.push(mergeBalls(first, second));
+              break;
+            }
+
+            const nx = dx / distance;
+            const ny = dy / distance;
+            const overlap = minDistance - distance;
+            first.x -= nx * overlap * .5;
+            first.y -= ny * overlap * .5;
+            second.x += nx * overlap * .5;
+            second.y += ny * overlap * .5;
+            const relativeVelocity = (second.vx - first.vx) * nx + (second.vy - first.vy) * ny;
+            if (relativeVelocity < 0) {
+              const impulse = -relativeVelocity * .72;
+              first.vx -= impulse * nx;
+              first.vy -= impulse * ny;
+              second.vx += impulse * nx;
+              second.vy += impulse * ny;
+            }
           }
-          selectedColumn = columnIndex;
-          setMessage(`选中了第 ${columnIndex + 1} 列最上面的珠子，再点它要去的列。`);
-          render();
-          return;
         }
 
-        if (selectedColumn === columnIndex) {
-          selectedColumn = null;
-          setMessage("已取消选择。 ");
-          render();
-          return;
+        if (removed.size) {
+          balls = balls.filter(ball => !removed.has(ball.id));
+          balls.push(...additions.filter(Boolean));
+          updateInfo();
         }
-
-        saveHistory();
-        const type = columns[selectedColumn].pop();
-        columns[columnIndex].push(type);
-        selectedColumn = null;
-        setMessage(`${TYPE_NAMES[type]}搬到了第 ${columnIndex + 1} 列。`);
-        resolveColumn(columnIndex);
-        render();
-        tryStarFinish();
       }
 
-      function handleColumn(columnIndex) {
-        if (queue.length > 0) dropBead(columnIndex);
-        else moveTopBead(columnIndex);
+      function finishWithStarMagic() {
+        if (queue.length || won) return;
+        const emeralds = balls.filter(ball => ball.type === "emerald");
+        const leftovers = balls.filter(ball => ball.type !== "emerald");
+        if (emeralds.length === 2 && leftovers.length === 2 && leftovers.some(ball => ball.type === "green") && leftovers.some(ball => ball.type === "red")) {
+          const centerX = leftovers.reduce((sum, ball) => sum + ball.x, 0) / 2;
+          const centerY = leftovers.reduce((sum, ball) => sum + ball.y, 0) / 2;
+          balls = [...emeralds, makeBall("emerald", centerX, centerY, 0, -4)];
+          mergeFlash.push({ x: centerX, y: centerY, life: 1.8, color: "#f3b936" });
+          setMessage("星光补上最后一点能量，全部变成绿宝石啦！");
+          updateInfo();
+          won = true;
+          window.setTimeout(() => { winElement.hidden = false; }, 800);
+        }
+      }
+
+      function updatePhysics(step) {
+        const wall = 15;
+        horizontalPush *= .972;
+        balls.forEach(ball => {
+          ball.vx += horizontalPush * step;
+          ball.vy += .28 * step;
+          ball.vx *= Math.pow(.995, step);
+          ball.vy *= Math.pow(.999, step);
+          ball.x += ball.vx * step;
+          ball.y += ball.vy * step;
+          ball.angle += (ball.vx / Math.max(10, ball.radius)) * .06 * step + ball.spin;
+
+          if (ball.x - ball.radius < wall) {
+            ball.x = wall + ball.radius;
+            ball.vx = Math.abs(ball.vx) * .68;
+          } else if (ball.x + ball.radius > width - wall) {
+            ball.x = width - wall - ball.radius;
+            ball.vx = -Math.abs(ball.vx) * .68;
+          }
+
+          if (ball.y + ball.radius > height - wall) {
+            ball.y = height - wall - ball.radius;
+            ball.vy = -Math.abs(ball.vy) * .48;
+            if (Math.abs(ball.vy) < .42) ball.vy = 0;
+            ball.vx *= .975;
+          }
+          if (ball.y - ball.radius < 68) {
+            ball.y = 68 + ball.radius;
+            ball.vy = Math.abs(ball.vy) * .5;
+          }
+        });
+
+        solveCollisions();
+        mergeFlash.forEach(flash => { flash.life -= .035 * step; });
+        mergeFlash = mergeFlash.filter(flash => flash.life > 0);
+        finishWithStarMagic();
+      }
+
+      function roundedPolygonPath(radius, sides = 8) {
+        context.beginPath();
+        for (let index = 0; index < sides; index += 1) {
+          const angle = (Math.PI * 2 * index) / sides - Math.PI / 2;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          if (index === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        }
+        context.closePath();
+      }
+
+      function drawBall(ball) {
+        const info = TYPE_INFO[ball.type];
+        context.save();
+        context.translate(ball.x, ball.y);
+        context.rotate(ball.angle);
+        context.shadowColor = "rgba(22, 62, 88, .28)";
+        context.shadowBlur = 7;
+        context.shadowOffsetY = 5;
+
+        const gradient = context.createRadialGradient(-ball.radius * .35, -ball.radius * .38, 2, 0, 0, ball.radius * 1.15);
+        gradient.addColorStop(0, "#ffffff");
+        gradient.addColorStop(.2, info.color);
+        gradient.addColorStop(1, info.gem ? "#073c5c" : "#173d58");
+        context.fillStyle = gradient;
+        context.strokeStyle = "rgba(255,255,255,.8)";
+        context.lineWidth = 3;
+
+        if (info.gem) roundedPolygonPath(ball.radius, 8);
+        else context.beginPath(), context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+
+        context.shadowColor = "transparent";
+        context.fillStyle = "rgba(255,255,255,.52)";
+        context.beginPath();
+        context.ellipse(-ball.radius * .3, -ball.radius * .36, ball.radius * .23, ball.radius * .12, -.55, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+
+      function drawPreview(now) {
+        if (!queue.length) return;
+        const info = TYPE_INFO[queue[0]];
+        const pulse = 1 + Math.sin(now / 180) * .05;
+        context.save();
+        context.globalAlpha = .82;
+        context.setLineDash([5, 7]);
+        context.strokeStyle = "rgba(45, 104, 135, .42)";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(dropX, 64);
+        context.lineTo(dropX, 126);
+        context.stroke();
+        context.setLineDash([]);
+        context.translate(dropX, 82);
+        context.scale(pulse, pulse);
+        context.fillStyle = info.color;
+        context.beginPath();
+        context.arc(0, 0, 21, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = "#fff";
+        context.lineWidth = 3;
+        context.stroke();
+        context.restore();
+      }
+
+      function draw(now) {
+        context.clearRect(0, 0, width, height);
+
+        const background = context.createLinearGradient(0, 0, 0, height);
+        background.addColorStop(0, "#eefbff");
+        background.addColorStop(1, "#c7e8f4");
+        context.fillStyle = background;
+        context.fillRect(0, 0, width, height);
+
+        context.fillStyle = "rgba(72, 135, 164, .12)";
+        for (let x = 38; x < width; x += 54) {
+          context.beginPath();
+          context.arc(x, height - 28, 3, 0, Math.PI * 2);
+          context.fill();
+        }
+
+        drawPreview(now);
+        balls.forEach(drawBall);
+
+        mergeFlash.forEach(flash => {
+          const radius = (1.8 - Math.min(1.8, flash.life)) * 55 + 18;
+          context.save();
+          context.globalAlpha = Math.min(1, flash.life);
+          context.strokeStyle = flash.color;
+          context.lineWidth = 5;
+          context.beginPath();
+          context.arc(flash.x, flash.y, radius, 0, Math.PI * 2);
+          context.stroke();
+          context.restore();
+        });
+      }
+
+      function frame(now) {
+        const delta = lastTime ? Math.min(34, now - lastTime) : 16;
+        lastTime = now;
+        const step = delta / 16.67;
+        updatePhysics(step);
+
+        if (running && queue.length) {
+          if (!nextDropAt) nextDropAt = now + AUTO_DROP_TIME;
+          const remaining = Math.max(0, nextDropAt - now);
+          dropMeterElement.style.transform = `scaleX(${remaining / AUTO_DROP_TIME})`;
+          if (now >= nextDropAt) dropBall();
+        } else {
+          dropMeterElement.style.transform = "scaleX(0)";
+        }
+
+        draw(now);
+        requestAnimationFrame(frame);
       }
 
       function restart() {
-        columns = Array.from({ length: COLUMN_COUNT }, () => []);
-        queue = shuffledBeads();
-        gems = 0;
-        selectedColumn = null;
-        history = [];
-        busy = false;
+        queue = shuffledQueue();
+        balls = [];
+        dropX = width / 2;
+        nextDropAt = 0;
+        horizontalPush = 0;
+        running = false;
+        won = false;
+        mergeFlash = [];
         winElement.hidden = true;
-        setPreviewPosition(2);
-        setMessage("点一下上方任意入口，让珠子从这里落下吧！");
-        render();
+        setMessage("按左右方向键调位置，按空格或下方向键放下珠子！");
+        updateInfo();
+        canvas.focus();
       }
 
-      dropZone.addEventListener("pointermove", event => {
-        const button = event.target.closest(".drop-choice");
-        if (button && queue.length > 0) setPreviewPosition(Number(button.dataset.column));
+      function pointerPosition(event) {
+        const rect = canvas.getBoundingClientRect();
+        return Math.max(42, Math.min(width - 42, event.clientX - rect.left));
+      }
+
+      canvas.addEventListener("pointermove", event => {
+        dropX = pointerPosition(event);
       });
 
-      dropZone.addEventListener("click", event => {
-        const button = event.target.closest(".drop-choice");
-        if (button) handleColumn(Number(button.dataset.column));
+      canvas.addEventListener("pointerdown", event => {
+        dropX = pointerPosition(event);
+        dropBall();
       });
-
-      boardElement.addEventListener("click", event => {
-        const column = event.target.closest(".column");
-        if (column && queue.length === 0) handleColumn(Number(column.dataset.column));
-      });
-
-      boardElement.addEventListener("keydown", event => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        const column = event.target.closest(".column");
-        if (column && queue.length === 0) {
-          event.preventDefault();
-          handleColumn(Number(column.dataset.column));
-        }
-      });
-
-      undoButton.addEventListener("click", () => {
-        const state = history.pop();
-        if (!state) return;
-        restore(state);
-        setMessage("已经撤销上一步。 ");
-      });
-
-      document.querySelector("#restartButton").addEventListener("click", restart);
-      document.querySelector("#againButton").addEventListener("click", restart);
 
       document.addEventListener("keydown", event => {
-        if (busy || queue.length === 0) return;
-        const number = Number(event.key);
-        if (number >= 1 && number <= COLUMN_COUNT) {
-          setPreviewPosition(number - 1);
-          handleColumn(number - 1);
-        }
+        if (["ArrowLeft", "ArrowRight", "ArrowDown", " "].includes(event.key)) event.preventDefault();
+        if (event.key === "ArrowLeft") moveDrop(-24);
+        if (event.key === "ArrowRight") moveDrop(24);
+        if (event.key === "ArrowDown" || event.key === " ") dropBall();
+        if (event.key === "ArrowUp") shake(Math.random() > .5 ? 1 : -1);
       });
 
-      makeDropButtons();
+      document.querySelector("#shakeButton").addEventListener("click", () => shake(Math.random() > .5 ? 1 : -1));
+      document.querySelector("#restartButton").addEventListener("click", restart);
+      document.querySelector("#againButton").addEventListener("click", restart);
+      window.addEventListener("resize", resizeCanvas);
+
+      resizeCanvas();
       restart();
+      requestAnimationFrame(frame);
     </script>
   </body>
 </html>
