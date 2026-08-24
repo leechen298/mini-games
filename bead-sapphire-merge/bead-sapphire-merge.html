@@ -314,7 +314,7 @@
       <section class="layout">
         <article class="game-card">
           <div class="box-wrap">
-            <div class="box-label">滚 动 大 框</div>
+            <div id="boxLabel" class="box-label">滚 动 大 框</div>
             <canvas id="gameCanvas" tabindex="0" aria-label="宝石滚动合成大框"></canvas>
           </div>
           <div id="message" class="message" aria-live="polite">按左右方向键调位置，按下方向键放下珠子！</div>
@@ -358,7 +358,7 @@
 
           <section>
             <h2>怎么玩</h2>
-            <p>左右方向键移动落点，也会让框里的珠子滚动。准备好以后，按下方向键让珠子落下。没有倒计时，可以慢慢选择。鼠标和手指也能玩。</p>
+            <p>合成时，左右键移动落点，下键落珠。进入地球后，用方向键转动地球并点击黑珠。进入黑珠内部后，左右键移动，空格键跳跃。全程没有倒计时。</p>
           </section>
 
           <div class="actions">
@@ -405,6 +405,7 @@
       const queueCountElement = document.querySelector("#queueCount");
       const ballCountElement = document.querySelector("#ballCount");
       const gameTitleElement = document.querySelector("#gameTitle");
+      const boxLabelElement = document.querySelector("#boxLabel");
       const goalEmojiElement = document.querySelector("#goalEmoji");
       const goalLabelElement = document.querySelector("#goalLabel");
       const goalCountElement = document.querySelector("#goalCount");
@@ -430,6 +431,12 @@
       let lostItems = [];
       let foundCount = 0;
       let hintGlow = 0;
+      let globeAngle = 0;
+      let globeTilt = 0;
+      let blackSpot = { x: 0, y: 0, visible: false, radius: 18 };
+      let worldWidth = 2400;
+      let cameraX = 0;
+      let platforms = [];
       const pressedKeys = new Set();
 
       function shuffledQueue() {
@@ -460,13 +467,9 @@
             ball.y *= scaleY;
           });
         }
-        if (oldWidth && oldHeight && hero) {
+        if (oldWidth && oldHeight && hero && gameMode === "globe") {
           hero.x *= width / oldWidth;
           hero.y *= height / oldHeight;
-          lostItems.forEach(item => {
-            item.x *= width / oldWidth;
-            item.y *= height / oldHeight;
-          });
         }
         dropX = Math.max(40, Math.min(width - 40, dropX * (width / oldWidth)));
       }
@@ -476,22 +479,39 @@
       }
 
       function updateInfo() {
-        if (gameMode === "search") {
-          gameTitleElement.textContent = "小人的寻物冒险";
+        if (gameMode === "globe") {
+          gameTitleElement.textContent = "转动地球找黑珠";
+          boxLabelElement.textContent = "旋 转 地 球";
+          goalEmojiElement.textContent = "🌍";
+          goalLabelElement.textContent = "找到黑珠";
+          goalCountElement.textContent = blackSpot.visible ? 1 : 0;
+          goalTotalElement.textContent = "/1";
+          queueCountElement.textContent = "—";
+          ballCountElement.textContent = "隐藏";
+          roundNumberElement.textContent = "地球";
+          nextBallElement.hidden = true;
+          nextNameElement.textContent = "用方向键转动地球";
+          shakeButton.textContent = "💡 黑珠提示";
+          return;
+        }
+        if (gameMode === "inside") {
+          gameTitleElement.textContent = "黑珠里面的寻物冒险";
+          boxLabelElement.textContent = "黑 珠 内 部";
           goalEmojiElement.textContent = "🔎";
           goalLabelElement.textContent = "找回物品";
           goalCountElement.textContent = foundCount;
           goalTotalElement.textContent = `/${lostItems.length}`;
           queueCountElement.textContent = "—";
           ballCountElement.textContent = lostItems.length - foundCount;
-          roundNumberElement.textContent = "寻物";
+          roundNumberElement.textContent = "黑珠内";
           nextBallElement.hidden = true;
-          nextNameElement.textContent = "用四个方向键寻找";
+          nextNameElement.textContent = "方向键移动，空格跳跃";
           shakeButton.textContent = "✨ 提示位置";
           return;
         }
         const nextType = queue[0];
         gameTitleElement.textContent = "滚滚宝石合成";
+        boxLabelElement.textContent = "滚 动 大 框";
         goalEmojiElement.textContent = "🏺";
         goalLabelElement.textContent = "宇宙变化";
         goalCountElement.textContent = balls.some(ball => ["bottle", "earth", "sun", "uranus", "solar", "black"].includes(ball.type)) ? 1 : 0;
@@ -639,55 +659,121 @@
         updateInfo();
       }
 
-      function createLostItems() {
-        const types = ["blue", "green", "red", "sapphire", "ruby", "emerald", "ice", "bottle"];
-        return types.map((type, index) => {
-          const column = index % 4;
-          const row = Math.floor(index / 4);
-          return {
-            id: `lost-${index}`,
-            type,
-            x: width * (.16 + column * .225) + (Math.random() - .5) * 24,
-            y: height * (.28 + row * .46) + (Math.random() - .5) * 26,
-            radius: Math.min(23, TYPE_INFO[type].radius),
-            angle: Math.random() * Math.PI * 2,
-            found: false
-          };
-        });
-      }
-
-      function startSearchGame(x, y) {
-        gameMode = "search";
+      function startGlobeGame() {
+        gameMode = "globe";
         queue = [];
         balls = [];
         sparks = [];
-        hero = { x: Math.max(34, Math.min(width - 34, x)), y: Math.max(100, Math.min(height - 40, y)), radius: 22 };
-        lostItems = createLostItems();
+        mergeFlash = [];
+        hero = null;
+        lostItems = [];
+        globeAngle = 0;
+        globeTilt = 0;
+        blackSpot = { x: 0, y: 0, visible: false, radius: 18 };
         foundCount = 0;
-        hintGlow = 2;
-        setMessage("黑色珠子变成了小人！用四个方向键寻找 8 件丢失的物品！");
+        setMessage("丢失的物品藏起来了！用四个方向键转动地球，找到黑色珠子后点它。 ");
         updateInfo();
       }
 
-      function updateSearch(step) {
+      function updateGlobe(step) {
+        const turnSpeed = .025 * step;
+        if (pressedKeys.has("ArrowLeft")) globeAngle -= turnSpeed;
+        if (pressedKeys.has("ArrowRight")) globeAngle += turnSpeed;
+        if (pressedKeys.has("ArrowUp")) globeTilt = Math.max(-.75, globeTilt - turnSpeed);
+        if (pressedKeys.has("ArrowDown")) globeTilt = Math.min(.75, globeTilt + turnSpeed);
+        updateInfo();
+      }
+
+      function createInsideWorld() {
+        worldWidth = Math.max(2400, width * 3.2);
+        const floorY = height - 64;
+        platforms = [
+          { x: 0, y: floorY, width: worldWidth, height: 44 },
+          { x: 330, y: floorY - 105, width: 190, height: 18 },
+          { x: 760, y: floorY - 145, width: 220, height: 18 },
+          { x: 1210, y: floorY - 95, width: 180, height: 18 },
+          { x: 1640, y: floorY - 150, width: 230, height: 18 },
+          { x: 2050, y: floorY - 110, width: 190, height: 18 }
+        ];
+        const itemPlan = [
+          ["blue", 260, floorY - 25],
+          ["green", 430, floorY - 132],
+          ["red", 690, floorY - 25],
+          ["sapphire", 860, floorY - 173],
+          ["ruby", 1120, floorY - 27],
+          ["emerald", 1295, floorY - 123],
+          ["ice", 1750, floorY - 180],
+          ["bottle", 2180, floorY - 140]
+        ];
+        lostItems = itemPlan.map(([type, x, y], index) => ({
+          id: `lost-${index}`,
+          type,
+          x,
+          y,
+          radius: Math.min(23, TYPE_INFO[type].radius),
+          angle: Math.random() * Math.PI * 2,
+          found: false
+        }));
+      }
+
+      function startInsideGame() {
+        gameMode = "inside";
+        createInsideWorld();
+        const floorY = height - 64;
+        hero = { x: 80, y: floorY - 28, vx: 0, vy: 0, radius: 22, onGround: true, facing: 1 };
+        cameraX = 0;
+        foundCount = 0;
+        hintGlow = 1.5;
+        pressedKeys.clear();
+        setMessage("进入黑色珠子里面了！方向键控制方向，空格键跳跃，小人不会掉出世界。 ");
+        updateInfo();
+      }
+
+      function updateInside(step) {
         if (!hero || won) return;
-        const speed = 4.2 * step;
-        if (pressedKeys.has("ArrowLeft")) hero.x -= speed;
-        if (pressedKeys.has("ArrowRight")) hero.x += speed;
-        if (pressedKeys.has("ArrowUp")) hero.y -= speed;
-        if (pressedKeys.has("ArrowDown")) hero.y += speed;
-        hero.x = Math.max(hero.radius + 12, Math.min(width - hero.radius - 12, hero.x));
-        hero.y = Math.max(92 + hero.radius, Math.min(height - hero.radius - 12, hero.y));
-        hintGlow = Math.max(0, hintGlow - .012 * step);
+        const acceleration = .42 * step;
+        if (pressedKeys.has("ArrowLeft")) {
+          hero.vx -= acceleration;
+          hero.facing = -1;
+        }
+        if (pressedKeys.has("ArrowRight")) {
+          hero.vx += acceleration;
+          hero.facing = 1;
+        }
+        hero.vx *= Math.pow(.84, step);
+        hero.vx = Math.max(-5.2, Math.min(5.2, hero.vx));
+        hero.vy += .46 * step;
+        const previousBottom = hero.y + hero.radius;
+        hero.x += hero.vx * step;
+        hero.y += hero.vy * step;
+        hero.onGround = false;
+
+        platforms.forEach(platform => {
+          const within = hero.x + hero.radius > platform.x && hero.x - hero.radius < platform.x + platform.width;
+          const crossedTop = previousBottom <= platform.y + 4 && hero.y + hero.radius >= platform.y;
+          if (within && crossedTop && hero.vy >= 0) {
+            hero.y = platform.y - hero.radius;
+            hero.vy = 0;
+            hero.onGround = true;
+          }
+        });
+
+        hero.x = Math.max(hero.radius, Math.min(worldWidth - hero.radius, hero.x));
+        if (hero.y > height - hero.radius - 10) {
+          hero.y = height - 64 - hero.radius;
+          hero.vy = 0;
+          hero.onGround = true;
+        }
+        cameraX += ((hero.x - width * .38) - cameraX) * Math.min(1, .09 * step);
+        cameraX = Math.max(0, Math.min(worldWidth - width, cameraX));
+        hintGlow = Math.max(0, hintGlow - .01 * step);
 
         lostItems.forEach(item => {
           if (item.found) return;
-          const dx = item.x - hero.x;
-          const dy = item.y - hero.y;
-          if (Math.hypot(dx, dy) < hero.radius + item.radius + 7) {
+          if (Math.hypot(item.x - hero.x, item.y - hero.y) < hero.radius + item.radius + 8) {
             item.found = true;
             foundCount += 1;
-            mergeFlash.push({ x: item.x, y: item.y, life: 1.4, color: TYPE_INFO[item.type].color });
+            mergeFlash.push({ x: item.x - cameraX, y: item.y, life: 1.4, color: TYPE_INFO[item.type].color });
             setMessage(`找到了${TYPE_INFO[item.type].name}！还差 ${lostItems.length - foundCount} 件。`);
             updateInfo();
           }
@@ -695,7 +781,7 @@
 
         if (foundCount === lostItems.length && !won) {
           won = true;
-          setMessage("所有丢失的物品都找回来啦！");
+          setMessage("黑色珠子里的丢失物品全部找回来啦！");
           window.setTimeout(() => { winElement.hidden = false; }, 650);
         }
       }
@@ -758,14 +844,18 @@
           }
           const blackAge = performance.now() - black.bornAt;
           if ((balls.length === 1 && blackAge > 900) || blackAge > 4200) {
-            startSearchGame(black.x, black.y);
+            startGlobeGame();
           }
         }
       }
 
       function updatePhysics(step) {
-        if (gameMode === "search") {
-          updateSearch(step);
+        if (gameMode === "globe") {
+          updateGlobe(step);
+          return;
+        }
+        if (gameMode === "inside") {
+          updateInside(step);
           mergeFlash.forEach(flash => { flash.life -= .035 * step; });
           mergeFlash = mergeFlash.filter(flash => flash.life > 0);
           return;
@@ -1089,35 +1179,113 @@
         context.restore();
       }
 
-      function drawSearchScene(now) {
-        const searchSky = context.createLinearGradient(0, 0, 0, height);
-        searchSky.addColorStop(0, "#263b72");
-        searchSky.addColorStop(.55, "#557ec0");
-        searchSky.addColorStop(1, "#78b87c");
-        context.fillStyle = searchSky;
+      function drawGlobeScene(now) {
+        const space = context.createRadialGradient(width / 2, height / 2, 30, width / 2, height / 2, Math.max(width, height));
+        space.addColorStop(0, "#243c79");
+        space.addColorStop(1, "#070b24");
+        context.fillStyle = space;
         context.fillRect(0, 0, width, height);
-
-        context.fillStyle = "rgba(255,255,255,.72)";
-        for (let index = 0; index < 28; index += 1) {
-          const x = (index * 83 + 31) % width;
-          const y = 78 + ((index * 47) % Math.max(100, height * .42));
-          const size = 1 + (index % 3);
+        context.fillStyle = "rgba(255,255,255,.78)";
+        for (let index = 0; index < 48; index += 1) {
+          const x = (index * 97 + 27) % width;
+          const y = 70 + ((index * 53) % Math.max(120, height - 100));
           context.beginPath();
-          context.arc(x, y, size, 0, Math.PI * 2);
+          context.arc(x, y, 1 + index % 3, 0, Math.PI * 2);
           context.fill();
         }
 
-        context.fillStyle = "#78b87c";
+        const centerX = width / 2;
+        const centerY = height / 2 + 28;
+        const radius = Math.min(width * .34, height * .34, 220);
+        context.save();
+        context.shadowColor = "#62c8ff";
+        context.shadowBlur = 28;
+        const ocean = context.createRadialGradient(centerX - radius * .35, centerY - radius * .4, 8, centerX, centerY, radius);
+        ocean.addColorStop(0, "#a8efff");
+        ocean.addColorStop(.28, "#3b9ee3");
+        ocean.addColorStop(1, "#123a86");
+        context.fillStyle = ocean;
         context.beginPath();
-        context.moveTo(0, height * .72);
-        for (let x = 0; x <= width; x += 50) {
-          context.lineTo(x, height * .72 + Math.sin(x * .025) * 18);
-        }
-        context.lineTo(width, height);
-        context.lineTo(0, height);
-        context.closePath();
+        context.arc(centerX, centerY, radius, 0, Math.PI * 2);
         context.fill();
+        context.clip();
+        context.shadowColor = "transparent";
 
+        for (let index = -2; index <= 2; index += 1) {
+          const longitude = globeAngle + index * 1.35;
+          const landX = centerX + Math.sin(longitude) * radius * .72;
+          const visibleScale = .3 + Math.max(0, Math.cos(longitude)) * .7;
+          context.fillStyle = index % 2 ? "#55bb69" : "#70ca6e";
+          context.beginPath();
+          context.ellipse(landX, centerY + Math.sin(index * 2.1 + globeTilt) * radius * .36, radius * .25 * visibleScale, radius * .32, longitude * .18, 0, Math.PI * 2);
+          context.fill();
+        }
+
+        context.strokeStyle = "rgba(220,250,255,.2)";
+        context.lineWidth = 2;
+        for (let index = -2; index <= 2; index += 1) {
+          context.beginPath();
+          context.ellipse(centerX, centerY + index * radius * .22, radius * Math.sqrt(Math.max(.1, 1 - index * index * .04)), radius * .11, 0, 0, Math.PI * 2);
+          context.stroke();
+        }
+        context.restore();
+
+        const markerLongitude = 2.45;
+        const markerLatitude = -.18;
+        const relative = globeAngle + markerLongitude;
+        const depth = Math.cos(relative) * Math.cos(markerLatitude);
+        blackSpot.visible = depth > .08;
+        blackSpot.x = centerX + Math.sin(relative) * radius * .83 * Math.cos(markerLatitude);
+        blackSpot.y = centerY + Math.sin(markerLatitude + globeTilt) * radius * .72;
+        blackSpot.radius = 17 + Math.max(0, depth) * 8;
+        if (blackSpot.visible) {
+          context.save();
+          context.shadowColor = hintGlow > 0 ? "#fff19a" : "#8b6ee8";
+          context.shadowBlur = hintGlow > 0 ? 25 : 14;
+          context.fillStyle = "#05070c";
+          context.beginPath();
+          context.arc(blackSpot.x, blackSpot.y, blackSpot.radius, 0, Math.PI * 2);
+          context.fill();
+          context.strokeStyle = "#9b80f0";
+          context.lineWidth = 3;
+          context.stroke();
+          context.restore();
+        }
+
+        context.fillStyle = "rgba(255,255,255,.92)";
+        context.font = "800 16px -apple-system, BlinkMacSystemFont, sans-serif";
+        context.textAlign = "center";
+        context.fillText("用方向键转动地球，找到后点击黑色珠子", centerX, 92);
+        hintGlow = Math.max(0, hintGlow - .01);
+      }
+
+      function drawInsideScene(now) {
+        const cave = context.createLinearGradient(0, 0, 0, height);
+        cave.addColorStop(0, "#17152d");
+        cave.addColorStop(.65, "#30264a");
+        cave.addColorStop(1, "#17121f");
+        context.fillStyle = cave;
+        context.fillRect(0, 0, width, height);
+        context.fillStyle = "rgba(137,111,205,.18)";
+        for (let index = 0; index < 30; index += 1) {
+          const x = ((index * 137 - cameraX * .25) % (width + 100)) - 50;
+          const y = 85 + (index * 83) % Math.max(160, height - 160);
+          context.beginPath();
+          context.arc(x, y, 8 + index % 5, 0, Math.PI * 2);
+          context.fill();
+        }
+
+        context.save();
+        context.translate(-cameraX, 0);
+        platforms.forEach((platform, index) => {
+          const platformGradient = context.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
+          platformGradient.addColorStop(0, index === 0 ? "#8770b6" : "#9a83c8");
+          platformGradient.addColorStop(1, "#40355e");
+          context.fillStyle = platformGradient;
+          context.fillRect(platform.x, platform.y, platform.width, platform.height);
+          context.fillStyle = "rgba(210,195,255,.35)";
+          context.fillRect(platform.x, platform.y, platform.width, 4);
+        });
         lostItems.forEach(item => {
           if (item.found) return;
           if (hintGlow > 0) {
@@ -1133,13 +1301,21 @@
           drawBall(item);
         });
         drawHero(now);
+        context.restore();
+
+        context.fillStyle = "rgba(255,255,255,.9)";
+        context.font = "800 15px -apple-system, BlinkMacSystemFont, sans-serif";
+        context.textAlign = "left";
+        context.fillText(`探索距离 ${Math.round(hero ? hero.x : 0)} / ${Math.round(worldWidth)}`, 20, 92);
       }
 
       function draw(now) {
         context.clearRect(0, 0, width, height);
 
-        if (gameMode === "search") {
-          drawSearchScene(now);
+        if (gameMode === "globe") {
+          drawGlobeScene(now);
+        } else if (gameMode === "inside") {
+          drawInsideScene(now);
         } else {
 
           const background = context.createLinearGradient(0, 0, 0, height);
@@ -1206,6 +1382,11 @@
         lostItems = [];
         foundCount = 0;
         hintGlow = 0;
+        globeAngle = 0;
+        globeTilt = 0;
+        blackSpot = { x: 0, y: 0, visible: false, radius: 18 };
+        cameraX = 0;
+        platforms = [];
         pressedKeys.clear();
         winElement.hidden = true;
         setMessage("按左右方向键调位置，按下方向键放下珠子！");
@@ -1223,21 +1404,34 @@
       });
 
       canvas.addEventListener("pointerdown", event => {
-        if (gameMode === "search") {
+        if (gameMode === "globe") {
           const rect = canvas.getBoundingClientRect();
-          hero.x = Math.max(hero.radius + 12, Math.min(width - hero.radius - 12, event.clientX - rect.left));
-          hero.y = Math.max(92 + hero.radius, Math.min(height - hero.radius - 12, event.clientY - rect.top));
-          updateSearch(1);
-        } else {
+          const pointerX = event.clientX - rect.left;
+          const pointerY = event.clientY - rect.top;
+          if (blackSpot.visible && Math.hypot(pointerX - blackSpot.x, pointerY - blackSpot.y) <= blackSpot.radius + 14) {
+            startInsideGame();
+          } else {
+            setMessage("这里没有黑色珠子，再用方向键转一转地球吧！");
+          }
+        } else if (gameMode === "merge") {
           dropX = pointerPosition(event);
           dropBall();
         }
       });
 
       document.addEventListener("keydown", event => {
-        if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"].includes(event.key)) event.preventDefault();
-        if (gameMode === "search") {
-          pressedKeys.add(event.key);
+        if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(event.key)) event.preventDefault();
+        if (gameMode === "globe") {
+          if (event.key.startsWith("Arrow")) pressedKeys.add(event.key);
+          return;
+        }
+        if (gameMode === "inside") {
+          if (event.key.startsWith("Arrow")) pressedKeys.add(event.key);
+          if (event.key === " " && hero && hero.onGround && !event.repeat) {
+            hero.vy = -9.2;
+            hero.onGround = false;
+            setMessage("跳起来啦！继续寻找丢失的物品。 ");
+          }
           return;
         }
         if (event.key === "ArrowLeft") moveDrop(-24);
@@ -1251,7 +1445,10 @@
       });
 
       shakeButton.addEventListener("click", () => {
-        if (gameMode === "search") {
+        if (gameMode === "globe") {
+          hintGlow = 2.5;
+          setMessage("提示：发光的黑色珠子藏在地球背面，继续左右转动！");
+        } else if (gameMode === "inside") {
           hintGlow = 2;
           setMessage("丢失的物品亮起来啦，快去找它们！");
         } else {
