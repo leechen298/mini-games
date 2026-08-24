@@ -702,16 +702,17 @@
           { x: 2140, y: waterSurface + 165, width: 230, height: 18 },
           { x: 2520, y: waterSurface + 70, width: 190, height: 18 }
         ];
+        const reachableY = waterSurface + 105;
         const itemPlan = [
-          ["blue", 260, waterSurface + 80],
-          ["green", 470, waterSurface + 50],
-          ["earth", 760, floorY - 34],
-          ["red", 930, waterSurface + 145],
-          ["sapphire", 1180, floorY - 30],
-          ["ruby", 1380, waterSurface + 72],
-          ["emerald", 1700, waterSurface + 190],
-          ["ice", 2250, waterSurface + 130],
-          ["bottle", 2620, waterSurface + 36]
+          ["blue", 260, reachableY],
+          ["green", 470, reachableY - 32],
+          ["earth", 760, reachableY + 22],
+          ["red", 930, reachableY + 38],
+          ["sapphire", 1180, reachableY - 38],
+          ["ruby", 1380, reachableY + 15],
+          ["emerald", 1700, reachableY - 18],
+          ["ice", 2250, reachableY + 34],
+          ["bottle", 2620, reachableY - 30]
         ];
         lostItems = itemPlan.map(([type, x, y], index) => ({
           id: `lost-${index}`,
@@ -790,14 +791,19 @@
           hero.facing = 1;
         }
         const underwater = hero.y >= waterSurface - 8;
-        if (pressedKeys.has("ArrowDown") && underwater) hero.vy += .2 * step;
+        const diving = pressedKeys.has("ArrowDown") && underwater;
         hero.vx *= Math.pow(hero.riding ? .91 : .86, step);
         const maxSpeed = hero.riding ? 8.5 : 5.2;
         hero.vx = Math.max(-maxSpeed, Math.min(maxSpeed, hero.vx));
         if (underwater) {
-          const steadyY = waterSurface + (hero.riding ? 75 : 105);
-          hero.vy += (steadyY - hero.y) * (hero.riding ? .018 : .009) * step;
-          hero.vy *= Math.pow(hero.riding ? .86 : .93, step);
+          if (diving) {
+            hero.vy += (hero.riding ? .48 : .38) * step;
+            hero.vy *= Math.pow(.97, step);
+          } else {
+            const steadyY = waterSurface + (hero.riding ? 75 : 105);
+            hero.vy += (steadyY - hero.y) * (hero.riding ? .018 : .009) * step;
+            hero.vy *= Math.pow(hero.riding ? .86 : .93, step);
+          }
         } else {
           hero.vy += .46 * step;
         }
