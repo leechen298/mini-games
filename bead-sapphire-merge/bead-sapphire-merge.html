@@ -308,7 +308,7 @@
     <main class="app">
       <header class="topbar">
         <h1 id="gameTitle">滚滚宝石合成</h1>
-        <div class="goal"><span id="goalEmoji">🏺</span> <span id="goalLabel">纪念瓷瓶</span> <span id="goalCount">0</span><span id="goalTotal">/1</span></div>
+        <div class="goal"><span id="goalEmoji">🧊</span> <span id="goalLabel">最终冰宝石</span> <span id="goalCount">0</span><span id="goalTotal">/2</span></div>
       </header>
 
       <section class="layout">
@@ -345,6 +345,8 @@
               <div class="chain-step"><i class="token sun"></i><span>太阳分裂</span><i class="token uranus"></i></div>
               <div class="chain-step"><i class="token uranus"></i><span>两颗天王星</span><i class="token solar"></i></div>
               <div class="chain-step"><i class="token solar"></i><span>太阳系爆出</span><i class="token black"></i></div>
+              <div class="chain-step"><i class="token black"></i><span>黑珠爆出100颗</span><i class="token blue"></i></div>
+              <div class="chain-step"><i class="token blue"></i><span>100颗重新合成</span><i class="token gem ice"></i></div>
             </div>
           </section>
 
@@ -358,7 +360,7 @@
 
           <section>
             <h2>怎么玩</h2>
-            <p>合成时左右键移动、下键落珠。地球画面用方向键转动并点击黑珠。海洋里左右键游泳、下键下潜、空格跳跃、上键伸黑手；回车可挑战和制服龙王，Esc 可退出战斗。</p>
+            <p>整个游戏只有合成玩法。左右方向键调整落点，下方向键放下珠子。黑色珠子会爆出最终的100颗珠子，把它们全部合成两颗冰宝石即可通关。没有倒计时。</p>
           </section>
 
           <div class="actions">
@@ -371,9 +373,9 @@
 
     <div id="win" class="win" hidden>
       <div class="win-card">
-        <div class="big-gem">🧒 ✨</div>
-        <h2>丢失的物品全找回啦！</h2>
-        <p>黑色珠子变成的小人找回了所有珠子和宝石，宇宙寻物任务完成！</p>
+        <div class="big-gem">🧊 🧊</div>
+        <h2>两颗冰宝石合成完成！</h2>
+        <p>黑色珠子爆出的100颗珠子，已经全部重新合成两颗亮晶晶的冰宝石！</p>
         <button id="againButton" class="action primary" type="button">再玩一次</button>
       </div>
     </div>
@@ -454,6 +456,19 @@
         return items;
       }
 
+      function shuffledHundredQueue() {
+        const items = [
+          ...Array(78).fill("blue"),
+          ...Array(19).fill("green"),
+          ...Array(3).fill("red")
+        ];
+        for (let index = items.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [items[index], items[randomIndex]] = [items[randomIndex], items[index]];
+        }
+        return items;
+      }
+
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
         const oldWidth = width;
@@ -485,6 +500,24 @@
       }
 
       function updateInfo() {
+        if (gameMode === "merge" && round === 3) {
+          const iceCount = balls.filter(ball => ball.type === "ice").length;
+          gameTitleElement.textContent = "100颗珠子的最终合成";
+          boxLabelElement.textContent = "最 终 合 成";
+          goalEmojiElement.textContent = "🧊";
+          goalLabelElement.textContent = "冰宝石";
+          goalCountElement.textContent = iceCount;
+          goalTotalElement.textContent = "/2";
+          queueCountElement.textContent = queue.length;
+          ballCountElement.textContent = balls.length;
+          roundNumberElement.textContent = "最终";
+          shakeButton.textContent = "↔ 晃一晃";
+          const nextType = queue[0];
+          nextBallElement.hidden = !nextType;
+          nextNameElement.textContent = nextType ? TYPE_INFO[nextType].name : "继续晃动合成";
+          if (nextType) nextBallElement.style.background = TYPE_INFO[nextType].color;
+          return;
+        }
         if (gameMode === "globe") {
           gameTitleElement.textContent = "转动地球找黑珠";
           boxLabelElement.textContent = "旋 转 地 球";
@@ -587,7 +620,7 @@
       }
 
       function canMerge(type) {
-        return Boolean(TYPE_INFO[type].next || type === "ice");
+        return Boolean(TYPE_INFO[type].next || (type === "ice" && round < 3));
       }
 
       function solveCollisions() {
@@ -890,6 +923,16 @@
 
       function handleSpecialStages() {
         if (won || gameMode !== "merge") return;
+        if (round === 3) {
+          const finalIce = balls.filter(ball => ball.type === "ice");
+          if (queue.length === 0 && balls.length === 2 && finalIce.length === 2) {
+            won = true;
+            setMessage("100颗珠子全部合成完毕，两颗冰宝石挑战成功！");
+            updateInfo();
+            window.setTimeout(() => { winElement.hidden = false; }, 700);
+          }
+          return;
+        }
         const bomb = balls.find(ball => ball.type === "bomb");
         if (bomb && performance.now() - bomb.bornAt > 950) {
           makeExplosion(bomb.x, bomb.y);
@@ -931,22 +974,16 @@
 
         const black = balls.find(ball => ball.type === "black");
         if (black) {
-          const others = balls.filter(ball => ball.id !== black.id);
-          others.forEach(ball => {
-            const dx = black.x - ball.x;
-            const dy = black.y - ball.y;
-            const distance = Math.max(1, Math.hypot(dx, dy));
-            ball.vx += dx / distance * .2;
-            ball.vy += dy / distance * .2;
-          });
-          const swallowed = new Set(others.filter(ball => Math.hypot(ball.x - black.x, ball.y - black.y) < black.radius + 9).map(ball => ball.id));
-          if (swallowed.size) {
-            balls = balls.filter(ball => !swallowed.has(ball.id));
-            black.radius = Math.min(54, black.radius + swallowed.size * 2);
-          }
           const blackAge = performance.now() - black.bornAt;
-          if ((balls.length === 1 && blackAge > 900) || blackAge > 4200) {
-            startGlobeGame();
+          if (blackAge > 1200) {
+            makeExplosion(black.x, black.y);
+            balls = [];
+            queue = shuffledHundredQueue();
+            round = 3;
+            dropX = width / 2;
+            horizontalPush = 0;
+            setMessage("黑色珠子分裂出100颗新珠子！把它们重新合成两颗冰宝石吧！");
+            updateInfo();
           }
         }
       }
