@@ -215,6 +215,14 @@
       .token.sapphire { background: linear-gradient(135deg, #70d2ff, var(--sapphire) 62%); }
       .token.ruby { background: linear-gradient(135deg, #ff7590, var(--ruby) 62%); }
       .token.emerald { background: linear-gradient(135deg, #6ff1bd, var(--emerald) 62%); }
+      .token.earth {
+        border: 2px solid #fff;
+        background:
+          radial-gradient(ellipse at 34% 40%, #49b96d 0 18%, transparent 20%),
+          radial-gradient(ellipse at 70% 63%, #49b96d 0 20%, transparent 22%),
+          #2e91dd;
+      }
+      .token.ice { background: linear-gradient(135deg, #f5ffff, #76dff5 55%, #268fc9); }
 
       .stats {
         display: grid;
@@ -296,7 +304,7 @@
     <main class="app">
       <header class="topbar">
         <h1>滚滚宝石合成</h1>
-        <div class="goal">💚 绿宝石 <span id="emeraldCount">0</span>/3</div>
+        <div class="goal">🧊 冰宝石 <span id="iceCount">0</span>/2</div>
       </header>
 
       <section class="layout">
@@ -325,6 +333,8 @@
               <div class="chain-step"><i class="token red"></i><span>两颗红珠</span><i class="token gem sapphire"></i></div>
               <div class="chain-step"><i class="token gem sapphire"></i><span>两颗蓝宝石</span><i class="token gem ruby"></i></div>
               <div class="chain-step"><i class="token gem ruby"></i><span>两颗红宝石</span><i class="token gem emerald"></i></div>
+              <div class="chain-step"><i class="token gem emerald"></i><span>三颗绿宝石</span><i class="token earth"></i></div>
+              <div class="chain-step"><i class="token earth"></i><span>一个地球变两颗</span><i class="token gem ice"></i></div>
             </div>
           </section>
 
@@ -350,9 +360,9 @@
 
     <div id="win" class="win" hidden>
       <div class="win-card">
-        <div class="big-gem">💚</div>
-        <h2>全都变成绿宝石啦！</h2>
-        <p>你让珠子一路滚动合成，得到了 3 颗闪闪发亮的绿宝石！</p>
+        <div class="big-gem">🌍 🧊</div>
+        <h2>得到两颗冰宝石啦！</h2>
+        <p>三颗绿宝石合成了地球，地球送给你两颗亮晶晶的冰宝石！</p>
         <button id="againButton" class="action primary" type="button">再玩一次</button>
       </div>
     </div>
@@ -364,7 +374,9 @@
         red: { name: "红珠", color: "#ef5b63", next: "sapphire", radius: 24, gem: false },
         sapphire: { name: "蓝宝石", color: "#205dda", next: "ruby", radius: 26, gem: true },
         ruby: { name: "红宝石", color: "#d92755", next: "emerald", radius: 28, gem: true },
-        emerald: { name: "绿宝石", color: "#07986a", next: null, radius: 30, gem: true }
+        emerald: { name: "绿宝石", color: "#07986a", next: null, radius: 30, gem: true },
+        earth: { name: "地球", color: "#2e91dd", next: null, radius: 36, gem: false },
+        ice: { name: "冰宝石", color: "#76dff5", next: null, radius: 30, gem: true }
       };
 
       const START_TYPES = ["blue", "green", "red"];
@@ -375,7 +387,7 @@
       const nextNameElement = document.querySelector("#nextName");
       const queueCountElement = document.querySelector("#queueCount");
       const ballCountElement = document.querySelector("#ballCount");
-      const emeraldCountElement = document.querySelector("#emeraldCount");
+      const iceCountElement = document.querySelector("#iceCount");
       const winElement = document.querySelector("#win");
 
       let width = 700;
@@ -428,7 +440,7 @@
         const nextType = queue[0];
         queueCountElement.textContent = queue.length;
         ballCountElement.textContent = balls.length;
-        emeraldCountElement.textContent = balls.filter(ball => ball.type === "emerald").length;
+        iceCountElement.textContent = balls.filter(ball => ball.type === "ice").length;
         nextBallElement.hidden = !nextType;
         nextNameElement.textContent = nextType ? TYPE_INFO[nextType].name : "全部落下了";
         if (nextType) nextBallElement.style.background = TYPE_INFO[nextType].color;
@@ -536,7 +548,7 @@
         }
       }
 
-      function finishWithStarMagic() {
+      function finishFinalJourney() {
         if (queue.length || won) return;
         const emeralds = balls.filter(ball => ball.type === "emerald");
         const leftovers = balls.filter(ball => ball.type !== "emerald");
@@ -545,7 +557,29 @@
           const centerY = leftovers.reduce((sum, ball) => sum + ball.y, 0) / 2;
           balls = [...emeralds, makeBall("emerald", centerX, centerY, 0, -4)];
           mergeFlash.push({ x: centerX, y: centerY, life: 1.8, color: "#f3b936" });
-          setMessage("星光补上最后一点能量，全部变成绿宝石啦！");
+          setMessage("星光补上最后一点能量，第三颗绿宝石出现啦！");
+          updateInfo();
+          return;
+        }
+
+        if (balls.length === 3 && emeralds.length === 3 && emeralds.every(ball => performance.now() - ball.bornAt > 700)) {
+          const centerX = emeralds.reduce((sum, ball) => sum + ball.x, 0) / 3;
+          const centerY = emeralds.reduce((sum, ball) => sum + ball.y, 0) / 3;
+          balls = [makeBall("earth", centerX, centerY, 0, -4.5)];
+          mergeFlash.push({ x: centerX, y: centerY, life: 1.8, color: "#49b96d" });
+          setMessage("哇！三颗绿宝石合成了一个会滚动的地球！");
+          updateInfo();
+          return;
+        }
+
+        if (balls.length === 1 && balls[0].type === "earth" && performance.now() - balls[0].bornAt > 1200) {
+          const earth = balls[0];
+          balls = [
+            makeBall("ice", earth.x - 24, earth.y, -2.4, -4.8),
+            makeBall("ice", earth.x + 24, earth.y, 2.4, -4.8)
+          ];
+          mergeFlash.push({ x: earth.x, y: earth.y, life: 1.8, color: "#d9fbff" });
+          setMessage("地球送出了两颗冰宝石！挑战成功！");
           updateInfo();
           won = true;
           window.setTimeout(() => { winElement.hidden = false; }, 800);
@@ -587,7 +621,7 @@
         solveCollisions();
         mergeFlash.forEach(flash => { flash.life -= .035 * step; });
         mergeFlash = mergeFlash.filter(flash => flash.life > 0);
-        finishWithStarMagic();
+        finishFinalJourney();
       }
 
       function roundedPolygonPath(radius, sides = 8) {
@@ -610,6 +644,32 @@
         context.shadowColor = "rgba(22, 62, 88, .28)";
         context.shadowBlur = 7;
         context.shadowOffsetY = 5;
+
+        if (ball.type === "earth") {
+          const ocean = context.createRadialGradient(-12, -14, 2, 0, 0, ball.radius * 1.15);
+          ocean.addColorStop(0, "#9ee9ff");
+          ocean.addColorStop(.28, "#2e91dd");
+          ocean.addColorStop(1, "#13539c");
+          context.fillStyle = ocean;
+          context.strokeStyle = "rgba(255,255,255,.85)";
+          context.lineWidth = 3;
+          context.beginPath();
+          context.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+          context.shadowColor = "transparent";
+          context.fillStyle = "#50bd70";
+          context.beginPath();
+          context.ellipse(-10, -5, 13, 19, -.55, 0, Math.PI * 2);
+          context.ellipse(15, 13, 12, 8, .4, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "rgba(245,255,255,.9)";
+          context.beginPath();
+          context.ellipse(0, -29, 18, 6, 0, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+          return;
+        }
 
         const gradient = context.createRadialGradient(-ball.radius * .35, -ball.radius * .38, 2, 0, 0, ball.radius * 1.15);
         gradient.addColorStop(0, "#ffffff");
