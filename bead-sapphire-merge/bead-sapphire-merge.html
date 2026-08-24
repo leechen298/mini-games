@@ -136,28 +136,6 @@
         pointer-events: none;
       }
 
-      .auto-meter {
-        position: absolute;
-        z-index: 2;
-        left: 24px;
-        right: 24px;
-        top: 55px;
-        height: 5px;
-        border-radius: 5px;
-        background: rgba(71, 134, 164, .16);
-        overflow: hidden;
-        pointer-events: none;
-      }
-
-      .auto-meter span {
-        display: block;
-        width: 100%;
-        height: 100%;
-        border-radius: inherit;
-        background: var(--gold);
-        transform-origin: left;
-      }
-
       .message {
         min-height: 50px;
         display: flex;
@@ -325,10 +303,9 @@
         <article class="game-card">
           <div class="box-wrap">
             <div class="box-label">滚 动 大 框</div>
-            <div class="auto-meter" aria-hidden="true"><span id="dropMeter"></span></div>
             <canvas id="gameCanvas" tabindex="0" aria-label="宝石滚动合成大框"></canvas>
           </div>
-          <div id="message" class="message" aria-live="polite">按左右方向键调位置，按空格或下方向键放下珠子！</div>
+          <div id="message" class="message" aria-live="polite">按左右方向键调位置，按下方向键放下珠子！</div>
         </article>
 
         <aside class="side">
@@ -360,7 +337,7 @@
 
           <section>
             <h2>怎么玩</h2>
-            <p>左右键移动落点，也会让框里的珠子滚动。空格键或下方向键立刻落下。鼠标和手指也能选择落点。相同物品碰到就会自动合成。</p>
+            <p>左右方向键移动落点，也会让框里的珠子滚动。准备好以后，按下方向键让珠子落下。没有倒计时，可以慢慢选择。鼠标和手指也能玩。</p>
           </section>
 
           <div class="actions">
@@ -391,7 +368,6 @@
       };
 
       const START_TYPES = ["blue", "green", "red"];
-      const AUTO_DROP_TIME = 3600;
       const canvas = document.querySelector("#gameCanvas");
       const context = canvas.getContext("2d");
       const messageElement = document.querySelector("#message");
@@ -400,7 +376,6 @@
       const queueCountElement = document.querySelector("#queueCount");
       const ballCountElement = document.querySelector("#ballCount");
       const emeraldCountElement = document.querySelector("#emeraldCount");
-      const dropMeterElement = document.querySelector("#dropMeter");
       const winElement = document.querySelector("#win");
 
       let width = 700;
@@ -408,10 +383,8 @@
       let queue = [];
       let balls = [];
       let dropX = width / 2;
-      let nextDropAt = 0;
       let lastTime = 0;
       let horizontalPush = 0;
-      let running = false;
       let won = false;
       let idCounter = 0;
       let mergeFlash = [];
@@ -478,10 +451,8 @@
 
       function dropBall() {
         if (!queue.length || won) return;
-        running = true;
         const type = queue.shift();
         balls.push(makeBall(type, dropX, 82, (Math.random() - .5) * 1.2, 0));
-        nextDropAt = performance.now() + AUTO_DROP_TIME;
         setMessage(`${TYPE_INFO[type].name}落下来了，左右晃一晃让相同的碰到！`);
         updateInfo();
         canvas.focus();
@@ -490,12 +461,9 @@
       function moveDrop(amount) {
         dropX = Math.max(42, Math.min(width - 42, dropX + amount));
         horizontalPush = Math.max(-.24, Math.min(.24, horizontalPush + amount * .003));
-        running = true;
-        if (!nextDropAt) nextDropAt = performance.now() + AUTO_DROP_TIME;
       }
 
       function shake(direction = 1) {
-        running = true;
         balls.forEach((ball, index) => {
           ball.vx += direction * (2.6 + (index % 3) * .35);
           ball.vy -= .8 + Math.random() * 1.4;
@@ -728,15 +696,6 @@
         const step = delta / 16.67;
         updatePhysics(step);
 
-        if (running && queue.length) {
-          if (!nextDropAt) nextDropAt = now + AUTO_DROP_TIME;
-          const remaining = Math.max(0, nextDropAt - now);
-          dropMeterElement.style.transform = `scaleX(${remaining / AUTO_DROP_TIME})`;
-          if (now >= nextDropAt) dropBall();
-        } else {
-          dropMeterElement.style.transform = "scaleX(0)";
-        }
-
         draw(now);
         requestAnimationFrame(frame);
       }
@@ -745,13 +704,11 @@
         queue = shuffledQueue();
         balls = [];
         dropX = width / 2;
-        nextDropAt = 0;
         horizontalPush = 0;
-        running = false;
         won = false;
         mergeFlash = [];
         winElement.hidden = true;
-        setMessage("按左右方向键调位置，按空格或下方向键放下珠子！");
+        setMessage("按左右方向键调位置，按下方向键放下珠子！");
         updateInfo();
         canvas.focus();
       }
@@ -771,10 +728,10 @@
       });
 
       document.addEventListener("keydown", event => {
-        if (["ArrowLeft", "ArrowRight", "ArrowDown", " "].includes(event.key)) event.preventDefault();
+        if (["ArrowLeft", "ArrowRight", "ArrowDown"].includes(event.key)) event.preventDefault();
         if (event.key === "ArrowLeft") moveDrop(-24);
         if (event.key === "ArrowRight") moveDrop(24);
-        if (event.key === "ArrowDown" || event.key === " ") dropBall();
+        if (event.key === "ArrowDown") dropBall();
         if (event.key === "ArrowUp") shake(Math.random() > .5 ? 1 : -1);
       });
 
