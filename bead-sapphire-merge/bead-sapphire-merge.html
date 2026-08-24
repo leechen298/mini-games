@@ -358,7 +358,7 @@
 
           <section>
             <h2>怎么玩</h2>
-            <p>合成时，左右键移动落点，下键落珠。进入地球后，用方向键转动地球并点击黑珠。进入黑珠内部后，左右键移动，空格键跳跃。全程没有倒计时。</p>
+            <p>合成时左右键移动、下键落珠。地球画面用方向键转动并点击黑珠。海洋里左右键游泳、下键下潜、空格跳跃、上键伸黑手；回车可挑战和制服龙王，Esc 可退出战斗。</p>
           </section>
 
           <div class="actions">
@@ -437,6 +437,12 @@
       let worldWidth = 2400;
       let cameraX = 0;
       let platforms = [];
+      let waterSurface = 240;
+      let dragon = null;
+      let battleActive = false;
+      let earthGiven = false;
+      let handLength = 0;
+      let dragonGrabbed = false;
       const pressedKeys = new Set();
 
       function shuffledQueue() {
@@ -495,18 +501,18 @@
           return;
         }
         if (gameMode === "inside") {
-          gameTitleElement.textContent = "黑珠里面的寻物冒险";
+          gameTitleElement.textContent = "小鸭子的海底龙王冒险";
           boxLabelElement.textContent = "黑 珠 内 部";
-          goalEmojiElement.textContent = "🔎";
-          goalLabelElement.textContent = "找回物品";
-          goalCountElement.textContent = foundCount;
-          goalTotalElement.textContent = `/${lostItems.length}`;
+          goalEmojiElement.textContent = dragon?.tamed ? "🐉" : "🦆";
+          goalLabelElement.textContent = battleActive ? "抓住龙王" : "寻物与龙王";
+          goalCountElement.textContent = foundCount + (dragon?.tamed ? 1 : 0);
+          goalTotalElement.textContent = `/${lostItems.length + 1}`;
           queueCountElement.textContent = "—";
           ballCountElement.textContent = lostItems.length - foundCount;
           roundNumberElement.textContent = "黑珠内";
           nextBallElement.hidden = true;
-          nextNameElement.textContent = "方向键移动，空格跳跃";
-          shakeButton.textContent = "✨ 提示位置";
+          nextNameElement.textContent = battleActive ? "上键抓龙，回车丢出" : "方向键游泳，空格跳跃";
+          shakeButton.textContent = battleActive ? "🚪 退出战斗" : (dragon?.tamed ? "🐉 龙王同行" : "✨ 提示位置");
           return;
         }
         const nextType = queue[0];
@@ -685,25 +691,27 @@
       }
 
       function createInsideWorld() {
-        worldWidth = Math.max(2400, width * 3.2);
-        const floorY = height - 64;
+        worldWidth = Math.max(2800, width * 3.6);
+        waterSurface = Math.max(170, height * .34);
+        const floorY = height - 54;
         platforms = [
-          { x: 0, y: floorY, width: worldWidth, height: 44 },
-          { x: 330, y: floorY - 105, width: 190, height: 18 },
-          { x: 760, y: floorY - 145, width: 220, height: 18 },
-          { x: 1210, y: floorY - 95, width: 180, height: 18 },
-          { x: 1640, y: floorY - 150, width: 230, height: 18 },
-          { x: 2050, y: floorY - 110, width: 190, height: 18 }
+          { x: 0, y: floorY, width: worldWidth, height: 54 },
+          { x: 380, y: waterSurface + 80, width: 180, height: 18 },
+          { x: 820, y: waterSurface + 180, width: 220, height: 18 },
+          { x: 1290, y: waterSurface + 105, width: 190, height: 18 },
+          { x: 2140, y: waterSurface + 165, width: 230, height: 18 },
+          { x: 2520, y: waterSurface + 70, width: 190, height: 18 }
         ];
         const itemPlan = [
-          ["blue", 260, floorY - 25],
-          ["green", 430, floorY - 132],
-          ["red", 690, floorY - 25],
-          ["sapphire", 860, floorY - 173],
-          ["ruby", 1120, floorY - 27],
-          ["emerald", 1295, floorY - 123],
-          ["ice", 1750, floorY - 180],
-          ["bottle", 2180, floorY - 140]
+          ["blue", 260, waterSurface + 80],
+          ["green", 470, waterSurface + 50],
+          ["earth", 760, floorY - 34],
+          ["red", 930, waterSurface + 145],
+          ["sapphire", 1180, floorY - 30],
+          ["ruby", 1380, waterSurface + 72],
+          ["emerald", 1700, waterSurface + 190],
+          ["ice", 2250, waterSurface + 130],
+          ["bottle", 2620, waterSurface + 36]
         ];
         lostItems = itemPlan.map(([type, x, y], index) => ({
           id: `lost-${index}`,
@@ -714,24 +722,65 @@
           angle: Math.random() * Math.PI * 2,
           found: false
         }));
+        dragon = { x: 1950, y: waterSurface + 125, radius: 68, tamed: false, thrown: false };
       }
 
       function startInsideGame() {
         gameMode = "inside";
         createInsideWorld();
-        const floorY = height - 64;
-        hero = { x: 80, y: floorY - 28, vx: 0, vy: 0, radius: 22, onGround: true, facing: 1 };
+        hero = { x: 85, y: waterSurface - 20, vx: 0, vy: 0, radius: 24, onGround: false, facing: 1, riding: false };
         cameraX = 0;
         foundCount = 0;
         hintGlow = 1.5;
+        battleActive = false;
+        earthGiven = false;
+        handLength = 0;
+        dragonGrabbed = false;
         pressedKeys.clear();
-        setMessage("进入黑色珠子里面了！方向键控制方向，空格键跳跃，小人不会掉出世界。 ");
+        setMessage("黑珠里变成了海洋世界！小鸭用左右键游泳、下键下潜、空格跳跃，上键伸出黑手。 ");
+        updateInfo();
+      }
+
+      function hasFoundEarth() {
+        return lostItems.some(item => item.type === "earth" && item.found);
+      }
+
+      function startDragonBattle() {
+        if (!hasFoundEarth()) {
+          setMessage("要先找到一颗地球，龙王才愿意和你战斗！");
+          return;
+        }
+        battleActive = true;
+        earthGiven = true;
+        handLength = 0;
+        dragonGrabbed = false;
+        setMessage("地球交给龙王了！按住上键伸出黑手抓住它，再按回车把它丢出去。 ");
+        updateInfo();
+      }
+
+      function exitDragonBattle() {
+        battleActive = false;
+        dragonGrabbed = false;
+        handLength = 0;
+        setMessage("已经退出龙王战斗，可以继续游泳寻找物品，靠近后还能再挑战。 ");
+        updateInfo();
+      }
+
+      function tameDragon() {
+        battleActive = false;
+        dragonGrabbed = false;
+        dragon.tamed = true;
+        dragon.thrown = true;
+        hero.riding = true;
+        handLength = 0;
+        makeExplosion(dragon.x, dragon.y);
+        setMessage("龙王被黑手丢出去以后听话啦！小鸭骑上龙王，游得更快、更稳！");
         updateInfo();
       }
 
       function updateInside(step) {
         if (!hero || won) return;
-        const acceleration = .42 * step;
+        const acceleration = (hero.riding ? .72 : .42) * step;
         if (pressedKeys.has("ArrowLeft")) {
           hero.vx -= acceleration;
           hero.facing = -1;
@@ -740,9 +789,18 @@
           hero.vx += acceleration;
           hero.facing = 1;
         }
-        hero.vx *= Math.pow(.84, step);
-        hero.vx = Math.max(-5.2, Math.min(5.2, hero.vx));
-        hero.vy += .46 * step;
+        const underwater = hero.y >= waterSurface - 8;
+        if (pressedKeys.has("ArrowDown") && underwater) hero.vy += .2 * step;
+        hero.vx *= Math.pow(hero.riding ? .91 : .86, step);
+        const maxSpeed = hero.riding ? 8.5 : 5.2;
+        hero.vx = Math.max(-maxSpeed, Math.min(maxSpeed, hero.vx));
+        if (underwater) {
+          const steadyY = waterSurface + (hero.riding ? 75 : 105);
+          hero.vy += (steadyY - hero.y) * (hero.riding ? .018 : .009) * step;
+          hero.vy *= Math.pow(hero.riding ? .86 : .93, step);
+        } else {
+          hero.vy += .46 * step;
+        }
         const previousBottom = hero.y + hero.radius;
         hero.x += hero.vx * step;
         hero.y += hero.vy * step;
@@ -760,13 +818,42 @@
 
         hero.x = Math.max(hero.radius, Math.min(worldWidth - hero.radius, hero.x));
         if (hero.y > height - hero.radius - 10) {
-          hero.y = height - 64 - hero.radius;
+          hero.y = height - 54 - hero.radius;
           hero.vy = 0;
           hero.onGround = true;
         }
         cameraX += ((hero.x - width * .38) - cameraX) * Math.min(1, .09 * step);
         cameraX = Math.max(0, Math.min(worldWidth - width, cameraX));
         hintGlow = Math.max(0, hintGlow - .01 * step);
+
+        if (pressedKeys.has("ArrowUp")) {
+          handLength = Math.min(worldWidth, handLength + 16 * step);
+        } else if (!dragonGrabbed) {
+          handLength = Math.max(0, handLength - 24 * step);
+        }
+
+        const handEndX = hero.x + hero.facing * handLength;
+        lostItems.forEach(item => {
+          if (item.found || handLength < 20) return;
+          const inFront = hero.facing > 0 ? item.x >= hero.x && item.x <= handEndX : item.x <= hero.x && item.x >= handEndX;
+          if (inFront && Math.abs(item.y - hero.y) < 70) {
+            item.found = true;
+            foundCount += 1;
+            mergeFlash.push({ x: item.x - cameraX, y: item.y, life: 1.4, color: TYPE_INFO[item.type].color });
+            setMessage(`无限黑手抓到了${TYPE_INFO[item.type].name}！`);
+            updateInfo();
+          }
+        });
+
+        if (battleActive && !dragon.tamed && handLength > 20) {
+          const dragonInFront = hero.facing > 0 ? dragon.x >= hero.x && dragon.x <= handEndX : dragon.x <= hero.x && dragon.x >= handEndX;
+          if (dragonInFront && Math.abs(dragon.y - hero.y) < 120) {
+            dragonGrabbed = true;
+            handLength = Math.abs(dragon.x - hero.x);
+            setMessage("黑手抓住龙王啦！现在按回车键把它丢出去！");
+            updateInfo();
+          }
+        }
 
         lostItems.forEach(item => {
           if (item.found) return;
@@ -779,7 +866,16 @@
           }
         });
 
-        if (foundCount === lostItems.length && !won) {
+        if (!dragon.tamed && !battleActive && Math.abs(hero.x - dragon.x) < 150 && Math.abs(hero.y - dragon.y) < 150) {
+          setMessage(hasFoundEarth() ? "龙王就在这里！按回车把地球交给它，开始战斗。" : "龙王出现了！先去找到地球，再回来挑战它。 ");
+        }
+
+        if (dragon.tamed) {
+          dragon.x = hero.x;
+          dragon.y = hero.y + 35;
+        }
+
+        if (foundCount === lostItems.length && dragon.tamed && !won) {
           won = true;
           setMessage("黑色珠子里的丢失物品全部找回来啦！");
           window.setTimeout(() => { winElement.hidden = false; }, 650);
@@ -1139,43 +1235,127 @@
 
       function drawHero(now) {
         if (!hero) return;
-        const bob = Math.sin(now / 150) * 2;
+        const bob = Math.sin(now / 150) * (hero.riding ? 1 : 2);
         context.save();
-        context.translate(hero.x, hero.y + bob);
-        context.strokeStyle = "#173451";
-        context.lineWidth = 5;
-        context.lineCap = "round";
+        context.translate(hero.x, hero.y + bob - (hero.riding ? 30 : 0));
+        context.scale(hero.facing, 1);
+        context.fillStyle = "#f3cf4f";
         context.beginPath();
-        context.moveTo(-8, 17);
-        context.lineTo(-13, 32);
-        context.moveTo(8, 17);
-        context.lineTo(13, 32);
-        context.moveTo(-14, 3);
-        context.lineTo(-25, 13);
-        context.moveTo(14, 3);
-        context.lineTo(25, 13);
-        context.stroke();
-        context.fillStyle = "#ffd45e";
-        context.beginPath();
-        context.roundRect(-16, -2, 32, 25, 9);
+        context.ellipse(-2, 7, 27, 19, -.08, 0, Math.PI * 2);
         context.fill();
-        context.fillStyle = "#080b12";
+        context.fillStyle = "#e5b93d";
         context.beginPath();
-        context.arc(0, 10, 6, 0, Math.PI * 2);
+        context.ellipse(-8, 8, 15, 9, .28, 0, Math.PI * 2);
         context.fill();
-        context.fillStyle = "#ffd5b4";
+        context.fillStyle = "#f6d45c";
         context.beginPath();
-        context.arc(0, -17, 17, 0, Math.PI * 2);
+        context.arc(17, -8, 18, 0, Math.PI * 2);
         context.fill();
-        context.fillStyle = "#29394d";
+        context.fillStyle = "#ee8337";
         context.beginPath();
-        context.arc(0, -22, 17, Math.PI, Math.PI * 2);
+        context.moveTo(30, -5);
+        context.lineTo(47, 1);
+        context.lineTo(30, 6);
+        context.closePath();
         context.fill();
         context.fillStyle = "#173451";
         context.beginPath();
-        context.arc(-6, -16, 2, 0, Math.PI * 2);
-        context.arc(6, -16, 2, 0, Math.PI * 2);
+        context.arc(21, -12, 3, 0, Math.PI * 2);
         context.fill();
+        context.fillStyle = "#080b12";
+        context.beginPath();
+        context.arc(-4, 8, 6, 0, Math.PI * 2);
+        context.fill();
+        if (hero.y > waterSurface - 15 && !hero.riding) {
+          context.strokeStyle = "rgba(220,250,255,.8)";
+          context.lineWidth = 3;
+          context.beginPath();
+          context.arc(-28, 3, 7, 0, Math.PI * 2);
+          context.stroke();
+        }
+        context.restore();
+      }
+
+      function drawDragon(now) {
+        if (!dragon) return;
+        const wave = Math.sin(now / 170) * 5;
+        const facing = dragon.tamed ? hero.facing : -1;
+        context.save();
+        context.translate(dragon.x, dragon.y + wave);
+        context.scale(facing, 1);
+        context.strokeStyle = "#167c9b";
+        context.lineWidth = 24;
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(-82, 25);
+        context.bezierCurveTo(-50, -15, -15, 38, 20, 8);
+        context.stroke();
+        context.strokeStyle = "#65d4d1";
+        context.lineWidth = 15;
+        context.stroke();
+        context.fillStyle = "#69dad5";
+        context.beginPath();
+        context.ellipse(35, -3, 38, 27, -.1, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#eefcff";
+        context.beginPath();
+        context.arc(48, -10, 7, 0, Math.PI * 2);
+        context.arc(25, -10, 7, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#183153";
+        context.beginPath();
+        context.arc(50, -10, 3, 0, Math.PI * 2);
+        context.arc(27, -10, 3, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = "#f4c547";
+        context.lineWidth = 5;
+        context.beginPath();
+        context.moveTo(18, -27);
+        context.lineTo(24, -45);
+        context.moveTo(39, -28);
+        context.lineTo(47, -46);
+        context.stroke();
+        context.fillStyle = "#f4c547";
+        context.beginPath();
+        context.arc(24, -46, 5, 0, Math.PI * 2);
+        context.arc(47, -47, 5, 0, Math.PI * 2);
+        context.fill();
+        if (dragonGrabbed) {
+          context.strokeStyle = "#080b12";
+          context.lineWidth = 5;
+          context.beginPath();
+          context.arc(35, -3, 47, 0, Math.PI * 2);
+          context.stroke();
+        }
+        context.restore();
+      }
+
+      function drawBlackHand() {
+        if (!hero || handLength <= 2) return;
+        const endX = dragonGrabbed ? dragon.x : hero.x + hero.facing * handLength;
+        const endY = dragonGrabbed ? dragon.y : hero.y;
+        context.save();
+        context.strokeStyle = "#080b12";
+        context.shadowColor = "#7656d9";
+        context.shadowBlur = 10;
+        context.lineWidth = 9;
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(hero.x + hero.facing * 18, hero.y - 2);
+        context.quadraticCurveTo((hero.x + endX) / 2, hero.y + Math.sin(handLength * .03) * 18, endX, endY);
+        context.stroke();
+        context.fillStyle = "#080b12";
+        context.beginPath();
+        context.arc(endX, endY, 14, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = "#7656d9";
+        context.lineWidth = 3;
+        for (let index = -1; index <= 1; index += 1) {
+          context.beginPath();
+          context.moveTo(endX, endY);
+          context.lineTo(endX + hero.facing * 20, endY + index * 10);
+          context.stroke();
+        }
         context.restore();
       }
 
@@ -1260,32 +1440,44 @@
       }
 
       function drawInsideScene(now) {
-        const cave = context.createLinearGradient(0, 0, 0, height);
-        cave.addColorStop(0, "#17152d");
-        cave.addColorStop(.65, "#30264a");
-        cave.addColorStop(1, "#17121f");
-        context.fillStyle = cave;
+        const ocean = context.createLinearGradient(0, 0, 0, height);
+        ocean.addColorStop(0, "#9ce7ff");
+        ocean.addColorStop(waterSurface / height, "#5dc9ec");
+        ocean.addColorStop(waterSurface / height + .03, "#2584ba");
+        ocean.addColorStop(1, "#073f6d");
+        context.fillStyle = ocean;
         context.fillRect(0, 0, width, height);
-        context.fillStyle = "rgba(137,111,205,.18)";
+        context.strokeStyle = "rgba(232,253,255,.85)";
+        context.lineWidth = 3;
+        context.beginPath();
+        for (let x = 0; x <= width + 16; x += 16) {
+          const y = waterSurface + Math.sin((x + cameraX) * .035 + now * .003) * 5;
+          if (x === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        }
+        context.stroke();
+
+        context.fillStyle = "rgba(205,249,255,.24)";
         for (let index = 0; index < 30; index += 1) {
           const x = ((index * 137 - cameraX * .25) % (width + 100)) - 50;
-          const y = 85 + (index * 83) % Math.max(160, height - 160);
+          const y = waterSurface + 30 + (index * 83) % Math.max(120, height - waterSurface - 80);
           context.beginPath();
-          context.arc(x, y, 8 + index % 5, 0, Math.PI * 2);
-          context.fill();
+          context.arc(x, y, 3 + index % 4, 0, Math.PI * 2);
+          context.stroke();
         }
 
         context.save();
         context.translate(-cameraX, 0);
         platforms.forEach((platform, index) => {
           const platformGradient = context.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
-          platformGradient.addColorStop(0, index === 0 ? "#8770b6" : "#9a83c8");
-          platformGradient.addColorStop(1, "#40355e");
+          platformGradient.addColorStop(0, index === 0 ? "#c0a56e" : "#8cb5b4");
+          platformGradient.addColorStop(1, index === 0 ? "#5f533e" : "#376b72");
           context.fillStyle = platformGradient;
           context.fillRect(platform.x, platform.y, platform.width, platform.height);
-          context.fillStyle = "rgba(210,195,255,.35)";
+          context.fillStyle = "rgba(225,252,240,.35)";
           context.fillRect(platform.x, platform.y, platform.width, 4);
         });
+        drawDragon(now);
         lostItems.forEach(item => {
           if (item.found) return;
           if (hintGlow > 0) {
@@ -1300,13 +1492,19 @@
           }
           drawBall(item);
         });
+        drawBlackHand();
         drawHero(now);
         context.restore();
 
         context.fillStyle = "rgba(255,255,255,.9)";
         context.font = "800 15px -apple-system, BlinkMacSystemFont, sans-serif";
         context.textAlign = "left";
-        context.fillText(`探索距离 ${Math.round(hero ? hero.x : 0)} / ${Math.round(worldWidth)}`, 20, 92);
+        context.fillText(`海洋距离 ${Math.round(hero ? hero.x : 0)} / ${Math.round(worldWidth)}`, 20, 92);
+        if (battleActive) {
+          context.textAlign = "center";
+          context.fillStyle = "rgba(255,245,190,.96)";
+          context.fillText(dragonGrabbed ? "龙王已被抓住：按回车键丢出去" : "按住上键伸长黑手抓住龙王 · Esc 退出", width / 2, 120);
+        }
       }
 
       function draw(now) {
@@ -1387,6 +1585,12 @@
         blackSpot = { x: 0, y: 0, visible: false, radius: 18 };
         cameraX = 0;
         platforms = [];
+        waterSurface = 240;
+        dragon = null;
+        battleActive = false;
+        earthGiven = false;
+        handLength = 0;
+        dragonGrabbed = false;
         pressedKeys.clear();
         winElement.hidden = true;
         setMessage("按左右方向键调位置，按下方向键放下珠子！");
@@ -1427,10 +1631,19 @@
         }
         if (gameMode === "inside") {
           if (event.key.startsWith("Arrow")) pressedKeys.add(event.key);
-          if (event.key === " " && hero && hero.onGround && !event.repeat) {
+          const canWaterJump = hero && hero.y >= waterSurface - 12 && hero.y <= waterSurface + 55;
+          if (event.key === " " && hero && (hero.onGround || canWaterJump) && !event.repeat) {
             hero.vy = -9.2;
             hero.onGround = false;
-            setMessage("跳起来啦！继续寻找丢失的物品。 ");
+            setMessage("小鸭跳出水面啦！继续寻找丢失的物品。 ");
+          }
+          if (event.key === "Enter" && !event.repeat) {
+            if (battleActive && dragonGrabbed) tameDragon();
+            else if (battleActive) setMessage("先按住上键，让无限黑手抓住龙王，再按回车！");
+            else if (!dragon.tamed && Math.abs(hero.x - dragon.x) < 180) startDragonBattle();
+          }
+          if (event.key === "Escape" && battleActive) {
+            exitDragonBattle();
           }
           return;
         }
@@ -1448,9 +1661,13 @@
         if (gameMode === "globe") {
           hintGlow = 2.5;
           setMessage("提示：发光的黑色珠子藏在地球背面，继续左右转动！");
-        } else if (gameMode === "inside") {
+        } else if (gameMode === "inside" && battleActive) {
+          exitDragonBattle();
+        } else if (gameMode === "inside" && !dragon?.tamed) {
           hintGlow = 2;
-          setMessage("丢失的物品亮起来啦，快去找它们！");
+          setMessage(hasFoundEarth() ? "地球已经找到了，龙王在海洋深处！" : "地球和丢失的物品亮起来啦，快去找它们！");
+        } else if (gameMode === "inside") {
+          setMessage("小鸭正骑着龙王，移动速度更快，也不会在海里晃来晃去！");
         } else {
           shake(Math.random() > .5 ? 1 : -1);
         }
