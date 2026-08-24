@@ -215,18 +215,17 @@
       .token.sapphire { background: linear-gradient(135deg, #70d2ff, var(--sapphire) 62%); }
       .token.ruby { background: linear-gradient(135deg, #ff7590, var(--ruby) 62%); }
       .token.emerald { background: linear-gradient(135deg, #6ff1bd, var(--emerald) 62%); }
-      .token.earth {
-        border: 2px solid #fff;
-        background:
-          radial-gradient(ellipse at 34% 40%, #49b96d 0 18%, transparent 20%),
-          radial-gradient(ellipse at 70% 63%, #49b96d 0 20%, transparent 22%),
-          #2e91dd;
-      }
       .token.ice { background: linear-gradient(135deg, #f5ffff, #76dff5 55%, #268fc9); }
+      .token.bomb { border: 3px solid #4a5664; background: radial-gradient(circle at 35% 28%, #718092, #19222c 68%); }
+      .token.bottle {
+        border: 2px solid #3d8fc6;
+        border-radius: 7px 7px 12px 12px;
+        background: radial-gradient(circle at 50% 65%, #ef5b63 0 18%, transparent 20%), #f4fdff;
+      }
 
       .stats {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
       }
 
@@ -304,7 +303,7 @@
     <main class="app">
       <header class="topbar">
         <h1>滚滚宝石合成</h1>
-        <div class="goal">🧊 冰宝石 <span id="iceCount">0</span>/2</div>
+        <div class="goal">🏺 纪念瓷瓶 <span id="bottleCount">0</span>/1</div>
       </header>
 
       <section class="layout">
@@ -333,14 +332,16 @@
               <div class="chain-step"><i class="token red"></i><span>两颗红珠</span><i class="token gem sapphire"></i></div>
               <div class="chain-step"><i class="token gem sapphire"></i><span>两颗蓝宝石</span><i class="token gem ruby"></i></div>
               <div class="chain-step"><i class="token gem ruby"></i><span>两颗红宝石</span><i class="token gem emerald"></i></div>
-              <div class="chain-step"><i class="token gem emerald"></i><span>三颗绿宝石</span><i class="token earth"></i></div>
-              <div class="chain-step"><i class="token earth"></i><span>一个地球变两颗</span><i class="token gem ice"></i></div>
+              <div class="chain-step"><i class="token gem emerald"></i><span>两颗绿宝石</span><i class="token gem ice"></i></div>
+              <div class="chain-step"><i class="token gem ice"></i><span>第一遍两颗冰宝石</span><i class="token bomb"></i></div>
+              <div class="chain-step"><i class="token gem ice"></i><span>第二遍两颗冰宝石</span><i class="token bottle"></i></div>
             </div>
           </section>
 
           <section>
             <div class="stats">
-              <div class="stat">还没落下<strong id="queueCount">30</strong></div>
+              <div class="stat">第几遍<strong id="roundNumber">1</strong></div>
+              <div class="stat">还没落下<strong id="queueCount">60</strong></div>
               <div class="stat">框内物品<strong id="ballCount">0</strong></div>
             </div>
           </section>
@@ -360,9 +361,9 @@
 
     <div id="win" class="win" hidden>
       <div class="win-card">
-        <div class="big-gem">🌍 🧊</div>
-        <h2>得到两颗冰宝石啦！</h2>
-        <p>三颗绿宝石合成了地球，地球送给你两颗亮晶晶的冰宝石！</p>
+        <div class="big-gem">🏺</div>
+        <h2>得到纪念瓷瓶啦！</h2>
+        <p>你完成了两遍宝石合成，小瓷瓶里装着一颗特别的纪念珠！</p>
         <button id="againButton" class="action primary" type="button">再玩一次</button>
       </div>
     </div>
@@ -374,9 +375,10 @@
         red: { name: "红珠", color: "#ef5b63", next: "sapphire", radius: 24, gem: false },
         sapphire: { name: "蓝宝石", color: "#205dda", next: "ruby", radius: 26, gem: true },
         ruby: { name: "红宝石", color: "#d92755", next: "emerald", radius: 28, gem: true },
-        emerald: { name: "绿宝石", color: "#07986a", next: null, radius: 30, gem: true },
-        earth: { name: "地球", color: "#2e91dd", next: null, radius: 36, gem: false },
-        ice: { name: "冰宝石", color: "#76dff5", next: null, radius: 30, gem: true }
+        emerald: { name: "绿宝石", color: "#07986a", next: "ice", radius: 30, gem: true },
+        ice: { name: "冰宝石", color: "#76dff5", next: null, radius: 31, gem: true },
+        bomb: { name: "炸弹", color: "#202b36", next: null, radius: 35, gem: false },
+        bottle: { name: "纪念瓷瓶", color: "#eafaff", next: null, radius: 34, gem: false }
       };
 
       const START_TYPES = ["blue", "green", "red"];
@@ -387,7 +389,8 @@
       const nextNameElement = document.querySelector("#nextName");
       const queueCountElement = document.querySelector("#queueCount");
       const ballCountElement = document.querySelector("#ballCount");
-      const iceCountElement = document.querySelector("#iceCount");
+      const bottleCountElement = document.querySelector("#bottleCount");
+      const roundNumberElement = document.querySelector("#roundNumber");
       const winElement = document.querySelector("#win");
 
       let width = 700;
@@ -398,11 +401,13 @@
       let lastTime = 0;
       let horizontalPush = 0;
       let won = false;
+      let round = 1;
       let idCounter = 0;
       let mergeFlash = [];
+      let sparks = [];
 
       function shuffledQueue() {
-        const items = START_TYPES.flatMap(type => Array(10).fill(type));
+        const items = START_TYPES.flatMap(type => Array(20).fill(type));
         for (let index = items.length - 1; index > 0; index -= 1) {
           const randomIndex = Math.floor(Math.random() * (index + 1));
           [items[index], items[randomIndex]] = [items[randomIndex], items[index]];
@@ -440,7 +445,8 @@
         const nextType = queue[0];
         queueCountElement.textContent = queue.length;
         ballCountElement.textContent = balls.length;
-        iceCountElement.textContent = balls.filter(ball => ball.type === "ice").length;
+        bottleCountElement.textContent = balls.filter(ball => ball.type === "bottle").length;
+        roundNumberElement.textContent = round;
         nextBallElement.hidden = !nextType;
         nextNameElement.textContent = nextType ? TYPE_INFO[nextType].name : "全部落下了";
         if (nextType) nextBallElement.style.background = TYPE_INFO[nextType].color;
@@ -485,7 +491,7 @@
       }
 
       function mergeBalls(first, second) {
-        const nextType = TYPE_INFO[first.type].next;
+        const nextType = first.type === "ice" ? (round === 1 ? "bomb" : "bottle") : TYPE_INFO[first.type].next;
         if (!nextType) return null;
         const merged = makeBall(
           nextType,
@@ -495,8 +501,14 @@
           -3.7
         );
         mergeFlash.push({ x: merged.x, y: merged.y, life: 1, color: TYPE_INFO[nextType].color });
-        setMessage(`叮！两颗${TYPE_INFO[first.type].name}变成了${TYPE_INFO[nextType].name}！`);
+        if (nextType === "bomb") setMessage("两颗冰宝石变成炸弹啦，快捂住耳朵！");
+        else if (nextType === "bottle") setMessage("第二遍完成！两颗冰宝石变成了纪念瓷瓶！");
+        else setMessage(`叮！两颗${TYPE_INFO[first.type].name}变成了${TYPE_INFO[nextType].name}！`);
         return merged;
+      }
+
+      function canMerge(type) {
+        return Boolean(TYPE_INFO[type].next || type === "ice");
       }
 
       function solveCollisions() {
@@ -516,7 +528,7 @@
             if (distanceSquared >= minDistance * minDistance) continue;
 
             const distance = Math.max(.01, Math.sqrt(distanceSquared));
-            if (first.type === second.type && TYPE_INFO[first.type].next && performance.now() - first.bornAt > 180 && performance.now() - second.bornAt > 180) {
+            if (first.type === second.type && canMerge(first.type) && performance.now() - first.bornAt > 180 && performance.now() - second.bornAt > 180) {
               removed.add(first.id);
               removed.add(second.id);
               additions.push(mergeBalls(first, second));
@@ -548,41 +560,45 @@
         }
       }
 
-      function finishFinalJourney() {
-        if (queue.length || won) return;
-        const emeralds = balls.filter(ball => ball.type === "emerald");
-        const leftovers = balls.filter(ball => ball.type !== "emerald");
-        if (emeralds.length === 2 && leftovers.length === 2 && leftovers.some(ball => ball.type === "green") && leftovers.some(ball => ball.type === "red")) {
-          const centerX = leftovers.reduce((sum, ball) => sum + ball.x, 0) / 2;
-          const centerY = leftovers.reduce((sum, ball) => sum + ball.y, 0) / 2;
-          balls = [...emeralds, makeBall("emerald", centerX, centerY, 0, -4)];
-          mergeFlash.push({ x: centerX, y: centerY, life: 1.8, color: "#f3b936" });
-          setMessage("星光补上最后一点能量，第三颗绿宝石出现啦！");
+      function makeExplosion(x, y) {
+        const colors = ["#368cf4", "#45bc78", "#ef5b63", "#f3b936", "#ffffff"];
+        for (let index = 0; index < 44; index += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2.5 + Math.random() * 6;
+          sparks.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2,
+            life: .8 + Math.random() * .8,
+            color: colors[index % colors.length]
+          });
+        }
+      }
+
+      function handleSpecialStages() {
+        if (won) return;
+        const bomb = balls.find(ball => ball.type === "bomb");
+        if (bomb && performance.now() - bomb.bornAt > 950) {
+          makeExplosion(bomb.x, bomb.y);
+          mergeFlash.push({ x: bomb.x, y: bomb.y, life: 2.2, color: "#f3b936" });
+          balls = [];
+          queue = shuffledQueue();
+          round = 2;
+          dropX = width / 2;
+          horizontalPush = 0;
+          setMessage("砰！炸弹爆出了第二遍的 60 颗珠子，继续用下方向键放下！");
           updateInfo();
           return;
         }
 
-        if (balls.length === 3 && emeralds.length === 3 && emeralds.every(ball => performance.now() - ball.bornAt > 700)) {
-          const centerX = emeralds.reduce((sum, ball) => sum + ball.x, 0) / 3;
-          const centerY = emeralds.reduce((sum, ball) => sum + ball.y, 0) / 3;
-          balls = [makeBall("earth", centerX, centerY, 0, -4.5)];
-          mergeFlash.push({ x: centerX, y: centerY, life: 1.8, color: "#49b96d" });
-          setMessage("哇！三颗绿宝石合成了一个会滚动的地球！");
-          updateInfo();
-          return;
-        }
-
-        if (balls.length === 1 && balls[0].type === "earth" && performance.now() - balls[0].bornAt > 1200) {
-          const earth = balls[0];
-          balls = [
-            makeBall("ice", earth.x - 24, earth.y, -2.4, -4.8),
-            makeBall("ice", earth.x + 24, earth.y, 2.4, -4.8)
-          ];
-          mergeFlash.push({ x: earth.x, y: earth.y, life: 1.8, color: "#d9fbff" });
-          setMessage("地球送出了两颗冰宝石！挑战成功！");
+        const bottle = balls.find(ball => ball.type === "bottle");
+        if (bottle && performance.now() - bottle.bornAt > 800) {
+          balls = [bottle];
+          setMessage("纪念瓷瓶完成啦，里面装着一颗特别的纪念珠！");
           updateInfo();
           won = true;
-          window.setTimeout(() => { winElement.hidden = false; }, 800);
+          window.setTimeout(() => { winElement.hidden = false; }, 650);
         }
       }
 
@@ -621,7 +637,14 @@
         solveCollisions();
         mergeFlash.forEach(flash => { flash.life -= .035 * step; });
         mergeFlash = mergeFlash.filter(flash => flash.life > 0);
-        finishFinalJourney();
+        sparks.forEach(spark => {
+          spark.vy += .12 * step;
+          spark.x += spark.vx * step;
+          spark.y += spark.vy * step;
+          spark.life -= .022 * step;
+        });
+        sparks = sparks.filter(spark => spark.life > 0);
+        handleSpecialStages();
       }
 
       function roundedPolygonPath(radius, sides = 8) {
@@ -645,12 +668,8 @@
         context.shadowBlur = 7;
         context.shadowOffsetY = 5;
 
-        if (ball.type === "earth") {
-          const ocean = context.createRadialGradient(-12, -14, 2, 0, 0, ball.radius * 1.15);
-          ocean.addColorStop(0, "#9ee9ff");
-          ocean.addColorStop(.28, "#2e91dd");
-          ocean.addColorStop(1, "#13539c");
-          context.fillStyle = ocean;
+        if (ball.type === "bomb") {
+          context.fillStyle = "#202b36";
           context.strokeStyle = "rgba(255,255,255,.85)";
           context.lineWidth = 3;
           context.beginPath();
@@ -658,14 +677,44 @@
           context.fill();
           context.stroke();
           context.shadowColor = "transparent";
-          context.fillStyle = "#50bd70";
+          context.strokeStyle = "#f3b936";
+          context.lineWidth = 5;
           context.beginPath();
-          context.ellipse(-10, -5, 13, 19, -.55, 0, Math.PI * 2);
-          context.ellipse(15, 13, 12, 8, .4, 0, Math.PI * 2);
+          context.moveTo(18, -26);
+          context.quadraticCurveTo(29, -42, 35, -27);
+          context.stroke();
+          context.fillStyle = "#ff7b39";
+          context.beginPath();
+          context.arc(35, -28, 6, 0, Math.PI * 2);
           context.fill();
-          context.fillStyle = "rgba(245,255,255,.9)";
+          context.restore();
+          return;
+        }
+
+        if (ball.type === "bottle") {
+          context.fillStyle = "#f5fdff";
+          context.strokeStyle = "#3d8fc6";
+          context.lineWidth = 3;
           context.beginPath();
-          context.ellipse(0, -29, 18, 6, 0, 0, Math.PI * 2);
+          context.moveTo(-10, -ball.radius);
+          context.lineTo(10, -ball.radius);
+          context.lineTo(11, -21);
+          context.bezierCurveTo(25, -13, 27, 4, 23, 22);
+          context.quadraticCurveTo(0, 32, -23, 22);
+          context.bezierCurveTo(-27, 4, -25, -13, -11, -21);
+          context.closePath();
+          context.fill();
+          context.stroke();
+          context.shadowColor = "transparent";
+          context.strokeStyle = "#71b8df";
+          context.lineWidth = 2;
+          context.beginPath();
+          context.moveTo(-18, 8);
+          context.quadraticCurveTo(0, -3, 18, 8);
+          context.stroke();
+          context.fillStyle = "#ef5b63";
+          context.beginPath();
+          context.arc(0, 13, 8, 0, Math.PI * 2);
           context.fill();
           context.restore();
           return;
@@ -748,6 +797,16 @@
           context.stroke();
           context.restore();
         });
+
+        sparks.forEach(spark => {
+          context.save();
+          context.globalAlpha = Math.max(0, spark.life);
+          context.fillStyle = spark.color;
+          context.beginPath();
+          context.arc(spark.x, spark.y, 4.5, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        });
       }
 
       function frame(now) {
@@ -766,7 +825,9 @@
         dropX = width / 2;
         horizontalPush = 0;
         won = false;
+        round = 1;
         mergeFlash = [];
+        sparks = [];
         winElement.hidden = true;
         setMessage("按左右方向键调位置，按下方向键放下珠子！");
         updateInfo();
