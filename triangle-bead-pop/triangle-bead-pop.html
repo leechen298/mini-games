@@ -35,7 +35,7 @@
       button { font: inherit; }
 
       .app {
-        width: min(1020px, 100%);
+        width: min(1100px, 100%);
         min-height: 100vh;
         margin: 0 auto;
         padding: 14px;
@@ -71,7 +71,7 @@
       .layout {
         min-height: 0;
         display: grid;
-        grid-template-columns: minmax(300px, 580px) minmax(250px, 1fr);
+        grid-template-columns: minmax(300px, 620px) minmax(250px, 1fr);
         justify-content: center;
         gap: 14px;
       }
@@ -88,7 +88,7 @@
 
       .board-wrap {
         position: relative;
-        width: min(100%, 500px);
+        width: min(100%, 540px);
         margin: 0 auto;
       }
 
@@ -224,7 +224,7 @@
         .rule-pill { padding: 7px 10px; font-size: 13px; }
         .layout { grid-template-columns: 1fr; }
         .game-card { padding: 8px; }
-        .board-wrap { width: min(100%, 390px); }
+        .board-wrap { width: min(100%, 450px); }
         .side-card { padding: 11px; gap: 10px; }
         .tips { display: none; }
         .controls { margin-top: 0; }
@@ -233,7 +233,7 @@
 
       @media (max-height: 760px) and (min-width: 721px) {
         .app { padding: 8px 14px; gap: 7px; }
-        .board-wrap { width: min(100%, 390px); }
+        .board-wrap { width: min(100%, 450px); }
         .side-card { gap: 9px; }
         .tips p { line-height: 1.35; }
       }
@@ -612,7 +612,7 @@
 
         function gameLoop(now) {
           if (!running) return;
-          const fallDelay = Math.max(180, 760 - (level - 1) * 55);
+          const fallDelay = Math.max(400, 1200 - (level - 1) * 65);
           if (!resolving && now - lastFall >= fallDelay) {
             move(0, 1);
             lastFall = now;
