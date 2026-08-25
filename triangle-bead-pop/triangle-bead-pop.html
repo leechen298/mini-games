@@ -243,7 +243,7 @@
     <main class="app">
       <header class="topbar">
         <h1>🔮 三角珠珠消消乐</h1>
-        <div class="rule-pill">同色 6 颗就消除！</div>
+        <div class="rule-pill">同色连 6 颗，全色消除！</div>
       </header>
 
       <section class="layout">
@@ -253,7 +253,7 @@
             <div class="overlay" id="overlay">
               <div class="overlay-box">
                 <h2 id="overlayTitle">准备好了吗？</h2>
-                <p id="overlayText">转动三角珠，让同色珠珠连在一起。</p>
+                <p id="overlayText">直线、斜线、拐弯都能连，凑齐 6 颗就全色消除。</p>
                 <button class="primary" id="startButton" type="button">开始游戏</button>
               </div>
             </div>
@@ -275,7 +275,7 @@
 
           <div class="tips">
             <h2>怎么玩</h2>
-            <p>← → 移动　↓ 加速下落<br />↑ 或空格：转动三角珠<br />同色珠上下左右连成 6 颗就会消除。</p>
+            <p>← → 移动　↓ 加速下落<br />↑ 或空格：转动三角珠<br />同色珠直连、斜连、拐弯连都可以；连成 6 颗，就消掉棋盘上这种颜色的全部珠珠。</p>
           </div>
 
           <div class="controls" aria-label="触屏按钮">
@@ -377,7 +377,7 @@
           spawnPiece();
           lastFall = performance.now();
           overlay.hidden = true;
-          message.textContent = "转一转，找好位置让同色珠珠碰在一起！";
+          message.textContent = "直着连、斜着连、拐弯连都可以！";
           updateStats();
           canvas.focus();
           animationId = requestAnimationFrame(gameLoop);
@@ -434,8 +434,11 @@
 
         function findMatches() {
           const seen = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-          const matches = [];
-          const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+          const matchedColors = new Set();
+          const directions = [
+            [1, 0], [-1, 0], [0, 1], [0, -1],
+            [1, 1], [1, -1], [-1, 1], [-1, -1]
+          ];
 
           for (let y = 0; y < ROWS; y += 1) {
             for (let x = 0; x < COLS; x += 1) {
@@ -456,7 +459,15 @@
                   }
                 });
               }
-              if (group.length >= MATCH_SIZE) matches.push(...group);
+              if (group.length >= MATCH_SIZE) matchedColors.add(color);
+            }
+          }
+
+          const matches = [];
+          if (!matchedColors.size) return matches;
+          for (let y = 0; y < ROWS; y += 1) {
+            for (let x = 0; x < COLS; x += 1) {
+              if (matchedColors.has(board[y][x])) matches.push({ x, y });
             }
           }
           return matches;
@@ -473,8 +484,8 @@
           }
 
           message.textContent = chain === 1
-            ? `太棒了！消除了 ${matches.length} 颗珠珠！`
-            : `连锁 ×${chain}！又消除了 ${matches.length} 颗！`;
+            ? `太棒了！这种颜色全部消除，共 ${matches.length} 颗！`
+            : `连锁 ×${chain}！又有一种颜色全部消除！`;
           cleared += matches.length;
           level = Math.floor(cleared / 24) + 1;
           updateStats();
