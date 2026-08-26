@@ -269,7 +269,7 @@
       .control-button[data-action="right"] { grid-column: 3; grid-row: 2; }
       .control-button.active { transform: scale(.94); background: rgba(255,255,255,.25); }
 
-      .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+      .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
 
       .action-button {
         min-height: 58px;
@@ -309,7 +309,9 @@
         .key-guide { grid-template-columns: 1fr; }
         .guide-card { padding: 7px; }
         .stage { border-radius: 16px; }
-        canvas { min-height: 300px; }
+        canvas { height: 46vh; min-height: 280px; }
+        .actions { grid-template-columns: repeat(2, 1fr); }
+        .action-button { min-height: 36px; }
       }
     </style>
   </head>
@@ -346,8 +348,8 @@
             <h2>林间四宝 VS 海洋三宝</h2>
             <p>两位玩家在同一个键盘或触控屏上对战。移动躲开冲锋，控制自己的宝物军队攻击！</p>
             <div class="key-guide">
-              <div class="guide-card"><strong>🌲 1P 林间队</strong>WASE 移动 · D 防御 · F 攻击 · G 合体</div>
-              <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · J 防御 · K 攻击 · L 合体</div>
+              <div class="guide-card"><strong>🌲 1P 林间队</strong>WASE 移动 · D 防御 · F 攻击 · G 合体 · R 回血</div>
+              <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · J 防御 · K 攻击 · L 合体 · P 回血</div>
             </div>
             <p>生命低于 30 会大哭：海洋队让海水淹向左边，林间队会把领地顶回去。领地消失也会失败！</p>
             <button class="start-button" id="startButton" type="button">开始双人对战</button>
@@ -367,6 +369,7 @@
             <button class="action-button" data-player="0" data-action="block">D 防御</button>
             <button class="action-button" data-player="0" data-action="attack">F 攻击</button>
             <button class="action-button merge" data-player="0" data-action="merge">G 合体</button>
+            <button class="action-button" data-player="0" data-action="heal">R 回血</button>
           </div>
         </div>
         <div class="control-side ocean-side">
@@ -374,6 +377,7 @@
             <button class="action-button" data-player="1" data-action="block">J 防御</button>
             <button class="action-button" data-player="1" data-action="attack">K 攻击</button>
             <button class="action-button merge" data-player="1" data-action="merge">L 合体</button>
+            <button class="action-button" data-player="1" data-action="heal">P 回血</button>
           </div>
           <div class="dpad">
             <button class="control-button" data-player="1" data-action="up" aria-label="2P向上">▲</button>
@@ -444,6 +448,12 @@
             blockTimer: 0,
             blocking: false,
             crying: false,
+            cryTimer: 0,
+            cryLocked: false,
+            healMode: false,
+            healing: false,
+            healDelay: 0,
+            healParticleTimer: 0,
             territoryDamageTimer: 0,
             merged: false,
             mergeTimer: 0,
@@ -508,12 +518,14 @@
 
           players.forEach((player, id) => {
             const movement = getMovement(id);
+            const length = Math.hypot(movement.x, movement.y);
             player.blockTimer = Math.max(0, player.blockTimer - dt);
             const holdingBlock = id === 0
               ? keys.has('KeyD') || touchState[id].has('block')
               : keys.has('KeyJ') || touchState[id].has('block');
-            player.blocking = holdingBlock || player.blockTimer > 0;
-            const length = Math.hypot(movement.x, movement.y);
+            if (length > 0 || holdingBlock) cancelHealing(player);
+            player.blocking = !player.healMode && (holdingBlock || player.blockTimer > 0);
+            updateHealing(player, dt, length);
             if (length > 0) {
               movement.x /= length;
               movement.y /= length;
@@ -550,15 +562,50 @@
           updateHud();
         }
 
+        function updateHealing(player, dt, movementLength) {
+          player.healParticleTimer = Math.max(0, player.healParticleTimer - dt);
+          player.healing = player.healMode && movementLength === 0 && !player.blocking && player.health < 100;
+          if (!player.healing) {
+            player.healDelay = 0;
+            return;
+          }
+
+          player.healDelay += dt;
+          if (player.healDelay < .7) return;
+          player.health = Math.min(100, player.health + 8 * dt);
+          if (player.healParticleTimer <= 0) {
+            player.healParticleTimer = .3;
+            burst(player.x, player.y - 8, '#aaffb9', 3, 42);
+          }
+          if (player.health >= 100) {
+            cancelHealing(player);
+            setMessage(`${player.id === 0 ? '1P' : '2P'}已经恢复满血！`);
+            tone(620, .12, 'sine');
+          }
+        }
+
+        function cancelHealing(player) {
+          player.healMode = false;
+          player.healing = false;
+          player.healDelay = 0;
+        }
+
         function updateTerritory(dt) {
           players.forEach(player => {
-            const wasCrying = player.crying;
-            player.crying = player.health > 0 && player.health <= 30;
-            if (!wasCrying && player.crying) {
-              setMessage(player.id === 0
-                ? '😭 林间守护者大哭，绿色领地开始向右顶回！'
-                : '😭 海洋守护者大哭，海水开始淹没林地！', 2600);
+            if (player.health > 35) player.cryLocked = false;
+            if (player.crying && (player.health > 30 || player.cryTimer <= 0)) {
+              player.crying = false;
+              player.cryTimer = 0;
             }
+            if (!player.crying && !player.cryLocked && player.health > 0 && player.health <= 30) {
+              player.crying = true;
+              player.cryTimer = 10;
+              player.cryLocked = true;
+              setMessage(player.id === 0
+                ? '😭 林间守护者最多哭10秒，绿色领地开始向右顶回！'
+                : '😭 海洋守护者最多哭10秒，海水开始淹没林地！', 2600);
+            }
+            if (player.crying) player.cryTimer = Math.max(0, player.cryTimer - dt);
           });
 
           if (players[0].crying) territoryLine += 16 * dt;
@@ -582,6 +629,7 @@
 
         function applyTerritoryDamage(target, opponent, warning) {
           if (target.territoryDamageTimer > 0 || !running) return;
+          cancelHealing(target);
           target.territoryDamageTimer = .55;
           target.health = Math.max(0, target.health - 3);
           target.hitFlash = .14;
@@ -656,6 +704,7 @@
 
         function attack(player) {
           if (!running || player.cooldown > 0 || player.blocking) return;
+          cancelHealing(player);
           player.cooldown = player.merged ? .7 : .4;
           if (player.merged) {
             waves.push({
@@ -690,6 +739,7 @@
 
         function merge(player) {
           if (!running || player.merged || player.blocking) return;
+          cancelHealing(player);
           if (player.energy < 100) {
             setMessage(`${player.id === 0 ? '林间队' : '海洋队'}还要继续命中，才能合体！`);
             return;
@@ -741,12 +791,15 @@
             tone(target.id === 0 ? 430 : 490, .08, 'triangle');
             return false;
           }
+          const interruptedHealing = target.healMode;
+          cancelHealing(target);
           target.health = Math.max(0, target.health - amount);
           target.hitFlash = .18;
           target.invincible = .42;
           shake = 8;
           burst(x, y, '#fff5b2', 15, 190);
           tone(150, .1, 'square');
+          if (interruptedHealing) setMessage(`${target.id === 0 ? '1P' : '2P'}被打中，安心回血中断了！`);
           if (target.health <= 0) finishGame(attacker.id);
           return true;
         }
@@ -794,6 +847,7 @@
           drawArena(time);
           drawWaves(time);
           players.forEach(player => drawMagic(player, time));
+          players.forEach(player => { if (player.healing) drawHealing(player, time); });
           players.forEach(player => player.army.forEach(unit => {
             if (!player.merged || unit.state === 'attack') drawUnit(unit, player.id, time);
           }));
@@ -926,6 +980,31 @@
             ctx.arc(Math.cos(a) * 50, Math.sin(a) * 50, 4, 0, Math.PI * 2);
             ctx.fillStyle = player.accent;
             ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawHealing(player, time) {
+          const ready = player.healDelay >= .7;
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.strokeStyle = ready ? '#aaffb9' : 'rgba(255,255,255,.55)';
+          ctx.shadowColor = '#71f59d';
+          ctx.shadowBlur = ready ? 22 : 9;
+          ctx.lineWidth = 4;
+          ctx.setLineDash(ready ? [] : [6, 8]);
+          ctx.beginPath();
+          ctx.arc(0, 0, 50 + Math.sin(time * .008) * 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#caffd2';
+          ctx.font = '900 20px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          for (let i = 0; i < 3; i++) {
+            const angle = time * .0015 + i * Math.PI * 2 / 3;
+            const x = Math.cos(angle) * 58;
+            const y = Math.sin(angle) * 30 - 12;
+            ctx.fillText('+', x, y);
           }
           ctx.restore();
         }
@@ -1143,8 +1222,14 @@
           players.forEach((player, id) => {
             healthEls[id].style.width = `${player.health}%`;
             energyEls[id].style.width = `${player.energy}%`;
-            if (player.crying) {
-              stateEls[id].textContent = id === 0 ? '😭 大哭 · 顶回领地' : '😭 大哭 · 海水上涨';
+            if (player.healing) {
+              stateEls[id].textContent = player.crying
+                ? `💗 回血 · 哭${player.cryTimer.toFixed(1)}秒`
+                : '💗 安心回血中';
+            } else if (player.crying) {
+              stateEls[id].textContent = id === 0
+                ? `😭 顶回领地 ${player.cryTimer.toFixed(1)}秒`
+                : `😭 海水上涨 ${player.cryTimer.toFixed(1)}秒`;
             } else if (player.merged) {
               stateEls[id].textContent = `合体中 ${player.mergeTimer.toFixed(1)}秒`;
             } else if (player.energy >= 100) {
@@ -1157,6 +1242,9 @@
             const forestPercent = Math.round(territoryLine / WORLD.width * 100);
             roundStatus.textContent = `🌲 ${forestPercent}% ｜ 🌊 ${100 - forestPercent}%`;
           }
+          players.forEach((player, id) => {
+            document.querySelector(`[data-player="${id}"][data-action="heal"]`)?.classList.toggle('active', player.healMode);
+          });
         }
 
         let messageTimer = 0;
@@ -1188,17 +1276,40 @@
         function triggerAction(id, action) {
           if (action === 'attack') attack(players[id]);
           if (action === 'merge') merge(players[id]);
+          if (action === 'heal') toggleHealing(players[id]);
+        }
+
+        function toggleHealing(player) {
+          if (!running) return;
+          if (player.healMode) {
+            cancelHealing(player);
+            setMessage(`${player.id === 0 ? '1P' : '2P'}停止回血。`);
+            return;
+          }
+          if (player.health >= 100) {
+            setMessage(`${player.id === 0 ? '1P' : '2P'}已经是满血！`);
+            return;
+          }
+          if (player.blocking) {
+            setMessage('先放下护盾，才能安心回血！');
+            return;
+          }
+          player.healMode = true;
+          player.healDelay = 0;
+          setMessage(`${player.id === 0 ? '1P按R' : '2P按P'}开始安心回血：不要移动，也别被打中！`, 2300);
         }
 
         const keyActions = {
           KeyF: [0, 'attack'],
           KeyG: [0, 'merge'],
+          KeyR: [0, 'heal'],
           KeyK: [1, 'attack'],
-          KeyL: [1, 'merge']
+          KeyL: [1, 'merge'],
+          KeyP: [1, 'heal']
         };
 
         window.addEventListener('keydown', event => {
-          const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyE', 'KeyD', 'KeyF', 'KeyG', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyJ', 'KeyK', 'KeyL'];
+          const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyE', 'KeyD', 'KeyF', 'KeyG', 'KeyR', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyJ', 'KeyK', 'KeyL', 'KeyP'];
           if (gameKeys.includes(event.code)) event.preventDefault();
           keys.add(event.code);
           if (event.code === 'KeyD') players[0].blockTimer = .4;
