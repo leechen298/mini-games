@@ -349,7 +349,7 @@
               <div class="guide-card"><strong>🌲 1P 林间队</strong>WASE 移动 · D 防御 · F 攻击 · G 合体</div>
               <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · J 防御 · K 攻击 · L 合体</div>
             </div>
-            <p>命中会增加合体能量。能量满时合体 7 秒，攻击会变成强力光波！</p>
+            <p>生命低于 30 会大哭：海洋队让海水淹向左边，林间队会把领地顶回去。领地消失也会失败！</p>
             <button class="start-button" id="startButton" type="button">开始双人对战</button>
           </div>
         </div>
@@ -408,6 +408,7 @@
         let lastTime = performance.now();
         let shake = 0;
         let audioContext = null;
+        let territoryLine = WORLD.width / 2;
 
         const armyThemes = [
           [
@@ -442,6 +443,8 @@
             blockFlash: 0,
             blockTimer: 0,
             blocking: false,
+            crying: false,
+            territoryDamageTimer: 0,
             merged: false,
             mergeTimer: 0,
             invincible: 0,
@@ -476,6 +479,7 @@
           players.forEach(resetPlayer);
           particles.length = 0;
           waves.length = 0;
+          territoryLine = WORLD.width / 2;
           gameOver = false;
           running = true;
           startScreen.classList.add('hidden');
@@ -487,12 +491,14 @@
           tone(440, .08, 'sine');
         }
 
-        function finishGame(winner) {
+        function finishGame(winner, reason = '') {
+          if (gameOver) return;
           gameOver = true;
           running = false;
           const winnerName = winner === 0 ? '林间四宝队' : '海洋三宝队';
+          const reasonText = reason ? `${reason} ` : '';
           roundStatus.textContent = `${winnerName}获胜！`;
-          setMessage(`🎉 ${winnerName}获胜！点“重新开战”再来一局。`, 999999);
+          setMessage(`🎉 ${winnerName}获胜！${reasonText}点“重新开战”再来一局。`, 999999);
           burst(players[winner].x, players[winner].y, players[winner].accent, 42, 260);
           tone(winner === 0 ? 660 : 720, .25, 'triangle');
         }
@@ -524,6 +530,7 @@
             player.hitFlash = Math.max(0, player.hitFlash - dt);
             player.blockFlash = Math.max(0, player.blockFlash - dt);
             player.invincible = Math.max(0, player.invincible - dt);
+            player.territoryDamageTimer = Math.max(0, player.territoryDamageTimer - dt);
             player.energy = Math.min(100, player.energy + dt * 1.7);
 
             if (player.merged) {
@@ -534,11 +541,54 @@
             updateArmy(player, dt, time);
           });
 
+          updateTerritory(dt);
+          if (!running) return;
           separatePlayers();
           updateWaves(dt);
           updateParticles(dt);
           shake = Math.max(0, shake - dt * 18);
           updateHud();
+        }
+
+        function updateTerritory(dt) {
+          players.forEach(player => {
+            const wasCrying = player.crying;
+            player.crying = player.health > 0 && player.health <= 30;
+            if (!wasCrying && player.crying) {
+              setMessage(player.id === 0
+                ? '😭 林间守护者大哭，绿色领地开始向右顶回！'
+                : '😭 海洋守护者大哭，海水开始淹没林地！', 2600);
+            }
+          });
+
+          if (players[0].crying) territoryLine += 16 * dt;
+          if (players[1].crying) territoryLine -= 18 * dt;
+          territoryLine = clamp(territoryLine, 0, WORLD.width);
+
+          if (territoryLine <= 36) {
+            finishGame(1, '林间领地被海水完全淹没了！');
+            return;
+          }
+          if (territoryLine >= WORLD.width - 36) {
+            finishGame(0, '海洋领地被绿色田地完全顶走了！');
+            return;
+          }
+
+          const forestInOcean = players[0].x > territoryLine;
+          const oceanInForest = players[1].x < territoryLine;
+          if (forestInOcean) applyTerritoryDamage(players[0], players[1], '海水正在让1P扣血！');
+          if (oceanInForest) applyTerritoryDamage(players[1], players[0], '离开海洋让2P扣血！');
+        }
+
+        function applyTerritoryDamage(target, opponent, warning) {
+          if (target.territoryDamageTimer > 0 || !running) return;
+          target.territoryDamageTimer = .55;
+          target.health = Math.max(0, target.health - 3);
+          target.hitFlash = .14;
+          burst(target.x, target.y + 20, target.id === 0 ? '#78dcff' : '#9cf0a9', 8, 80);
+          setMessage(warning, 900);
+          tone(125, .07, 'sine');
+          if (target.health <= 0) finishGame(opponent.id, '对手在对方领地里耗尽了生命！');
         }
 
         function getMovement(id) {
@@ -754,17 +804,21 @@
         }
 
         function drawArena(time) {
-          const forest = ctx.createLinearGradient(0, 0, WORLD.width, 0);
-          forest.addColorStop(0, '#205b39');
-          forest.addColorStop(.47, '#397253');
-          forest.addColorStop(.53, '#276777');
-          forest.addColorStop(1, '#17496c');
-          ctx.fillStyle = forest;
-          ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+          const forestGradient = ctx.createLinearGradient(0, 0, Math.max(territoryLine, 1), 0);
+          forestGradient.addColorStop(0, '#205b39');
+          forestGradient.addColorStop(1, '#397253');
+          ctx.fillStyle = forestGradient;
+          ctx.fillRect(0, 0, territoryLine, WORLD.height);
+
+          const oceanGradient = ctx.createLinearGradient(territoryLine, 0, WORLD.width, 0);
+          oceanGradient.addColorStop(0, '#276777');
+          oceanGradient.addColorStop(1, '#17496c');
+          ctx.fillStyle = oceanGradient;
+          ctx.fillRect(territoryLine, 0, WORLD.width - territoryLine, WORLD.height);
 
           ctx.globalAlpha = .16;
           ctx.fillStyle = '#b6ffac';
-          for (let x = 25; x < 500; x += 62) {
+          for (let x = 25; x < territoryLine; x += 62) {
             for (let y = 90; y < WORLD.height; y += 65) {
               ctx.beginPath();
               ctx.ellipse(x + Math.sin(y) * 8, y, 20, 8, -.5, 0, Math.PI * 2);
@@ -775,37 +829,60 @@
           ctx.lineWidth = 2;
           for (let y = 90; y < WORLD.height; y += 48) {
             ctx.beginPath();
-            for (let x = 510; x <= WORLD.width; x += 20) {
+            for (let x = territoryLine + 10; x <= WORLD.width; x += 20) {
               const waveY = y + Math.sin(x * .045 + time * .002) * 5;
-              if (x === 510) ctx.moveTo(x, waveY); else ctx.lineTo(x, waveY);
+              if (x < territoryLine + 25) ctx.moveTo(x, waveY); else ctx.lineTo(x, waveY);
             }
             ctx.stroke();
           }
           ctx.globalAlpha = 1;
 
+          ctx.save();
+          ctx.strokeStyle = 'rgba(129,225,255,.78)';
+          ctx.shadowColor = '#5dd8ff';
+          ctx.shadowBlur = 18;
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          for (let y = 62; y <= WORLD.height; y += 14) {
+            const edgeX = territoryLine + Math.sin(y * .045 + time * .003) * 4;
+            if (y === 62) ctx.moveTo(edgeX, y); else ctx.lineTo(edgeX, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+
           ctx.fillStyle = 'rgba(5,20,24,.36)';
           ctx.fillRect(0, 0, WORLD.width, 58);
           ctx.textAlign = 'center';
           ctx.font = '900 18px system-ui, sans-serif';
-          ctx.fillStyle = '#baffca';
-          ctx.fillText('林 间 领 地', 250, 35);
-          ctx.fillStyle = '#b8ebff';
-          ctx.fillText('海 洋 领 地', 750, 35);
+          if (territoryLine > 115) {
+            ctx.fillStyle = '#baffca';
+            ctx.fillText('林 间 领 地', territoryLine / 2, 35);
+          }
+          if (WORLD.width - territoryLine > 115) {
+            ctx.fillStyle = '#b8ebff';
+            ctx.fillText('海 洋 领 地', territoryLine + (WORLD.width - territoryLine) / 2, 35);
+          }
 
           ctx.save();
           ctx.setLineDash([8, 12]);
           ctx.strokeStyle = 'rgba(255,255,255,.27)';
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.moveTo(500, 68);
-          ctx.lineTo(500, WORLD.height - 12);
+          ctx.moveTo(territoryLine, 68);
+          ctx.lineTo(territoryLine, WORLD.height - 12);
           ctx.stroke();
           ctx.restore();
 
+          ctx.save();
+          ctx.beginPath(); ctx.rect(0, 0, territoryLine, WORLD.height); ctx.clip();
           drawScenery(78, 104, 'tree');
           drawScenery(445, 480, 'mushroom');
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath(); ctx.rect(territoryLine, 0, WORLD.width - territoryLine, WORLD.height); ctx.clip();
           drawScenery(905, 112, 'coral');
           drawScenery(576, 490, 'shell');
+          ctx.restore();
         }
 
         function drawScenery(x, y, kind) {
@@ -880,7 +957,7 @@
             });
           }
 
-          drawFace(player.id, 1);
+          drawFace(player.id, 1, player.crying, time);
           drawHeadTooth(0, -38, player.id === 0 ? '#eaffc9' : '#ffffff');
           ctx.restore();
 
@@ -895,9 +972,33 @@
           ctx.restore();
         }
 
-        function drawFace(id, scale) {
+        function drawFace(id, scale, crying, time) {
           ctx.save();
           ctx.scale(scale, scale);
+          if (crying) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(-22, -10); ctx.quadraticCurveTo(-13, -18, -4, -9); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(4, -9); ctx.quadraticCurveTo(13, -18, 22, -10); ctx.stroke();
+
+            const tearStretch = 1 + Math.sin(time * .012) * .13;
+            ctx.fillStyle = '#6ddcff';
+            ctx.shadowColor = '#a8efff';
+            ctx.shadowBlur = 8;
+            ctx.beginPath(); ctx.ellipse(-15, 6, 7, 15 * tearStretch, -.12, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(15, 6, 7, 15 * tearStretch, .12, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#07151c';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.ellipse(0, 18, 11, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ff9ba7';
+            ctx.beginPath(); ctx.ellipse(0, 25, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            return;
+          }
           ctx.fillStyle = '#fff';
           ctx.beginPath(); ctx.arc(-12, -7, 8, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(12, -7, 8, 0, Math.PI * 2); ctx.fill();
@@ -1042,7 +1143,9 @@
           players.forEach((player, id) => {
             healthEls[id].style.width = `${player.health}%`;
             energyEls[id].style.width = `${player.energy}%`;
-            if (player.merged) {
+            if (player.crying) {
+              stateEls[id].textContent = id === 0 ? '😭 大哭 · 顶回领地' : '😭 大哭 · 海水上涨';
+            } else if (player.merged) {
               stateEls[id].textContent = `合体中 ${player.mergeTimer.toFixed(1)}秒`;
             } else if (player.energy >= 100) {
               stateEls[id].textContent = '✨ 可以合体！';
@@ -1050,6 +1153,10 @@
               stateEls[id].textContent = `${id === 0 ? '林间四宝 ×4' : '海洋三宝 ×3'} · ${Math.floor(player.energy)}%`;
             }
           });
+          if (running) {
+            const forestPercent = Math.round(territoryLine / WORLD.width * 100);
+            roundStatus.textContent = `🌲 ${forestPercent}% ｜ 🌊 ${100 - forestPercent}%`;
+          }
         }
 
         let messageTimer = 0;
