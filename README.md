@@ -6,3 +6,4 @@
 - `duck-market-hop/duck-market-hop.html`：小鸭子的超大地图跳跳日常，买菜、做家务、挖地道、找隐藏东西、去厕所时按回车挡小气球。
 - `xiao-yaya-daily/xiao-yaya-daily.html`：小丫丫换衣、买菜、自动安排晚饭和拜访小浣熊家的日常小游戏。
 - `triangle-bead-pop/triangle-bead-pop.html`：转动每次落下的三角珠珠，让 6 颗或更多同色珠珠连在一起消除。
+- `forest-ocean-duel/forest-ocean-duel.html`：两位玩家控制林间四宝和海洋三宝移动、冲锋与合体的同屏对战游戏。

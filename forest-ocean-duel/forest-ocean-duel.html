@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>林海宝物合体大战</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f8fff4;
+        --muted: #c6d8cd;
+        --forest: #4ee68c;
+        --forest-dark: #123e2c;
+        --ocean: #54c8ff;
+        --ocean-dark: #123755;
+        --danger: #ff6d73;
+        --gold: #ffe375;
+        --panel: rgba(7, 25, 25, 0.83);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { min-height: 100%; }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at 12% 12%, rgba(66, 212, 123, .24), transparent 28%),
+          radial-gradient(circle at 88% 14%, rgba(56, 178, 255, .22), transparent 28%),
+          linear-gradient(135deg, #071f19, #081b29);
+        overscroll-behavior: none;
+      }
+
+      button { font: inherit; color: inherit; }
+
+      .app {
+        width: min(1240px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 10px 12px max(14px, env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-rows: auto auto auto;
+        gap: 9px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(22px, 3.3vw, 38px);
+        line-height: 1;
+        letter-spacing: .04em;
+      }
+
+      .restart {
+        border: 1px solid rgba(255,255,255,.25);
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: rgba(255,255,255,.1);
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .restart:hover { background: rgba(255,255,255,.18); }
+
+      .hud {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .player-card {
+        min-width: 0;
+        padding: 8px 11px;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 7px 22px rgba(0,0,0,.22);
+      }
+
+      .player-card.ocean { text-align: right; }
+
+      .name-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .ocean .name-row { flex-direction: row-reverse; }
+
+      .bars { margin-top: 6px; display: grid; gap: 5px; }
+
+      .bar {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(255,255,255,.12);
+      }
+
+      .bar > i {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #ff7c75, #ffdc69);
+        transition: width .18s ease;
+      }
+
+      .bar.energy > i { width: 0; background: linear-gradient(90deg, #50dc8c, #caff70); }
+      .ocean .bar.energy > i { background: linear-gradient(90deg, #4aaeff, #79efff); }
+
+      .round-status {
+        align-self: center;
+        min-width: 116px;
+        padding: 8px 12px;
+        border-radius: 14px;
+        background: rgba(255,255,255,.1);
+        text-align: center;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .stage {
+        position: relative;
+        min-height: 0;
+        border: 2px solid rgba(255,255,255,.18);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 16px 45px rgba(0,0,0,.34);
+        background: #123b3c;
+      }
+
+      canvas {
+        width: 100%;
+        height: min(59vh, 650px);
+        min-height: 410px;
+        display: block;
+        outline: none;
+        touch-action: none;
+      }
+
+      canvas:focus-visible { box-shadow: inset 0 0 0 4px var(--gold); }
+
+      .message {
+        position: absolute;
+        z-index: 3;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        max-width: 80%;
+        padding: 7px 16px;
+        border: 1px solid rgba(255,255,255,.2);
+        border-radius: 999px;
+        background: rgba(5,18,22,.74);
+        font-size: 13px;
+        font-weight: 900;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .start-screen {
+        position: absolute;
+        z-index: 5;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(3, 14, 18, .76);
+        backdrop-filter: blur(6px);
+      }
+
+      .start-screen.hidden { display: none; }
+
+      .start-card {
+        width: min(620px, 100%);
+        padding: clamp(18px, 4vw, 32px);
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: 28px;
+        background: linear-gradient(145deg, rgba(22,72,50,.96), rgba(16,49,76,.96));
+        box-shadow: 0 20px 60px rgba(0,0,0,.42);
+        text-align: center;
+      }
+
+      .start-card h2 { margin: 0 0 10px; font-size: clamp(28px, 5vw, 48px); }
+      .start-card p { margin: 7px 0; color: #e2f4e9; line-height: 1.55; font-weight: 700; }
+
+      .key-guide {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+        margin: 16px 0;
+      }
+
+      .guide-card {
+        padding: 11px;
+        border-radius: 15px;
+        background: rgba(255,255,255,.1);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .guide-card strong { display: block; font-size: 16px; }
+
+      .start-button {
+        min-width: 180px;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 26px;
+        color: #123022;
+        background: linear-gradient(180deg, #f5ff9c, #8ff49d);
+        box-shadow: 0 8px 0 #34885a, 0 14px 26px rgba(0,0,0,.25);
+        font-size: 19px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .start-button:active { transform: translateY(5px); box-shadow: 0 3px 0 #34885a; }
+
+      .touch-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .control-side {
+        display: grid;
+        grid-template-columns: minmax(126px, 170px) 1fr;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid rgba(255,255,255,.13);
+        border-radius: 18px;
+        background: rgba(5,20,23,.72);
+      }
+
+      .control-side.ocean-side { grid-template-columns: 1fr minmax(126px, 170px); }
+
+      .dpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, 36px);
+        gap: 4px;
+      }
+
+      .control-button {
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 10px;
+        background: rgba(255,255,255,.1);
+        font-weight: 950;
+        cursor: pointer;
+        touch-action: none;
+        user-select: none;
+      }
+
+      .control-button[data-action="up"] { grid-column: 2; }
+      .control-button[data-action="left"] { grid-column: 1; grid-row: 2; }
+      .control-button[data-action="down"] { grid-column: 2; grid-row: 2; }
+      .control-button[data-action="right"] { grid-column: 3; grid-row: 2; }
+      .control-button.active { transform: scale(.94); background: rgba(255,255,255,.25); }
+
+      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+      .action-button {
+        min-height: 58px;
+        border: 0;
+        border-radius: 14px;
+        padding: 5px;
+        background: linear-gradient(180deg, #58de8e, #23784a);
+        box-shadow: inset 0 -4px rgba(0,0,0,.18);
+        font-size: 14px;
+        font-weight: 950;
+        touch-action: none;
+        cursor: pointer;
+      }
+
+      .ocean-side .action-button { background: linear-gradient(180deg, #58cfff, #276baf); }
+      .action-button.merge { background: linear-gradient(180deg, #ffe977, #c07b27); }
+      .action-button:active, .action-button.active { transform: translateY(3px); }
+
+      @media (max-width: 760px) {
+        .app { padding: 7px; gap: 6px; }
+        h1 { font-size: 19px; }
+        .restart { padding: 6px 10px; font-size: 12px; }
+        .player-card { padding: 6px 8px; }
+        .name-row { font-size: 11px; }
+        .round-status { min-width: 74px; padding: 6px; font-size: 10px; }
+        canvas { height: 50vh; min-height: 330px; }
+        .message { top: 6px; padding: 5px 10px; font-size: 11px; }
+        .control-side, .control-side.ocean-side { grid-template-columns: 1fr; }
+        .ocean-side .actions { order: 2; }
+        .ocean-side .dpad { order: 1; }
+        .dpad { grid-template-rows: repeat(2, 33px); }
+        .action-button { min-height: 45px; font-size: 12px; }
+      }
+
+      @media (max-width: 470px) {
+        .start-card { padding: 16px 12px; }
+        .key-guide { grid-template-columns: 1fr; }
+        .guide-card { padding: 7px; }
+        .stage { border-radius: 16px; }
+        canvas { min-height: 300px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>🌲 林海宝物合体大战 🌊</h1>
+        <button class="restart" id="restartButton" type="button">重新开战</button>
+      </header>
+
+      <section class="hud" aria-label="双方状态">
+        <div class="player-card forest">
+          <div class="name-row"><span>1P 墨绿守护者</span><span id="forestState">林间四宝 ×4</span></div>
+          <div class="bars">
+            <div class="bar" aria-label="1P生命"><i id="forestHealth"></i></div>
+            <div class="bar energy" aria-label="1P合体能量"><i id="forestEnergy"></i></div>
+          </div>
+        </div>
+        <div class="round-status" id="roundStatus">先打中 10 次左右就能获胜</div>
+        <div class="player-card ocean">
+          <div class="name-row"><span>2P 黑色守护者</span><span id="oceanState">海洋三宝 ×3</span></div>
+          <div class="bars">
+            <div class="bar" aria-label="2P生命"><i id="oceanHealth"></i></div>
+            <div class="bar energy" aria-label="2P合体能量"><i id="oceanEnergy"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stage">
+        <canvas id="gameCanvas" tabindex="0" aria-label="林间四宝与海洋三宝的双人对战场地"></canvas>
+        <div class="message" id="message">派出宝物冲锋，能量满后全队合体！</div>
+        <div class="start-screen" id="startScreen">
+          <div class="start-card">
+            <h2>林间四宝 VS 海洋三宝</h2>
+            <p>两位玩家在同一个键盘或触控屏上对战。移动躲开冲锋，控制自己的宝物军队攻击！</p>
+            <div class="key-guide">
+              <div class="guide-card"><strong>🌲 1P 林间队</strong>WASD 移动 · F 攻击 · G 合体</div>
+              <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · K 攻击 · L 合体</div>
+            </div>
+            <p>命中会增加合体能量。能量满时合体 7 秒，攻击会变成强力光波！</p>
+            <button class="start-button" id="startButton" type="button">开始双人对战</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="touch-controls" aria-label="触控操作区">
+        <div class="control-side forest-side">
+          <div class="dpad">
+            <button class="control-button" data-player="0" data-action="up" aria-label="1P向上">▲</button>
+            <button class="control-button" data-player="0" data-action="left" aria-label="1P向左">◀</button>
+            <button class="control-button" data-player="0" data-action="down" aria-label="1P向下">▼</button>
+            <button class="control-button" data-player="0" data-action="right" aria-label="1P向右">▶</button>
+          </div>
+          <div class="actions">
+            <button class="action-button" data-player="0" data-action="attack">F 攻击</button>
+            <button class="action-button merge" data-player="0" data-action="merge">G 合体</button>
+          </div>
+        </div>
+        <div class="control-side ocean-side">
+          <div class="actions">
+            <button class="action-button" data-player="1" data-action="attack">K 攻击</button>
+            <button class="action-button merge" data-player="1" data-action="merge">L 合体</button>
+          </div>
+          <div class="dpad">
+            <button class="control-button" data-player="1" data-action="up" aria-label="2P向上">▲</button>
+            <button class="control-button" data-player="1" data-action="left" aria-label="2P向左">◀</button>
+            <button class="control-button" data-player="1" data-action="down" aria-label="2P向下">▼</button>
+            <button class="control-button" data-player="1" data-action="right" aria-label="2P向右">▶</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const canvas = document.querySelector('#gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.querySelector('#startScreen');
+        const startButton = document.querySelector('#startButton');
+        const restartButton = document.querySelector('#restartButton');
+        const message = document.querySelector('#message');
+        const roundStatus = document.querySelector('#roundStatus');
+        const healthEls = [document.querySelector('#forestHealth'), document.querySelector('#oceanHealth')];
+        const energyEls = [document.querySelector('#forestEnergy'), document.querySelector('#oceanEnergy')];
+        const stateEls = [document.querySelector('#forestState'), document.querySelector('#oceanState')];
+
+        const WORLD = { width: 1000, height: 560 };
+        const keys = new Set();
+        const touchState = [new Set(), new Set()];
+        const particles = [];
+        const waves = [];
+        let running = false;
+        let gameOver = false;
+        let lastTime = performance.now();
+        let shake = 0;
+        let audioContext = null;
+
+        const armyThemes = [
+          [
+            { name: '松果宝', color: '#9f6b37', mark: 'cone' },
+            { name: '叶片宝', color: '#50c86d', mark: 'leaf' },
+            { name: '蘑菇宝', color: '#ef7774', mark: 'spot' },
+            { name: '树莓宝', color: '#bb4f78', mark: 'berry' }
+          ],
+          [
+            { name: '水滴宝', color: '#4eb9ed', mark: 'drop' },
+            { name: '珊瑚宝', color: '#ff807c', mark: 'coral' },
+            { name: '贝壳宝', color: '#ad8de8', mark: 'shell' }
+          ]
+        ];
+
+        const players = [createPlayer(0), createPlayer(1)];
+
+        function createPlayer(id) {
+          const isForest = id === 0;
+          return {
+            id,
+            x: isForest ? 185 : 815,
+            y: 290,
+            radius: 34,
+            color: isForest ? '#174f32' : '#11151a',
+            accent: isForest ? '#62ee97' : '#54c8ff',
+            health: 100,
+            energy: 0,
+            direction: isForest ? 0 : Math.PI,
+            cooldown: 0,
+            hitFlash: 0,
+            merged: false,
+            mergeTimer: 0,
+            invincible: 0,
+            army: armyThemes[id].map((theme, index) => ({
+              ...theme,
+              index,
+              state: 'orbit',
+              x: 0,
+              y: 0,
+              vx: 0,
+              vy: 0,
+              attackTimer: 0,
+              stun: 0
+            }))
+          };
+        }
+
+        function resetPlayer(player) {
+          const fresh = createPlayer(player.id);
+          Object.assign(player, fresh);
+        }
+
+        function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.round(rect.width * dpr);
+          canvas.height = Math.round(rect.height * dpr);
+          ctx.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
+        }
+
+        function startGame() {
+          players.forEach(resetPlayer);
+          particles.length = 0;
+          waves.length = 0;
+          gameOver = false;
+          running = true;
+          startScreen.classList.add('hidden');
+          roundStatus.textContent = '宝物军队准备出发！';
+          setMessage('躲开对方的冲锋，找准方向再攻击！');
+          canvas.focus({ preventScroll: true });
+          lastTime = performance.now();
+          updateHud();
+          tone(440, .08, 'sine');
+        }
+
+        function finishGame(winner) {
+          gameOver = true;
+          running = false;
+          const winnerName = winner === 0 ? '林间四宝队' : '海洋三宝队';
+          roundStatus.textContent = `${winnerName}获胜！`;
+          setMessage(`🎉 ${winnerName}获胜！点“重新开战”再来一局。`, 999999);
+          burst(players[winner].x, players[winner].y, players[winner].accent, 42, 260);
+          tone(winner === 0 ? 660 : 720, .25, 'triangle');
+        }
+
+        function update(dt, time) {
+          if (!running) return;
+
+          players.forEach((player, id) => {
+            const movement = getMovement(id);
+            const length = Math.hypot(movement.x, movement.y);
+            if (length > 0) {
+              movement.x /= length;
+              movement.y /= length;
+              player.direction = Math.atan2(movement.y, movement.x);
+              const speed = player.merged ? 195 : 170;
+              player.x += movement.x * speed * dt;
+              player.y += movement.y * speed * dt;
+            }
+
+            const padding = player.merged ? 57 : 40;
+            player.x = clamp(player.x, padding, WORLD.width - padding);
+            player.y = clamp(player.y, 66 + padding, WORLD.height - padding);
+            player.cooldown = Math.max(0, player.cooldown - dt);
+            player.hitFlash = Math.max(0, player.hitFlash - dt);
+            player.invincible = Math.max(0, player.invincible - dt);
+            player.energy = Math.min(100, player.energy + dt * 1.7);
+
+            if (player.merged) {
+              player.mergeTimer -= dt;
+              if (player.mergeTimer <= 0) endMerge(player);
+            }
+
+            updateArmy(player, dt, time);
+          });
+
+          separatePlayers();
+          updateWaves(dt);
+          updateParticles(dt);
+          shake = Math.max(0, shake - dt * 18);
+          updateHud();
+        }
+
+        function getMovement(id) {
+          const held = action => touchState[id].has(action);
+          if (id === 0) {
+            return {
+              x: (keys.has('KeyD') || held('right') ? 1 : 0) - (keys.has('KeyA') || held('left') ? 1 : 0),
+              y: (keys.has('KeyS') || held('down') ? 1 : 0) - (keys.has('KeyW') || held('up') ? 1 : 0)
+            };
+          }
+          return {
+            x: (keys.has('ArrowRight') || held('right') ? 1 : 0) - (keys.has('ArrowLeft') || held('left') ? 1 : 0),
+            y: (keys.has('ArrowDown') || held('down') ? 1 : 0) - (keys.has('ArrowUp') || held('up') ? 1 : 0)
+          };
+        }
+
+        function updateArmy(player, dt, time) {
+          const count = player.army.length;
+          player.army.forEach((unit, index) => {
+            unit.stun = Math.max(0, unit.stun - dt);
+            if (unit.state === 'attack') {
+              unit.x += unit.vx * dt;
+              unit.y += unit.vy * dt;
+              unit.attackTimer -= dt;
+              checkUnitHit(player, unit);
+              if (unit.attackTimer <= 0 || unit.x < -60 || unit.x > WORLD.width + 60 || unit.y < 40 || unit.y > WORLD.height + 60) {
+                unit.state = 'return';
+              }
+            } else if (unit.state === 'return') {
+              const target = orbitPosition(player, index, count, time);
+              const dx = target.x - unit.x;
+              const dy = target.y - unit.y;
+              const distance = Math.hypot(dx, dy);
+              if (distance < 15) {
+                unit.state = 'orbit';
+              } else {
+                unit.x += dx / distance * 390 * dt;
+                unit.y += dy / distance * 390 * dt;
+              }
+            } else {
+              const target = orbitPosition(player, index, count, time);
+              unit.x += (target.x - unit.x) * Math.min(1, dt * 10);
+              unit.y += (target.y - unit.y) * Math.min(1, dt * 10);
+            }
+          });
+        }
+
+        function orbitPosition(player, index, count, time) {
+          if (player.merged) return { x: player.x, y: player.y };
+          const angle = time * .00125 * (player.id === 0 ? 1 : -1) + index * Math.PI * 2 / count;
+          const orbit = 69 + Math.sin(time * .003 + index) * 4;
+          return { x: player.x + Math.cos(angle) * orbit, y: player.y + Math.sin(angle) * orbit * .7 };
+        }
+
+        function checkUnitHit(owner, unit) {
+          const enemy = players[1 - owner.id];
+          const targetRadius = enemy.merged ? 54 : 32;
+          if (enemy.invincible <= 0 && distance(unit, enemy) < targetRadius + 22) {
+            const damage = 10;
+            hurtPlayer(enemy, owner, damage, unit.x, unit.y);
+            unit.state = 'return';
+            owner.energy = Math.min(100, owner.energy + 22);
+          }
+        }
+
+        function attack(player) {
+          if (!running || player.cooldown > 0) return;
+          player.cooldown = player.merged ? .7 : .4;
+          if (player.merged) {
+            waves.push({
+              owner: player.id,
+              x: player.x + Math.cos(player.direction) * 52,
+              y: player.y + Math.sin(player.direction) * 52,
+              vx: Math.cos(player.direction) * 520,
+              vy: Math.sin(player.direction) * 520,
+              radius: 18,
+              life: 1.25,
+              color: player.accent
+            });
+            tone(player.id === 0 ? 520 : 590, .08, 'sawtooth');
+            return;
+          }
+
+          const unit = player.army.find(item => item.state === 'orbit' && item.stun <= 0);
+          if (!unit) {
+            setMessage(`${player.id === 0 ? '林间' : '海洋'}宝物还在赶回来！`);
+            return;
+          }
+          const speed = 470;
+          unit.state = 'attack';
+          unit.x = player.x + Math.cos(player.direction) * 56;
+          unit.y = player.y + Math.sin(player.direction) * 56;
+          unit.vx = Math.cos(player.direction) * speed;
+          unit.vy = Math.sin(player.direction) * speed;
+          unit.attackTimer = 1.35;
+          burst(unit.x, unit.y, player.accent, 7, 100);
+          tone(player.id === 0 ? 320 : 380, .055, 'square');
+        }
+
+        function merge(player) {
+          if (!running || player.merged) return;
+          if (player.energy < 100) {
+            setMessage(`${player.id === 0 ? '林间队' : '海洋队'}还要继续命中，才能合体！`);
+            return;
+          }
+          player.energy = 0;
+          player.merged = true;
+          player.mergeTimer = 7;
+          player.invincible = .8;
+          player.army.forEach(unit => { unit.state = 'return'; });
+          burst(player.x, player.y, player.accent, 34, 220);
+          setMessage(`${player.id === 0 ? '🌲 林间四宝' : '🌊 海洋三宝'}合体成功！光波攻击变强了！`, 2300);
+          tone(player.id === 0 ? 520 : 600, .3, 'triangle');
+        }
+
+        function endMerge(player) {
+          player.merged = false;
+          player.mergeTimer = 0;
+          player.army.forEach(unit => { unit.state = 'return'; });
+          setMessage(`${player.id === 0 ? '林间队' : '海洋队'}解除合体，宝物军队重新出发！`);
+        }
+
+        function updateWaves(dt) {
+          for (let index = waves.length - 1; index >= 0; index--) {
+            const wave = waves[index];
+            wave.x += wave.vx * dt;
+            wave.y += wave.vy * dt;
+            wave.life -= dt;
+            const owner = players[wave.owner];
+            const enemy = players[1 - wave.owner];
+            if (enemy.invincible <= 0 && distance(wave, enemy) < wave.radius + (enemy.merged ? 54 : 32)) {
+              hurtPlayer(enemy, owner, 16, wave.x, wave.y);
+              owner.energy = Math.min(100, owner.energy + 14);
+              waves.splice(index, 1);
+              continue;
+            }
+            if (wave.life <= 0 || wave.x < -40 || wave.x > WORLD.width + 40 || wave.y < 40 || wave.y > WORLD.height + 40) {
+              waves.splice(index, 1);
+            }
+          }
+        }
+
+        function hurtPlayer(target, attacker, amount, x, y) {
+          target.health = Math.max(0, target.health - amount);
+          target.hitFlash = .18;
+          target.invincible = .42;
+          shake = 8;
+          burst(x, y, '#fff5b2', 15, 190);
+          tone(150, .1, 'square');
+          if (target.health <= 0) finishGame(attacker.id);
+        }
+
+        function separatePlayers() {
+          const a = players[0];
+          const b = players[1];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const minimum = (a.merged ? 55 : 34) + (b.merged ? 55 : 34) + 8;
+          if (dist < minimum) {
+            const push = (minimum - dist) / 2;
+            a.x -= dx / dist * push;
+            a.y -= dy / dist * push;
+            b.x += dx / dist * push;
+            b.y += dy / dist * push;
+          }
+        }
+
+        function updateParticles(dt) {
+          for (let index = particles.length - 1; index >= 0; index--) {
+            const particle = particles[index];
+            particle.x += particle.vx * dt;
+            particle.y += particle.vy * dt;
+            particle.vx *= .96;
+            particle.vy *= .96;
+            particle.life -= dt;
+            if (particle.life <= 0) particles.splice(index, 1);
+          }
+        }
+
+        function burst(x, y, color, count, speed) {
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = speed * (.3 + Math.random() * .7);
+            particles.push({ x, y, vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity, color, life: .35 + Math.random() * .45, size: 2 + Math.random() * 5 });
+          }
+        }
+
+        function draw(time) {
+          ctx.save();
+          ctx.clearRect(0, 0, WORLD.width, WORLD.height);
+          if (shake > 0) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+          drawArena(time);
+          drawWaves(time);
+          players.forEach(player => drawMagic(player, time));
+          players.forEach(player => player.army.forEach(unit => {
+            if (!player.merged || unit.state === 'attack') drawUnit(unit, player.id, time);
+          }));
+          players.forEach(player => drawPlayer(player, time));
+          drawParticles();
+          ctx.restore();
+        }
+
+        function drawArena(time) {
+          const forest = ctx.createLinearGradient(0, 0, WORLD.width, 0);
+          forest.addColorStop(0, '#205b39');
+          forest.addColorStop(.47, '#397253');
+          forest.addColorStop(.53, '#276777');
+          forest.addColorStop(1, '#17496c');
+          ctx.fillStyle = forest;
+          ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+
+          ctx.globalAlpha = .16;
+          ctx.fillStyle = '#b6ffac';
+          for (let x = 25; x < 500; x += 62) {
+            for (let y = 90; y < WORLD.height; y += 65) {
+              ctx.beginPath();
+              ctx.ellipse(x + Math.sin(y) * 8, y, 20, 8, -.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.strokeStyle = '#a8edff';
+          ctx.lineWidth = 2;
+          for (let y = 90; y < WORLD.height; y += 48) {
+            ctx.beginPath();
+            for (let x = 510; x <= WORLD.width; x += 20) {
+              const waveY = y + Math.sin(x * .045 + time * .002) * 5;
+              if (x === 510) ctx.moveTo(x, waveY); else ctx.lineTo(x, waveY);
+            }
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+
+          ctx.fillStyle = 'rgba(5,20,24,.36)';
+          ctx.fillRect(0, 0, WORLD.width, 58);
+          ctx.textAlign = 'center';
+          ctx.font = '900 18px system-ui, sans-serif';
+          ctx.fillStyle = '#baffca';
+          ctx.fillText('林 间 领 地', 250, 35);
+          ctx.fillStyle = '#b8ebff';
+          ctx.fillText('海 洋 领 地', 750, 35);
+
+          ctx.save();
+          ctx.setLineDash([8, 12]);
+          ctx.strokeStyle = 'rgba(255,255,255,.27)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(500, 68);
+          ctx.lineTo(500, WORLD.height - 12);
+          ctx.stroke();
+          ctx.restore();
+
+          drawScenery(78, 104, 'tree');
+          drawScenery(445, 480, 'mushroom');
+          drawScenery(905, 112, 'coral');
+          drawScenery(576, 490, 'shell');
+        }
+
+        function drawScenery(x, y, kind) {
+          ctx.save();
+          ctx.globalAlpha = .44;
+          ctx.translate(x, y);
+          if (kind === 'tree') {
+            ctx.fillStyle = '#563d25'; ctx.fillRect(-5, 4, 10, 24);
+            ctx.fillStyle = '#79be61';
+            [-16, 0, 16].forEach((offset, i) => { ctx.beginPath(); ctx.arc(offset, i === 1 ? -8 : 0, 17, 0, Math.PI * 2); ctx.fill(); });
+          } else if (kind === 'mushroom') {
+            ctx.fillStyle = '#f3deb0'; ctx.fillRect(-5, -2, 10, 20);
+            ctx.fillStyle = '#ff877e'; ctx.beginPath(); ctx.arc(0, 0, 16, Math.PI, 0); ctx.fill();
+          } else if (kind === 'coral') {
+            ctx.strokeStyle = '#ff9288'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+            [-10, 0, 10].forEach((offset, i) => { ctx.beginPath(); ctx.moveTo(0, 25); ctx.quadraticCurveTo(offset, 8, offset * 1.5, -8 - i * 3); ctx.stroke(); });
+          } else {
+            ctx.fillStyle = '#d5c8f2'; ctx.beginPath(); ctx.arc(0, 0, 18, Math.PI, 0); ctx.lineTo(18, 10); ctx.lineTo(-18, 10); ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawMagic(player, time) {
+          if (player.id !== 0 && !player.merged) return;
+          const pulse = 1 + Math.sin(time * .006 + player.id) * .08;
+          ctx.save();
+          ctx.translate(player.x, player.y + (player.merged ? 35 : 24));
+          ctx.scale(1, .42);
+          ctx.strokeStyle = player.id === 0 ? `rgba(89,255,145,${player.merged ? .9 : .62})` : 'rgba(84,200,255,.85)';
+          ctx.shadowColor = player.accent;
+          ctx.shadowBlur = player.merged ? 28 : 16;
+          ctx.lineWidth = player.merged ? 6 : 3;
+          [42, 57, 72].forEach((radius, i) => {
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * pulse + ((time * .025 + i * 12) % 18), 0, Math.PI * 2);
+            ctx.stroke();
+          });
+          for (let i = 0; i < 6; i++) {
+            const a = time * .001 + i * Math.PI / 3;
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * 50, Math.sin(a) * 50, 4, 0, Math.PI * 2);
+            ctx.fillStyle = player.accent;
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawPlayer(player, time) {
+          const scale = player.merged ? 1.55 + Math.sin(time * .009) * .04 : 1;
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.rotate(Math.sin(time * .004 + player.id) * .035);
+          ctx.scale(scale, scale);
+          if (player.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(time * .04) * .35;
+
+          ctx.shadowColor = player.accent;
+          ctx.shadowBlur = player.merged ? 28 : 10;
+          ctx.fillStyle = player.hitFlash > 0 ? '#fff' : player.color;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 34, 43, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          if (player.merged) {
+            const colors = armyThemes[player.id].map(item => item.color);
+            colors.forEach((color, index) => {
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 5;
+              ctx.beginPath();
+              ctx.arc(0, 0, 37 + index * 3, index * 1.1, index * 1.1 + 1.8);
+              ctx.stroke();
+            });
+          }
+
+          drawFace(player.id, 1);
+          drawHeadTooth(0, -42, player.id === 0 ? '#eaffc9' : '#ffffff');
+          ctx.restore();
+
+          ctx.save();
+          ctx.translate(player.x, player.y - (player.merged ? 82 : 58));
+          ctx.fillStyle = 'rgba(4,15,18,.72)';
+          roundRect(ctx, -38, -10, 76, 17, 8);
+          ctx.fill();
+          ctx.fillStyle = player.accent;
+          roundRect(ctx, -35, -7, 70 * (player.health / 100), 11, 6);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function drawFace(id, scale) {
+          ctx.save();
+          ctx.scale(scale, scale);
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.ellipse(-12, -8, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(12, -8, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = id === 0 ? '#12291d' : '#0a0d12';
+          ctx.beginPath(); ctx.arc(-10, -6, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(14, -6, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(-19, -20); ctx.lineTo(-7, -23); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(7, -23); ctx.lineTo(19, -20); ctx.stroke();
+          ctx.beginPath(); ctx.arc(0, 9, 12, .2, Math.PI - .2); ctx.stroke();
+          ctx.restore();
+        }
+
+        function drawHeadTooth(x, y, color) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(-7, 4);
+          ctx.quadraticCurveTo(0, -16, 7, 4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function drawUnit(unit, team, time) {
+          const attacking = unit.state === 'attack';
+          const angle = attacking ? Math.atan2(unit.vy, unit.vx) + Math.PI / 2 : Math.sin(time * .004 + unit.index) * .1;
+          ctx.save();
+          ctx.translate(unit.x, unit.y);
+          ctx.rotate(angle);
+          if (unit.stun > 0) ctx.globalAlpha = .45;
+          ctx.shadowColor = team === 0 ? '#71f19b' : '#6bd7ff';
+          ctx.shadowBlur = attacking ? 20 : 7;
+          ctx.fillStyle = unit.color;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 20, 26, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          drawUnitMark(unit.mark);
+          drawTinyFace();
+          drawHeadTooth(0, -25, '#fff5ca');
+          if (team === 1) drawBlueTuft(time, unit.index);
+          ctx.restore();
+        }
+
+        function drawTinyFace() {
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.ellipse(-7, -5, 4, 6, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(7, -5, 4, 6, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#17212a';
+          ctx.beginPath(); ctx.arc(-6, -4, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(8, -4, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.arc(0, 6, 7, .2, Math.PI - .2); ctx.stroke();
+        }
+
+        function drawUnitMark(mark) {
+          ctx.save();
+          ctx.globalAlpha = .75;
+          if (mark === 'cone') {
+            ctx.strokeStyle = '#f2bd71'; ctx.lineWidth = 2;
+            [-10, 0, 10].forEach(y => { ctx.beginPath(); ctx.moveTo(-15, y); ctx.lineTo(15, y + 5); ctx.stroke(); });
+          } else if (mark === 'leaf') {
+            ctx.fillStyle = '#caff9c'; ctx.beginPath(); ctx.ellipse(0, 11, 9, 4, -.5, 0, Math.PI * 2); ctx.fill();
+          } else if (mark === 'spot') {
+            ctx.fillStyle = '#fff0cf'; [-9, 0, 9].forEach(x => { ctx.beginPath(); ctx.arc(x, 13, 3, 0, Math.PI * 2); ctx.fill(); });
+          } else if (mark === 'berry') {
+            ctx.fillStyle = '#ffafc6'; [-6, 0, 6].forEach(x => { ctx.beginPath(); ctx.arc(x, 12, 4, 0, Math.PI * 2); ctx.fill(); });
+          } else if (mark === 'drop') {
+            ctx.fillStyle = '#c4f4ff'; ctx.beginPath(); ctx.arc(0, 12, 5, 0, Math.PI * 2); ctx.fill();
+          } else if (mark === 'coral') {
+            ctx.strokeStyle = '#ffd0b7'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(0, 8); ctx.moveTo(0, 12); ctx.lineTo(-7, 6); ctx.moveTo(0, 14); ctx.lineTo(7, 8); ctx.stroke();
+          } else {
+            ctx.strokeStyle = '#f5e9ff'; ctx.lineWidth = 2; [-7, 0, 7].forEach(x => { ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(x, 7); ctx.stroke(); });
+          }
+          ctx.restore();
+        }
+
+        function drawBlueTuft(time, index) {
+          ctx.save();
+          ctx.strokeStyle = '#72dcff';
+          ctx.fillStyle = '#a8efff';
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(9, -23);
+          ctx.quadraticCurveTo(17 + Math.sin(time * .006 + index) * 3, -39, 12, -45);
+          ctx.stroke();
+          ctx.beginPath(); ctx.arc(12, -45, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+
+        function drawWaves(time) {
+          waves.forEach(wave => {
+            ctx.save();
+            ctx.translate(wave.x, wave.y);
+            ctx.shadowColor = wave.color;
+            ctx.shadowBlur = 24;
+            ctx.fillStyle = wave.color;
+            ctx.globalAlpha = .8;
+            ctx.beginPath(); ctx.arc(0, 0, wave.radius + Math.sin(time * .02) * 3, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, wave.radius + 7, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+          });
+        }
+
+        function drawParticles() {
+          particles.forEach(particle => {
+            ctx.globalAlpha = Math.min(1, particle.life * 2);
+            ctx.fillStyle = particle.color;
+            ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
+          });
+          ctx.globalAlpha = 1;
+        }
+
+        function updateHud() {
+          players.forEach((player, id) => {
+            healthEls[id].style.width = `${player.health}%`;
+            energyEls[id].style.width = `${player.energy}%`;
+            if (player.merged) {
+              stateEls[id].textContent = `合体中 ${player.mergeTimer.toFixed(1)}秒`;
+            } else if (player.energy >= 100) {
+              stateEls[id].textContent = '✨ 可以合体！';
+            } else {
+              stateEls[id].textContent = `${id === 0 ? '林间四宝 ×4' : '海洋三宝 ×3'} · ${Math.floor(player.energy)}%`;
+            }
+          });
+        }
+
+        let messageTimer = 0;
+        function setMessage(text, duration = 1700) {
+          message.textContent = text;
+          clearTimeout(messageTimer);
+          messageTimer = window.setTimeout(() => {
+            if (running) message.textContent = '派出宝物冲锋，能量满后全队合体！';
+          }, duration);
+        }
+
+        function tone(frequency, duration, type) {
+          try {
+            audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            gain.gain.setValueAtTime(.035, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration);
+            oscillator.connect(gain).connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+          } catch (_) {
+            // 没有声音也不影响游戏。
+          }
+        }
+
+        function triggerAction(id, action) {
+          if (action === 'attack') attack(players[id]);
+          if (action === 'merge') merge(players[id]);
+        }
+
+        const keyActions = {
+          KeyF: [0, 'attack'],
+          KeyG: [0, 'merge'],
+          KeyK: [1, 'attack'],
+          KeyL: [1, 'merge']
+        };
+
+        window.addEventListener('keydown', event => {
+          const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyK', 'KeyL'];
+          if (gameKeys.includes(event.code)) event.preventDefault();
+          keys.add(event.code);
+          if (!event.repeat && keyActions[event.code]) triggerAction(...keyActions[event.code]);
+        });
+
+        window.addEventListener('keyup', event => keys.delete(event.code));
+        window.addEventListener('blur', () => { keys.clear(); touchState.forEach(set => set.clear()); });
+
+        document.querySelectorAll('[data-player][data-action]').forEach(button => {
+          const id = Number(button.dataset.player);
+          const action = button.dataset.action;
+          const end = event => {
+            event.preventDefault();
+            touchState[id].delete(action);
+            button.classList.remove('active');
+            if (button.hasPointerCapture?.(event.pointerId)) button.releasePointerCapture(event.pointerId);
+          };
+          button.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            button.setPointerCapture?.(event.pointerId);
+            button.classList.add('active');
+            if (['up', 'down', 'left', 'right'].includes(action)) touchState[id].add(action);
+            else triggerAction(id, action);
+          });
+          button.addEventListener('pointerup', end);
+          button.addEventListener('pointercancel', end);
+          button.addEventListener('lostpointercapture', () => { touchState[id].delete(action); button.classList.remove('active'); });
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        window.addEventListener('resize', resizeCanvas);
+
+        function loop(time) {
+          const dt = Math.min(.033, (time - lastTime) / 1000 || 0);
+          lastTime = time;
+          update(dt, time);
+          draw(time);
+          requestAnimationFrame(loop);
+        }
+
+        function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+        function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+        function roundRect(context, x, y, width, height, radius) {
+          context.beginPath();
+          context.roundRect(x, y, width, height, radius);
+        }
+
+        resizeCanvas();
+        players.forEach(player => player.army.forEach((unit, index) => {
+          const position = orbitPosition(player, index, player.army.length, performance.now());
+          unit.x = position.x;
+          unit.y = position.y;
+        }));
+        updateHud();
+        requestAnimationFrame(loop);
+      })();
+    </script>
+  </body>
+</html>
