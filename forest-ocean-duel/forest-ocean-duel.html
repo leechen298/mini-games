@@ -269,7 +269,7 @@
       .control-button[data-action="right"] { grid-column: 3; grid-row: 2; }
       .control-button.active { transform: scale(.94); background: rgba(255,255,255,.25); }
 
-      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+      .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 
       .action-button {
         min-height: 58px;
@@ -346,8 +346,8 @@
             <h2>林间四宝 VS 海洋三宝</h2>
             <p>两位玩家在同一个键盘或触控屏上对战。移动躲开冲锋，控制自己的宝物军队攻击！</p>
             <div class="key-guide">
-              <div class="guide-card"><strong>🌲 1P 林间队</strong>WASD 移动 · F 攻击 · G 合体</div>
-              <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · K 攻击 · L 合体</div>
+              <div class="guide-card"><strong>🌲 1P 林间队</strong>WASE 移动 · D 防御 · F 攻击 · G 合体</div>
+              <div class="guide-card"><strong>🌊 2P 海洋队</strong>方向键移动 · J 防御 · K 攻击 · L 合体</div>
             </div>
             <p>命中会增加合体能量。能量满时合体 7 秒，攻击会变成强力光波！</p>
             <button class="start-button" id="startButton" type="button">开始双人对战</button>
@@ -364,12 +364,14 @@
             <button class="control-button" data-player="0" data-action="right" aria-label="1P向右">▶</button>
           </div>
           <div class="actions">
+            <button class="action-button" data-player="0" data-action="block">D 防御</button>
             <button class="action-button" data-player="0" data-action="attack">F 攻击</button>
             <button class="action-button merge" data-player="0" data-action="merge">G 合体</button>
           </div>
         </div>
         <div class="control-side ocean-side">
           <div class="actions">
+            <button class="action-button" data-player="1" data-action="block">J 防御</button>
             <button class="action-button" data-player="1" data-action="attack">K 攻击</button>
             <button class="action-button merge" data-player="1" data-action="merge">L 合体</button>
           </div>
@@ -409,15 +411,15 @@
 
         const armyThemes = [
           [
-            { name: '松果宝', color: '#9f6b37', mark: 'cone' },
-            { name: '叶片宝', color: '#50c86d', mark: 'leaf' },
-            { name: '蘑菇宝', color: '#ef7774', mark: 'spot' },
-            { name: '树莓宝', color: '#bb4f78', mark: 'berry' }
+            { name: '松果宝', color: '#43c96f', mark: 'cone' },
+            { name: '叶片宝', color: '#43c96f', mark: 'leaf' },
+            { name: '蘑菇宝', color: '#43c96f', mark: 'spot' },
+            { name: '树莓宝', color: '#43c96f', mark: 'berry' }
           ],
           [
             { name: '水滴宝', color: '#4eb9ed', mark: 'drop' },
-            { name: '珊瑚宝', color: '#ff807c', mark: 'coral' },
-            { name: '贝壳宝', color: '#ad8de8', mark: 'shell' }
+            { name: '珊瑚宝', color: '#4eb9ed', mark: 'coral' },
+            { name: '贝壳宝', color: '#4eb9ed', mark: 'shell' }
           ]
         ];
 
@@ -437,6 +439,9 @@
             direction: isForest ? 0 : Math.PI,
             cooldown: 0,
             hitFlash: 0,
+            blockFlash: 0,
+            blockTimer: 0,
+            blocking: false,
             merged: false,
             mergeTimer: 0,
             invincible: 0,
@@ -497,12 +502,17 @@
 
           players.forEach((player, id) => {
             const movement = getMovement(id);
+            player.blockTimer = Math.max(0, player.blockTimer - dt);
+            const holdingBlock = id === 0
+              ? keys.has('KeyD') || touchState[id].has('block')
+              : keys.has('KeyJ') || touchState[id].has('block');
+            player.blocking = holdingBlock || player.blockTimer > 0;
             const length = Math.hypot(movement.x, movement.y);
             if (length > 0) {
               movement.x /= length;
               movement.y /= length;
               player.direction = Math.atan2(movement.y, movement.x);
-              const speed = player.merged ? 195 : 170;
+              const speed = (player.merged ? 195 : 170) * (player.blocking ? .52 : 1);
               player.x += movement.x * speed * dt;
               player.y += movement.y * speed * dt;
             }
@@ -512,6 +522,7 @@
             player.y = clamp(player.y, 66 + padding, WORLD.height - padding);
             player.cooldown = Math.max(0, player.cooldown - dt);
             player.hitFlash = Math.max(0, player.hitFlash - dt);
+            player.blockFlash = Math.max(0, player.blockFlash - dt);
             player.invincible = Math.max(0, player.invincible - dt);
             player.energy = Math.min(100, player.energy + dt * 1.7);
 
@@ -534,7 +545,7 @@
           const held = action => touchState[id].has(action);
           if (id === 0) {
             return {
-              x: (keys.has('KeyD') || held('right') ? 1 : 0) - (keys.has('KeyA') || held('left') ? 1 : 0),
+              x: (keys.has('KeyE') || held('right') ? 1 : 0) - (keys.has('KeyA') || held('left') ? 1 : 0),
               y: (keys.has('KeyS') || held('down') ? 1 : 0) - (keys.has('KeyW') || held('up') ? 1 : 0)
             };
           }
@@ -587,14 +598,14 @@
           const targetRadius = enemy.merged ? 54 : 32;
           if (enemy.invincible <= 0 && distance(unit, enemy) < targetRadius + 22) {
             const damage = 10;
-            hurtPlayer(enemy, owner, damage, unit.x, unit.y);
+            const didDamage = hurtPlayer(enemy, owner, damage, unit.x, unit.y);
             unit.state = 'return';
-            owner.energy = Math.min(100, owner.energy + 22);
+            if (didDamage) owner.energy = Math.min(100, owner.energy + 22);
           }
         }
 
         function attack(player) {
-          if (!running || player.cooldown > 0) return;
+          if (!running || player.cooldown > 0 || player.blocking) return;
           player.cooldown = player.merged ? .7 : .4;
           if (player.merged) {
             waves.push({
@@ -628,7 +639,7 @@
         }
 
         function merge(player) {
-          if (!running || player.merged) return;
+          if (!running || player.merged || player.blocking) return;
           if (player.energy < 100) {
             setMessage(`${player.id === 0 ? '林间队' : '海洋队'}还要继续命中，才能合体！`);
             return;
@@ -659,8 +670,8 @@
             const owner = players[wave.owner];
             const enemy = players[1 - wave.owner];
             if (enemy.invincible <= 0 && distance(wave, enemy) < wave.radius + (enemy.merged ? 54 : 32)) {
-              hurtPlayer(enemy, owner, 16, wave.x, wave.y);
-              owner.energy = Math.min(100, owner.energy + 14);
+              const didDamage = hurtPlayer(enemy, owner, 16, wave.x, wave.y);
+              if (didDamage) owner.energy = Math.min(100, owner.energy + 14);
               waves.splice(index, 1);
               continue;
             }
@@ -671,6 +682,15 @@
         }
 
         function hurtPlayer(target, attacker, amount, x, y) {
+          if (target.blocking) {
+            target.blockFlash = .22;
+            target.energy = Math.min(100, target.energy + 6);
+            shake = 3;
+            burst(x, y, target.accent, 13, 145);
+            setMessage(`${target.id === 0 ? '1P' : '2P'}用护盾挡住了攻击！`);
+            tone(target.id === 0 ? 430 : 490, .08, 'triangle');
+            return false;
+          }
           target.health = Math.max(0, target.health - amount);
           target.hitFlash = .18;
           target.invincible = .42;
@@ -678,6 +698,7 @@
           burst(x, y, '#fff5b2', 15, 190);
           tone(150, .1, 'square');
           if (target.health <= 0) finishGame(attacker.id);
+          return true;
         }
 
         function separatePlayers() {
@@ -727,6 +748,7 @@
             if (!player.merged || unit.state === 'attack') drawUnit(unit, player.id, time);
           }));
           players.forEach(player => drawPlayer(player, time));
+          players.forEach(player => { if (player.blocking) drawShield(player, time); });
           drawParticles();
           ctx.restore();
         }
@@ -843,7 +865,7 @@
           ctx.shadowBlur = player.merged ? 28 : 10;
           ctx.fillStyle = player.hitFlash > 0 ? '#fff' : player.color;
           ctx.beginPath();
-          ctx.ellipse(0, 0, 34, 43, 0, 0, Math.PI * 2);
+          ctx.arc(0, 0, 38, 0, Math.PI * 2);
           ctx.fill();
           ctx.shadowBlur = 0;
 
@@ -859,7 +881,7 @@
           }
 
           drawFace(player.id, 1);
-          drawHeadTooth(0, -42, player.id === 0 ? '#eaffc9' : '#ffffff');
+          drawHeadTooth(0, -38, player.id === 0 ? '#eaffc9' : '#ffffff');
           ctx.restore();
 
           ctx.save();
@@ -877,8 +899,8 @@
           ctx.save();
           ctx.scale(scale, scale);
           ctx.fillStyle = '#fff';
-          ctx.beginPath(); ctx.ellipse(-12, -8, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(12, -8, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(-12, -7, 8, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(12, -7, 8, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = id === 0 ? '#12291d' : '#0a0d12';
           ctx.beginPath(); ctx.arc(-10, -6, 3, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(14, -6, 3, 0, Math.PI * 2); ctx.fill();
@@ -887,7 +909,29 @@
           ctx.lineCap = 'round';
           ctx.beginPath(); ctx.moveTo(-19, -20); ctx.lineTo(-7, -23); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(7, -23); ctx.lineTo(19, -20); ctx.stroke();
-          ctx.beginPath(); ctx.arc(0, 9, 12, .2, Math.PI - .2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(0, 7, 12, .18, Math.PI - .18); ctx.stroke();
+          ctx.fillStyle = id === 0 ? '#78e29c' : '#9adfff';
+          ctx.globalAlpha = .55;
+          ctx.beginPath(); ctx.arc(-23, 8, 5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(23, 8, 5, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+
+        function drawShield(player, time) {
+          const pulse = 1 + Math.sin(time * .018) * .04;
+          const radius = (player.merged ? 78 : 57) * pulse;
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.rotate(player.direction);
+          ctx.strokeStyle = player.blockFlash > 0 ? '#fff7a2' : player.accent;
+          ctx.fillStyle = player.id === 0 ? 'rgba(83,239,137,.17)' : 'rgba(84,200,255,.17)';
+          ctx.shadowColor = player.accent;
+          ctx.shadowBlur = player.blockFlash > 0 ? 30 : 17;
+          ctx.lineWidth = player.blockFlash > 0 ? 9 : 6;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
           ctx.restore();
         }
 
@@ -914,7 +958,7 @@
           ctx.shadowBlur = attacking ? 20 : 7;
           ctx.fillStyle = unit.color;
           ctx.beginPath();
-          ctx.ellipse(0, 0, 20, 26, 0, 0, Math.PI * 2);
+          ctx.arc(0, 0, 22, 0, Math.PI * 2);
           ctx.fill();
           ctx.shadowBlur = 0;
           drawUnitMark(unit.mark);
@@ -1047,9 +1091,11 @@
         };
 
         window.addEventListener('keydown', event => {
-          const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyK', 'KeyL'];
+          const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyE', 'KeyD', 'KeyF', 'KeyG', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyJ', 'KeyK', 'KeyL'];
           if (gameKeys.includes(event.code)) event.preventDefault();
           keys.add(event.code);
+          if (event.code === 'KeyD') players[0].blockTimer = .4;
+          if (event.code === 'KeyJ') players[1].blockTimer = .4;
           if (!event.repeat && keyActions[event.code]) triggerAction(...keyActions[event.code]);
         });
 
@@ -1069,7 +1115,10 @@
             event.preventDefault();
             button.setPointerCapture?.(event.pointerId);
             button.classList.add('active');
-            if (['up', 'down', 'left', 'right'].includes(action)) touchState[id].add(action);
+            if (['up', 'down', 'left', 'right', 'block'].includes(action)) {
+              touchState[id].add(action);
+              if (action === 'block') players[id].blockTimer = .45;
+            }
             else triggerAction(id, action);
           });
           button.addEventListener('pointerup', end);
