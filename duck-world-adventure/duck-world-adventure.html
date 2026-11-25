@@ -265,6 +265,10 @@
       const gravity = 1850;
       const coinRespawnTime = 2.5;
       const world = { w: 2500, h: 760, ground: 626 };
+      const alliesForFlight = 20;
+      const unknownPortal = { x: 1570, w: 92, h: 138 };
+      const fallPlatforms = [500, 500, 476, 476, 452, 476, 500, 500, 476, 476, 452, 476, 500]
+        .map((y, index) => ({ x: 150 + index * 106, y, w: 116, h: 24 }));
       const sceneNames = {
         earth: "地表",
         ocean: "海洋",
@@ -351,7 +355,7 @@
         car: { x: 680, y: city.ground - 34, inCar: false },
         cityReturnX: 1200,
         nextCityCoinX: 210,
-        allies: 0,
+        allies: [],
         robots: Array.from({ length: 4 }, (_, index) => ({
           x: 360 + index * 220,
           y: 360 + (index % 2) * 70,
@@ -372,21 +376,23 @@
           y: city.ground - 46,
           beaten: false,
         })),
-        hazards: Array.from({ length: 11 }, (_, index) => ({
-          x: 300 + index * 132,
-          y: 210 + (index % 4) * 82,
-          size: 34,
+        hazards: Array.from({ length: 10 }, (_, index) => ({
+          x: 300 + index * 120,
+          y: world.ground - 34 - [0, 44, 86, 22][index % 4],
+          w: 34,
+          h: 34,
           offset: index * 0.7,
         })),
-        fallBlocks: Array.from({ length: 13 }, (_, index) => ({
-          x: 150 + index * 106,
-          y: 500 - (index % 3) * 38,
-          w: 104,
-          h: 24,
+        fallBlocks: fallPlatforms.map((platform, index) => ({
+          ...platform,
           bonus: index === 4 || index === 10,
           claimed: false,
-          fall: 0,
         })),
+        fallAllies: fallPlatforms.flatMap(({ x, y }) => [
+          { type: "robot", x: x + 10, y: y - 52, w: 42, h: 44, beaten: false },
+          { type: "duck", x: x + 60, y: y - 33, w: 42, h: 33, beaten: false },
+        ]),
+        unknownTime: 0,
         unknownPortalOpen: false,
         dead: false,
       });
@@ -489,11 +495,21 @@
         return Object.values(state.materials).reduce((sum, value) => sum + value, 0);
       }
 
+      function isInvincible() {
+        return state.allies.length >= alliesForFlight;
+      }
+
+      function recruitAlly(ally, type, message) {
+        ally.beaten = true;
+        state.allies.push(type);
+        showFlash(state.allies.length === alliesForFlight ? "无敌开启！按上飞行" : message);
+      }
+
       function toolText() {
         if (state.dead) return "死翘翘";
-        if (state.allies >= 20) return "无敌";
+        if (isInvincible()) return "无敌";
         if (state.car.inCar) return "开车";
-        if (state.allies > 0) return `伙伴${state.allies}`;
+        if (state.allies.length > 0) return `伙伴${state.allies.length}`;
         if (state.portalBuilt) return "传送门";
         if (state.materials.obsidian >= 4 && state.materials.water >= 1) return "可造门";
         return "无";
@@ -520,7 +536,9 @@
 
       function setScene(scene) {
         state.scene = scene;
+        state.dead = false;
         state.player.buried = false;
+        state.player.vy = 0;
         state.activeCloudId = null;
         state.standingCloudId = null;
         state.car.inCar = false;
@@ -586,11 +604,20 @@
         }
         if (scene === "fallPlanet") {
           world.w = 1800;
-          state.player.x = 120;
-          state.player.y = 440;
+          spawnOnFallPlanet();
         }
+        state.player.onGround = scene === "fallPlanet" || state.player.y + state.player.h === currentGround();
         cameraX = 0;
         showFlash(sceneNames[scene]);
+      }
+
+      function spawnOnFallPlanet() {
+        const firstBlock = state.fallBlocks[0];
+        const p = state.player;
+        p.x = firstBlock.x - 8;
+        p.y = firstBlock.y - p.h;
+        p.vy = 0;
+        p.onGround = true;
       }
 
       function jump(power = 690) {
@@ -768,10 +795,9 @@
           setScene("unknownWorld");
           showFlash("未知世界");
         }
-        if (state.scene === "unknownWorld" && nearX(1580, 150)) {
+        if (state.scene === "unknownWorld" && nearX(unknownPortal.x + (unknownPortal.w - state.player.w) / 2, 80)) {
           if (state.unknownPortalOpen) {
             setScene("fallPlanet");
-            showFlash("掉落星球");
           } else {
             showFlash("先碰绿色方块");
           }
@@ -786,34 +812,34 @@
         if (state.scene === "underwaterCity") {
           const robot = state.robots.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 82 && Math.abs(item.y - state.player.y) < 90);
           if (!robot) return false;
-          robot.beaten = true;
-          state.allies += 1;
-          showFlash("机器人加入");
+          recruitAlly(robot, "robot", "机器人加入");
           return true;
         }
         if (state.scene === "deathLand") {
           const duck = state.wildDucks.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 80);
           if (!duck) return false;
-          duck.beaten = true;
-          state.allies += 1;
-          showFlash("小鸭加入");
+          recruitAlly(duck, "duck", "小鸭加入");
           return true;
         }
         if (state.scene === "planet") {
           const duck = state.planetDucks.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 82);
           if (!duck) return false;
-          duck.beaten = true;
-          state.allies += 1;
-          showFlash(state.allies >= 20 ? "无敌开启" : "星球小鸭加入");
+          recruitAlly(duck, "duck", "星球小鸭加入");
           return true;
         }
         if (state.scene !== "helperLand") return false;
         const enemy = state.helperEnemies.find((item) => !item.beaten && Math.abs(item.x - state.player.x) < 70);
         if (!enemy) return false;
-        enemy.beaten = true;
-        state.allies += 1;
-        showFlash("助手加入");
+        recruitAlly(enemy, "duck", "助手加入");
         return true;
+      }
+
+      function useDown() {
+        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand", "unknownWorld", "planet", "fallPlanet"].includes(state.scene)) {
+          returnToCity();
+        } else {
+          burrow();
+        }
       }
 
       function handleInput(dt) {
@@ -822,11 +848,6 @@
         if (keys.has("ArrowLeft") || keys.has("KeyA")) move -= 1;
         if (keys.has("ArrowRight") || keys.has("KeyD")) move += 1;
         if (move !== 0) p.facing = move;
-
-        if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand", "unknownWorld", "planet", "fallPlanet"].includes(state.scene) && keys.has("ArrowDown")) {
-          returnToCity();
-          return;
-        }
 
         if (state.scene === "ocean" || state.scene === "underwaterCity") {
           const swim = 250;
@@ -883,12 +904,6 @@
           return;
         }
 
-        if (state.allies >= 20 && keys.has("ArrowUp")) {
-          p.y = Math.max(72, p.y - 330 * dt);
-          p.vy = 0;
-          p.onGround = false;
-        }
-
         const walkSpeed = state.scene === "city" ? 260 : 230;
         p.x += move * walkSpeed * dt;
         if (state.scene === "earth" && keys.has("ArrowDown")) burrow();
@@ -899,6 +914,42 @@
         if (state.scene === "city" || state.scene === "house" || state.scene === "portalShop" || state.scene === "itemShop" || state.scene === "craftShop" || state.scene === "worldShop" || state.scene === "deathLand" || state.scene === "helperLand" || state.scene === "planet") return city.ground;
         if (state.scene === "fallPlanet") return world.h + 200;
         return world.ground;
+      }
+
+      function isGreenSquare(square) {
+        return (state.unknownTime + square.offset) % 3.2 < 2;
+      }
+
+      function updateFallPlanet(previousBottom) {
+        const p = state.player;
+        let landing = null;
+        if (p.vy >= 0) {
+          for (const block of state.fallBlocks) {
+            const crossesTop = previousBottom <= block.y && p.y + p.h >= block.y;
+            const aboveBlock = p.x < block.x + block.w && p.x + p.w > block.x;
+            if (crossesTop && aboveBlock && (!landing || block.y < landing.y)) landing = block;
+          }
+        }
+
+        p.onGround = Boolean(landing);
+        if (landing) {
+          p.y = landing.y - p.h;
+          p.vy = 0;
+          if (landing.bonus && !landing.claimed) {
+            landing.claimed = true;
+            state.score += 500;
+            showFlash("免费金币+500");
+          }
+        } else if (p.y > world.h) {
+          spawnOnFallPlanet();
+          showFlash("回到第一个方块");
+        }
+
+        for (const ally of state.fallAllies) {
+          if (!ally.beaten && rectsOverlap(p, ally)) {
+            recruitAlly(ally, ally.type, ally.type === "robot" ? "机器人加入" : "小鸭加入");
+          }
+        }
       }
 
       function update(dt) {
@@ -916,16 +967,22 @@
 
         p.x = Math.max(16, Math.min(world.w - p.w - 16, p.x));
         const ground = currentGround();
-        const flyingInvincible = state.allies >= 20 && p.y + p.h < ground - 2;
-        if (!p.buried && state.scene !== "ocean" && state.scene !== "underwaterCity" && !state.car.inCar && !flyingInvincible) {
-          p.vy += gravity * dt;
-          p.y += p.vy * dt;
-          if (p.y + p.h >= ground) {
-            p.y = ground - p.h;
+        const previousBottom = p.y + p.h;
+        if (!p.buried && state.scene !== "ocean" && state.scene !== "underwaterCity" && !state.car.inCar) {
+          if (isInvincible() && keys.has("ArrowUp") && state.activeCloudId === null) {
+            p.y = Math.max(72, p.y - 330 * dt);
             p.vy = 0;
-            p.onGround = true;
-            state.activeCloudId = null;
-            state.standingCloudId = null;
+            p.onGround = false;
+          } else {
+            p.vy += gravity * dt;
+            p.y += p.vy * dt;
+            if (p.y + p.h >= ground) {
+              p.y = ground - p.h;
+              p.vy = 0;
+              p.onGround = true;
+              state.activeCloudId = null;
+              state.standingCloudId = null;
+            }
           }
         }
 
@@ -959,69 +1016,43 @@
           }
         }
 
-        if (state.scene === "deathLand" && state.allies > 0) {
+        if (state.scene === "deathLand" && state.allies.length > 0) {
           for (const duck of state.wildDucks) {
             if (!duck.beaten && Math.abs(duck.x - p.x) < 170) {
-              duck.beaten = true;
-              state.allies += 1;
-              showFlash("伙伴帮你收服小鸭");
+              recruitAlly(duck, "duck", "伙伴帮你收服小鸭");
               break;
             }
           }
         }
 
-        if (state.scene === "planet" && state.allies > 0) {
+        if (state.scene === "planet" && state.allies.length > 0) {
           for (const duck of state.planetDucks) {
             if (!duck.beaten && Math.abs(duck.x - p.x) < 150) {
-              duck.beaten = true;
-              state.allies += 1;
-              showFlash(state.allies >= 20 ? "无敌开启" : "伙伴帮你收服星球小鸭");
+              recruitAlly(duck, "duck", "伙伴帮你收服星球小鸭");
               break;
             }
           }
         }
 
         if (state.scene === "unknownWorld") {
+          state.unknownTime += dt;
           for (const hazard of state.hazards) {
-            const square = { x: hazard.x, y: hazard.y, w: hazard.size, h: hazard.size };
-            const safe = Math.sin(Date.now() / 520 + hazard.offset) > 0;
-            if (safe && rectsOverlap(playerRect, square)) {
+            if (!rectsOverlap(playerRect, hazard)) continue;
+            if (isGreenSquare(hazard)) {
               if (!state.unknownPortalOpen) {
                 state.unknownPortalOpen = true;
-                showFlash("传送门打开");
+                showFlash("掉落星球的门打开了");
               }
-              continue;
-            }
-            if (!safe && state.allies < 20 && rectsOverlap(playerRect, square)) {
+            } else if (!isInvincible()) {
               state.dead = true;
-              showFlash("死翘翘");
+              showFlash("碰到红方块，按下返回");
               break;
             }
           }
         }
 
         if (state.scene === "fallPlanet") {
-          let landed = false;
-          for (const block of state.fallBlocks) {
-            block.fall = 0;
-            const platform = { x: block.x, y: block.y, w: block.w, h: block.h };
-            const onTop = p.vy >= 0 && p.y + p.h <= platform.y + 26 && rectsOverlap(playerRect, platform);
-            if (onTop) {
-              p.y = platform.y - p.h;
-              p.vy = 0;
-              p.onGround = true;
-              landed = true;
-              if (block.bonus && !block.claimed) {
-                block.claimed = true;
-                state.score += 500;
-                showFlash("免费金币+500");
-              }
-            }
-          }
-          if (!landed && p.y > world.h - 35 && state.allies < 20) {
-            state.dead = true;
-            showFlash("掉下去了");
-          }
+          updateFallPlanet(previousBottom);
         }
 
         for (const coin of state.coins) {
@@ -1460,12 +1491,12 @@
       }
 
       function drawFlyingAllies() {
-        const count = Math.min(state.allies, 6);
-        for (let i = 0; i < count; i += 1) {
+        const visibleAllies = state.allies.slice(-6);
+        for (let i = 0; i < visibleAllies.length; i += 1) {
           const angle = performance.now() / 520 + i * 1.08;
           const x = state.player.x - cameraX - 42 + Math.cos(angle) * 42;
           const y = state.player.y - 34 + Math.sin(angle) * 18;
-          if (i % 2 === 0) drawRobot(x, y);
+          if (visibleAllies[i] === "robot") drawRobot(x, y);
           else drawDuck(x, y, 0.58, state.player.facing);
         }
       }
@@ -1476,24 +1507,25 @@
         ctx.fillStyle = "#080912";
         ctx.fillRect(0, 0, w, world.h);
         ctx.fillStyle = "#222850";
-        ctx.fillRect(-cameraX, city.ground, world.w, world.h - city.ground);
+        ctx.fillRect(-cameraX, world.ground, world.w, world.h - world.ground);
         state.hazards.forEach((hazard) => {
-          const safe = Math.sin(Date.now() / 520 + hazard.offset) > 0;
-          ctx.fillStyle = safe ? "#4ee06f" : "#ff4d6d";
-          ctx.fillRect(hazard.x - cameraX, hazard.y, hazard.size, hazard.size);
+          ctx.fillStyle = isGreenSquare(hazard) ? "#4ee06f" : "#ff4d6d";
+          ctx.fillRect(hazard.x - cameraX, hazard.y, hazard.w, hazard.h);
         });
-        drawLabel(650 - cameraX, 110, "未知世界：碰绿色方块开门");
+        drawLabel(w / 2, 110, state.unknownPortalOpen ? "传送门已打开" : "绿了再碰方块");
+        const { x, w: portalWidth, h: portalHeight } = unknownPortal;
+        const portalX = x - cameraX;
+        const portalY = world.ground - portalHeight;
         if (state.unknownPortalOpen) {
           ctx.strokeStyle = "#7d5cff";
           ctx.lineWidth = 9;
-          ctx.strokeRect(1580 - cameraX, city.ground - 168, 92, 138);
+          ctx.strokeRect(portalX, portalY, portalWidth, portalHeight);
           ctx.fillStyle = "rgba(125, 92, 255, 0.45)";
-          ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
-          drawLabel(1626 - cameraX, city.ground - 190, "掉落星球");
+          ctx.fillRect(portalX + 12, portalY + 12, portalWidth - 24, portalHeight - 24);
+          drawLabel(portalX + portalWidth / 2, portalY - 18, "↑ 掉落星球");
         } else {
-          drawLabel(1580 - cameraX, city.ground - 178, "门还没打开");
+          drawLabel(portalX + portalWidth / 2, portalY - 18, "门还没打开");
         }
-        if (state.allies >= 20) drawLabel(920 - cameraX, 150, "无敌飞行");
       }
 
       function drawPlanet() {
@@ -1524,7 +1556,7 @@
         ctx.fillRect(1592 - cameraX, city.ground - 156, 68, 114);
         drawLabel(720 - cameraX, 130, "伙伴星球：空格收服小鸭");
         drawLabel(1626 - cameraX, city.ground - 190, "掉落星球");
-        if (state.allies >= 20) drawLabel(1020 - cameraX, 174, "20伙伴 无敌");
+        if (isInvincible()) drawLabel(1020 - cameraX, 174, "20伙伴 无敌");
       }
 
       function drawFallPlanet() {
@@ -1538,9 +1570,14 @@
           const glow = Math.sin(Date.now() / 700 + block.x * 0.01) < -0.25;
           ctx.fillStyle = block.bonus && !block.claimed ? "#f5c84c" : glow ? "#80f08e" : "#4ee06f";
           ctx.fillRect(block.x - cameraX, block.y, block.w, block.h);
-          if (block.bonus && !block.claimed) drawLabel(block.x + block.w / 2 - cameraX, block.y - 16, "500");
+          if (block.bonus && !block.claimed) drawLabel(block.x + block.w / 2 - cameraX, block.y + 17, "500");
         });
-        drawLabel(660 - cameraX, 120, "方块不会掉，什么时候都能跳");
+        state.fallAllies.forEach((ally) => {
+          if (ally.beaten) return;
+          if (ally.type === "robot") drawRobot(ally.x - cameraX, ally.y);
+          else drawDuck(ally.x - cameraX, ally.y, 0.72);
+        });
+        drawLabel(w / 2, 110, isInvincible() ? "无敌 · ↑飞行" : `伙伴 ${state.allies.length} / ${alliesForFlight}`);
       }
 
       function drawSceneBackground() {
@@ -1585,10 +1622,11 @@
         ctx.restore();
 
         if (flash) {
-          ctx.fillStyle = "rgba(38, 49, 59, 0.82)";
-          ctx.fillRect(canvas.clientWidth / 2 - 82, 18, 164, 38);
-          ctx.fillStyle = "#fffdf8";
           ctx.font = "900 18px sans-serif";
+          const flashWidth = Math.max(164, ctx.measureText(flash).width + 28);
+          ctx.fillStyle = "rgba(38, 49, 59, 0.82)";
+          ctx.fillRect((canvas.clientWidth - flashWidth) / 2, 18, flashWidth, 38);
+          ctx.fillStyle = "#fffdf8";
           ctx.textAlign = "center";
           ctx.fillText(flash, canvas.clientWidth / 2, 43);
         }
@@ -1616,13 +1654,7 @@
         if (event.code === "ArrowUp") {
           useCurrentPlace();
         }
-        if (event.code === "ArrowDown") {
-          if (["house", "portalShop", "itemShop", "craftShop", "worldShop", "underwaterCity", "deathLand", "helperLand", "unknownWorld", "planet", "fallPlanet"].includes(state.scene)) {
-            returnToCity();
-          } else {
-            burrow();
-          }
-        }
+        if (event.code === "ArrowDown") useDown();
         if (event.code === "Space" || /^Key[A-Z]$/.test(event.code)) {
           if (!attackHelper()) jump();
         }
@@ -1638,7 +1670,7 @@
           else {
             keys.add(map[action]);
             if (action === "up") useCurrentPlace();
-            if (action === "down") burrow();
+            if (action === "down") useDown();
           }
           canvas.focus();
         };
