@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5e9">
+  <link rel="icon" href="data:,">
+  <title>小鸭隔海对战</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17353a;
+      --muted: #496669;
+      --page: #f6f5e9;
+      --white: #fffef8;
+      --line: #cbd9d2;
+      --deep: #104750;
+      --sun: #ffc751;
+      --sun-light: #ffefbd;
+      --wave: #8fddd9;
+      --wave-light: #ddf4ef;
+      --heart: #bb4754;
+      --air: #27888d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font: 1rem/1.5 system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main { width: min(100% - 40px, 1020px); margin: 24px auto 20px; }
+    .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: clamp(2.15rem, 5vw, 3.5rem); line-height: 1.1; letter-spacing: -.055em; font-weight: 900; }
+    .mode {
+      flex: none;
+      margin: 0 0 3px;
+      padding: 5px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: .875rem;
+      font-weight: 750;
+    }
+
+    .game { overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: var(--white); box-shadow: 0 6px 0 #e4e9df; }
+    .hud, .controls { display: grid; grid-template-columns: 1fr 1fr; }
+    .hud { background: var(--white); }
+    .player-card, .pad { min-width: 0; padding: 13px 20px; }
+    .player-card + .player-card, .pad + .pad { border-left: 1px solid var(--line); }
+    .sun { --team: var(--sun); --team-light: var(--sun-light); }
+    .wave { --team: var(--wave); --team-light: var(--wave-light); }
+    .player-title { display: flex; flex-wrap: wrap; column-gap: 8px; align-items: center; }
+    .seat { padding: 1px 9px; border-radius: 99px; background: var(--team); font-size: .8125rem; font-weight: 800; }
+    .name { font-size: 1.125rem; font-weight: 850; }
+    .status { margin-left: auto; color: var(--muted); white-space: nowrap; font-size: .875rem; font-weight: 700; }
+    .status[data-warning="true"] { color: #a13b44; }
+    .stats { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: center; margin-top: 7px; }
+    .hearts { display: flex; gap: 4px; color: var(--heart); font-size: 1.35rem; line-height: 1; white-space: nowrap; }
+    .hearts .empty { color: #d9ded7; }
+    .oxygen { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: .875rem; font-weight: 750; white-space: nowrap; }
+    progress { width: 100%; min-width: 0; height: 8px; overflow: hidden; border: 0; border-radius: 99px; background: #deebe5; appearance: none; }
+    progress::-webkit-progress-bar { background: #deebe5; border-radius: 99px; }
+    progress::-webkit-progress-value { background: var(--air); border-radius: 99px; }
+    progress::-moz-progress-bar { background: var(--air); border-radius: 99px; }
+    progress[data-low="true"] { --air: var(--heart); }
+
+    .arena { position: relative; overflow: hidden; isolation: isolate; background: #8cdddd; border-block: 1px solid var(--line); }
+    canvas { display: block; width: 100%; aspect-ratio: 2.15; outline: none; }
+    canvas:focus-visible { box-shadow: inset 0 0 0 3px var(--deep); }
+    .overlay {
+      position: absolute;
+      inset: auto 50% 13% auto;
+      translate: 50% 0;
+      width: max-content;
+      max-width: calc(100% - 24px);
+      text-align: center;
+    }
+    .overlay[data-result="true"] {
+      bottom: 12%;
+      padding: 14px 22px;
+      border: 1px solid #d7e6dc;
+      border-radius: 18px;
+      background: var(--white);
+      box-shadow: 0 5px 0 #073f4666;
+    }
+    .overlay h2 { margin: 0; font-size: clamp(1.25rem, 4vw, 1.8rem); line-height: 1.2; }
+    .overlay p { margin: 5px 0 11px; font-size: .9375rem; color: var(--muted); }
+    .start {
+      min-height: 46px;
+      padding: 8px 24px;
+      border: 1px solid #fefbe4;
+      border-radius: 999px;
+      background: var(--sun);
+      box-shadow: 0 4px 0 #0a4a53;
+      color: var(--ink);
+      font-size: 1.0625rem;
+      font-weight: 850;
+    }
+    .overlay[data-result="true"] .start { box-shadow: 0 3px 0 #dab56b; }
+
+    button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible { outline: 3px solid var(--deep); outline-offset: 2px; }
+    button:active:not(:disabled) { transform: translateY(2px); }
+    .controls { background: #f9fbf4; }
+    .pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 5px 3px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--white);
+      color: var(--ink);
+      line-height: 1.2;
+      font-weight: 800;
+      white-space: nowrap;
+      touch-action: none;
+      user-select: none;
+    }
+    .action[data-action="whip"] { background: var(--team-light); }
+    .action:disabled { cursor: default; }
+    .action:hover:not(:disabled) { background: var(--team-light); border-color: var(--team); }
+    .action[data-held="true"] { background: var(--team); border-color: var(--team); }
+    kbd {
+      display: inline-grid;
+      place-items: center;
+      min-width: 1.5em;
+      padding: 2px 4px;
+      border: 1px solid #c8d7ce;
+      border-radius: 5px;
+      background: var(--white);
+      color: var(--muted);
+      font: 750 .8125rem/1.2 system-ui, sans-serif;
+    }
+    .hint { margin: 13px 0 0; color: var(--muted); font-size: .9375rem; text-align: center; }
+
+    @media (max-width: 640px) {
+      main { width: calc(100% - 20px); margin-top: 17px; }
+      .page-heading { margin-bottom: 12px; }
+      .game { border-radius: 17px; }
+      .player-card { padding: 9px 10px 10px; }
+      .name { font-size: 1rem; }
+      .seat { padding-inline: 6px; }
+      .status { flex-basis: 100%; margin-top: 2px; }
+      .stats { grid-template-columns: 1fr; gap: 5px; margin-top: 3px; }
+      .hearts { font-size: 1.2rem; }
+      .oxygen { gap: 5px; }
+      .pad { padding: 9px 5px; gap: 4px; }
+      .action { gap: 2px; flex-direction: column; min-height: 52px; border-radius: 8px; font-size: .875rem; }
+      kbd { font-size: .6875rem; padding: 1px 3px; }
+      canvas { aspect-ratio: 1.48; }
+      .overlay[data-result="true"] { bottom: 6%; padding: 10px 15px; }
+      .hint { text-align: left; padding-inline: 3px; }
+    }
+
+    @media (max-width: 360px) {
+      h1 { font-size: 1.85rem; }
+      .mode { font-size: .8125rem; padding-inline: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-heading">
+      <h1>小鸭隔海对战</h1>
+      <p class="mode">同屏双人</p>
+    </header>
+
+    <section class="game" aria-label="小鸭隔海对战">
+      <div class="hud">
+        <div class="player-card sun" id="sun-card">
+          <div class="player-title">
+            <span class="seat">左岸</span><span class="name">太阳鸭</span>
+            <span class="status">在岸上</span>
+          </div>
+          <div class="stats">
+            <div class="hearts" role="img" aria-label="生命 5 / 5"></div>
+            <label class="oxygen">氧气 <progress aria-label="太阳鸭氧气" max="100" value="100"></progress></label>
+          </div>
+        </div>
+        <div class="player-card wave" id="wave-card">
+          <div class="player-title">
+            <span class="seat">右岸</span><span class="name">海风鸭</span>
+            <span class="status">在岸上</span>
+          </div>
+          <div class="stats">
+            <div class="hearts" role="img" aria-label="生命 5 / 5"></div>
+            <label class="oxygen">氧气 <progress aria-label="海风鸭氧气" max="100" value="100"></progress></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="arena">
+        <canvas id="board" tabindex="-1" aria-label="两只小鸭各站在海湾的一岸"></canvas>
+        <div class="overlay" id="overlay">
+          <div id="result" role="status" hidden>
+            <h2 id="result-title"></h2>
+            <p id="result-note"></p>
+          </div>
+          <button type="button" class="start" id="start">开始对战</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="pad sun" role="group" aria-label="太阳鸭操作" data-player="0">
+          <button class="action" data-action="whip" type="button" disabled>甩鞭 <kbd>F</kbd></button>
+          <button class="action" data-action="dive" type="button" disabled>下潜 <kbd>S</kbd></button>
+          <button class="action" data-action="rise" type="button" disabled>上浮 <kbd>W</kbd></button>
+        </div>
+        <div class="pad wave" role="group" aria-label="海风鸭操作" data-player="1">
+          <button class="action" data-action="whip" type="button" disabled>甩鞭 <kbd>回车</kbd></button>
+          <button class="action" data-action="dive" type="button" disabled>下潜 <kbd aria-label="方向键下">↓</kbd></button>
+          <button class="action" data-action="rise" type="button" disabled>上浮 <kbd aria-label="方向键上">↑</kbd></button>
+        </div>
+      </div>
+    </section>
+    <p class="hint">看到对方举鞭，快跳进海里躲一躲。按住「下潜」会潜得更深，氧气也用得更快。</p>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const board = document.querySelector('#board');
+      const brush = board.getContext('2d');
+      const scenery = document.createElement('canvas');
+      const overlay = document.querySelector('#overlay');
+      const start = document.querySelector('#start');
+      const result = document.querySelector('#result');
+      const resultTitle = document.querySelector('#result-title');
+      const resultNote = document.querySelector('#result-note');
+      const buttons = [...document.querySelectorAll('.action')];
+
+      const height = 440;
+      const waterline = 197;
+      const shore = .31;
+      const maxHealth = 5;
+      const shallow = .28;
+      const sheltered = .19;
+      const deep = .65;
+      const windup = .48;
+      const strike = .22;
+      const recovery = 1.12;
+      const teams = [
+        { card: 'sun', name: '太阳鸭', direction: 1, body: '#ffd568', wing: '#ffb951', scarf: '#e16c47', flag: '#f4ab46', lash: '#a25838' },
+        { card: 'wave', name: '海风鸭', direction: -1, body: '#9be1de', wing: '#65bdbf', scarf: '#635a9e', flag: '#53b8ae', lash: '#495e92' },
+      ];
+
+      let width = 946;
+      let phase = 'ready';
+      let players = [];
+      let ripples = [];
+      let previousTime = 0;
+      let sceneTime = 0;
+
+      function makePlayer(team) {
+        const card = document.querySelector('#' + team.card + '-card');
+        const hearts = document.createDocumentFragment();
+        const heartNodes = Array.from({ length: maxHealth }, () => {
+          const heart = document.createElement('span');
+          heart.setAttribute('aria-hidden', 'true');
+          heart.textContent = '♥';
+          hearts.append(heart);
+          return heart;
+        });
+        const life = card.querySelector('.hearts');
+        life.replaceChildren(hearts);
+        return {
+          team, life, heartNodes,
+          status: card.querySelector('.status'),
+          oxygen: card.querySelector('progress'),
+          health: maxHealth,
+          air: 100,
+          depth: 0,
+          targetDepth: 0,
+          heldFor: 0,
+          holds: new Set(),
+          attackTime: null,
+          cooldown: 0,
+          hitFlash: 0,
+        };
+      }
+
+      function startRound() {
+        players = teams.map(makePlayer);
+        ripples = [];
+        phase = 'playing';
+        overlay.hidden = true;
+        buttons.forEach(button => { button.disabled = false; });
+        updateHud();
+        board.focus({ preventScroll: true });
+      }
+
+      function endRound() {
+        const winner = players.find(player => player.air > 0 && player.health > 0);
+        const knockedOut = players.some(player => player.air === 0);
+        phase = 'finished';
+        releaseInputs();
+        buttons.forEach(button => { button.disabled = true; });
+        resultTitle.textContent = winner ? winner.team.name + '赢啦！' : '这局打平啦！';
+        resultNote.textContent = winner
+          ? (knockedOut ? '对手氧气用光，没能浮上来。' : '对手的爱心用光了。')
+          : (knockedOut ? '两只小鸭都没撑到最后。' : '两只小鸭同时用光了爱心。');
+        result.hidden = false;
+        start.textContent = '再玩一局';
+        overlay.dataset.result = 'true';
+        overlay.hidden = false;
+        start.focus({ preventScroll: true });
+      }
+
+      function splash(player, x, y, inWater = true) {
+        ripples.push({ x: x / width, y, inWater, color: player.team.flag, time: 0 });
+      }
+
+      function useAction(player, action, source) {
+        if (phase !== 'playing') return;
+        if (action === 'rise') {
+          player.holds.clear();
+          player.heldFor = 0;
+          player.targetDepth = 0;
+          return;
+        }
+        if (action === 'dive') {
+          if (!player.holds.size) player.heldFor = 0;
+          if (source !== undefined) player.holds.add(source);
+          player.targetDepth = Math.max(player.depth, player.targetDepth, shallow);
+          if (player.attackTime !== null && player.attackTime < windup) player.attackTime = null;
+          return;
+        }
+        if (!player.depth && !player.targetDepth && !player.cooldown) {
+          player.attackTime = 0;
+          player.cooldown = recovery;
+        }
+      }
+
+      function update(dt) {
+        const landedHits = [];
+        players.forEach((player, index) => {
+          const oldDepth = player.depth;
+          player.hitFlash = Math.max(0, player.hitFlash - dt);
+          player.cooldown = Math.max(0, player.cooldown - dt);
+
+          if (player.holds.size) {
+            player.heldFor += dt;
+            if (player.heldFor > .32) player.targetDepth = Math.min(1, player.targetDepth + dt * .72);
+          }
+
+          if (player.depth < player.targetDepth) {
+            player.depth = Math.min(player.targetDepth, player.depth + dt * (player.depth < shallow ? 1.55 : .9));
+          } else if (player.depth > player.targetDepth) {
+            player.depth = Math.max(player.targetDepth, player.depth - dt * 1.42);
+          }
+          if ((oldDepth < sheltered) !== (player.depth < sheltered)) {
+            splash(player, position(player).x, waterline);
+          }
+
+          if (player.depth >= sheltered) {
+            player.air = Math.max(0, player.air - dt * (player.depth >= deep ? 34 : 13));
+          } else if (!player.depth) {
+            player.air = Math.min(100, player.air + dt * 45);
+          }
+
+          if (player.attackTime === null) return;
+          const lastAttackTime = player.attackTime;
+          player.attackTime += dt;
+          if (lastAttackTime < windup && player.attackTime >= windup) landedHits.push(index);
+          if (player.attackTime >= windup + strike) player.attackTime = null;
+        });
+
+        for (const index of landedHits) {
+          const target = players[1 - index];
+          if (target.depth >= sheltered) continue;
+          target.health = Math.max(0, target.health - 1);
+          target.hitFlash = .36;
+          const spot = position(target);
+          splash(target, spot.x, spot.y - 21, false);
+        }
+
+        ripples.forEach(ripple => { ripple.time += dt; });
+        ripples = ripples.filter(ripple => ripple.time < .56);
+
+        if (players.some(player => !player.health || !player.air)) endRound();
+        updateHud();
+      }
+
+      function setStatus(player, text, warning = false) {
+        if (player.status.textContent !== text) player.status.textContent = text;
+        const flag = String(warning);
+        if (player.status.dataset.warning !== flag) player.status.dataset.warning = flag;
+      }
+
+      function updateHud() {
+        for (const player of players) {
+          const lifeLabel = '生命 ' + player.health + ' / ' + maxHealth;
+          if (player.life.getAttribute('aria-label') !== lifeLabel) {
+            player.life.setAttribute('aria-label', lifeLabel);
+            player.heartNodes.forEach((heart, index) => heart.classList.toggle('empty', index >= player.health));
+          }
+          const air = Math.ceil(player.air);
+          if (player.oxygen.value !== air) player.oxygen.value = air;
+          const lowAir = String(player.air <= 28);
+          if (player.oxygen.dataset.low !== lowAir) player.oxygen.dataset.low = lowAir;
+
+          if (!player.air) setStatus(player, '氧气用光了', true);
+          else if (!player.health) setStatus(player, '爱心用光了', true);
+          else if (player.depth && player.air <= 28) setStatus(player, '快上浮！', true);
+          else if (player.depth && !player.targetDepth) setStatus(player, '正在上浮');
+          else if (player.depth >= deep) setStatus(player, '深水耗气快', true);
+          else if (player.depth >= sheltered) setStatus(player, '在水里躲避');
+          else if (player.targetDepth) setStatus(player, '正在跳水');
+          else if (player.hitFlash) setStatus(player, '被打中啦', true);
+          else if (player.attackTime !== null && player.attackTime < windup) setStatus(player, '举起鞭子');
+          else if (player.attackTime !== null) setStatus(player, '甩出鞭子');
+          else if (player.cooldown) setStatus(player, '收回鞭子');
+          else setStatus(player, '在岸上');
+        }
+      }
+
+      function position(player) {
+        const jump = Math.min(1, player.depth / sheltered);
+        const deepTravel = Math.max(0, (player.depth - sheltered) / (1 - sheltered));
+        const horizontal = .219 + .17 * jump + .028 * deepTravel;
+        return {
+          x: width * (player.team.direction === 1 ? horizontal : 1 - horizontal),
+          y: 162 + 76 * jump - 32 * Math.sin(Math.PI * jump) + 151 * deepTravel,
+          scale: 1 - .22 * jump,
+        };
+      }
+
+      function ellipse(ctx, x, y, rx, ry, color, angle = 0) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, angle, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function sky(ctx) {
+        const tint = ctx.createLinearGradient(0, 0, 0, waterline);
+        tint.addColorStop(0, '#a1dfdf');
+        tint.addColorStop(1, '#e3f6de');
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, 0, width, waterline);
+        ellipse(ctx, width * .49, 84, 59, 59, '#f8f4ce');
+        ellipse(ctx, width * .49, 84, 49, 49, '#ffe797');
+
+        const clouds = [[.12, 75, 1], [.32, 47, .55], [.68, 92, .63], [.86, 49, 1]];
+        for (const [x, y, scale] of clouds) {
+          const middle = width * x;
+          ellipse(ctx, middle - 24 * scale, y + 10, 25 * scale, 9 * scale, '#fffdf2');
+          ellipse(ctx, middle + 7 * scale, y + 10, 36 * scale, 10 * scale, '#fffdf2');
+          ellipse(ctx, middle - 4 * scale, y + 4, 22 * scale, 15 * scale, '#fffdf2');
+        }
+
+        ctx.fillStyle = '#8dcac6';
+        ctx.beginPath();
+        ctx.moveTo(0, 169);
+        ctx.bezierCurveTo(width * .12, 144, width * .21, 151, width * .34, 178);
+        ctx.bezierCurveTo(width * .50, 205, width * .68, 126, width, 165);
+        ctx.lineTo(width, waterline);
+        ctx.lineTo(0, waterline);
+        ctx.fill();
+
+        ctx.strokeStyle = '#4e8f92';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        for (const [x, y] of [[.62, 53], [.65, 66]]) {
+          const center = width * x;
+          ctx.beginPath();
+          ctx.moveTo(center - 11, y);
+          ctx.quadraticCurveTo(center - 5, y - 7, center, y);
+          ctx.quadraticCurveTo(center + 5, y - 7, center + 11, y);
+          ctx.stroke();
+        }
+      }
+
+      function ocean(ctx) {
+        const tint = ctx.createLinearGradient(0, waterline, 0, height);
+        tint.addColorStop(0, '#53c7c7');
+        tint.addColorStop(.22, '#319fac');
+        tint.addColorStop(1, '#126073');
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, waterline, width, height - waterline);
+
+        ctx.fillStyle = '#e0fff124';
+        ctx.beginPath();
+        ctx.moveTo(width * .38, waterline);
+        ctx.lineTo(width * .46, waterline);
+        ctx.lineTo(width * .60, height);
+        ctx.lineTo(width * .53, height);
+        ctx.moveTo(width * .50, waterline);
+        ctx.lineTo(width * .53, waterline);
+        ctx.lineTo(width * .69, height);
+        ctx.lineTo(width * .65, height);
+        ctx.fill();
+
+        ctx.strokeStyle = '#a3e3de60';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 35; i += 1) {
+          const x = width * (.02 + ((i * 53) % 97) / 101);
+          const y = 217 + (i * 29) % 208;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + 6 + i % 11, y);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#1a5468';
+        ctx.beginPath();
+        ctx.moveTo(0, 415);
+        ctx.bezierCurveTo(width * .19, 440, width * .24, 389, width * .41, 420);
+        ctx.bezierCurveTo(width * .57, 456, width * .72, 389, width, 414);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.fill();
+      }
+
+      function plant(ctx, x, y, size, color) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(size, size);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(0, -17, 2, -31);
+        ctx.stroke();
+        ellipse(ctx, -6, -11, 9, 3, color, .65);
+        ellipse(ctx, 6, -19, 9, 3, color, -.62);
+        ellipse(ctx, 2, -29, 3, 7, color, .38);
+        ctx.restore();
+      }
+
+      function island(ctx, team) {
+        const edge = width * shore;
+        ctx.save();
+        if (team.direction === -1) {
+          ctx.translate(width, 0);
+          ctx.scale(-1, 1);
+        }
+
+        ctx.fillStyle = '#467677';
+        ctx.beginPath();
+        ctx.moveTo(0, 189);
+        ctx.lineTo(edge, 190);
+        ctx.bezierCurveTo(edge + 22, 218, edge - 32, 254, edge - 34, 288);
+        ctx.bezierCurveTo(edge - 38, 333, edge - 71, 349, edge - 103, 371);
+        ctx.bezierCurveTo(edge - 115, 380, edge - 117, 411, edge - 145, 424);
+        ctx.lineTo(0, height);
+        ctx.fill();
+
+        ctx.fillStyle = '#578788';
+        ctx.beginPath();
+        ctx.moveTo(0, 254);
+        ctx.bezierCurveTo(edge * .30, 259, edge * .72, 221, edge - 3, 219);
+        ctx.bezierCurveTo(edge - 16, 241, edge - 33, 257, edge - 34, 276);
+        ctx.bezierCurveTo(edge * .58, 273, edge * .31, 318, 0, 308);
+        ctx.fill();
+
+        ctx.fillStyle = '#dfa778';
+        ctx.beginPath();
+        ctx.moveTo(0, 183);
+        ctx.lineTo(edge, 185);
+        ctx.quadraticCurveTo(edge + 9, 199, edge - 10, 215);
+        ctx.bezierCurveTo(edge * .67, 220, edge * .35, 247, 0, 239);
+        ctx.fill();
+
+        ctx.fillStyle = '#f7d58b';
+        ctx.beginPath();
+        ctx.moveTo(0, 177);
+        ctx.bezierCurveTo(edge * .32, 161, edge * .54, 184, edge - 17, 181);
+        ctx.quadraticCurveTo(edge + 9, 182, edge, 196);
+        ctx.bezierCurveTo(edge * .53, 207, edge * .19, 211, 0, 207);
+        ctx.fill();
+
+        ctx.fillStyle = '#7fb475';
+        ctx.beginPath();
+        ctx.moveTo(0, 173);
+        ctx.bezierCurveTo(edge * .35, 159, edge * .54, 179, edge * .68, 182);
+        ctx.bezierCurveTo(edge * .43, 191, edge * .18, 197, 0, 192);
+        ctx.fill();
+
+        for (let i = 0; i < 8; i += 1) {
+          ellipse(ctx, edge * (.12 + ((i * 13) % 79) / 100), 194 + (i * 7) % 12, 2 + i % 3, 1.4, '#bb8760');
+        }
+
+        plant(ctx, edge * .09, 178, 1.35, '#4a8d72');
+        plant(ctx, edge * .17, 184, .74, '#62996a');
+        plant(ctx, edge * .43, 180, .92, '#58906b');
+        ellipse(ctx, edge * .42, 155, 4, 4, '#fff3b5');
+        plant(ctx, edge * .20, 420, 2.6, '#2f7680');
+        plant(ctx, edge * .35, 408, 1.7, '#2b6f7a');
+        plant(ctx, edge * .72, 333, 1.1, '#346e73');
+
+        const pole = edge * .29;
+        ctx.strokeStyle = '#5d7861';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(pole, 170);
+        ctx.lineTo(pole, 110);
+        ctx.stroke();
+        ctx.fillStyle = team.flag;
+        ctx.beginPath();
+        ctx.moveTo(pole, 111);
+        ctx.quadraticCurveTo(pole + 20, 117, pole + 37, 111);
+        ctx.lineTo(pole + 30, 124);
+        ctx.lineTo(pole + 37, 134);
+        ctx.quadraticCurveTo(pole + 20, 140, pole, 133);
+        ctx.fill();
+        ellipse(ctx, pole, 109, 4, 4, '#fff1b4');
+        ellipse(ctx, pole + 16, 123, 4, 4, '#fff7d7');
+        ctx.restore();
+      }
+
+      function resize() {
+        const rect = board.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        width = height * rect.width / rect.height;
+        board.width = Math.round(rect.width * ratio);
+        board.height = Math.round(rect.height * ratio);
+        brush.setTransform(board.width / width, 0, 0, board.height / height, 0, 0);
+        scenery.width = board.width;
+        scenery.height = board.height;
+        const ctx = scenery.getContext('2d');
+        ctx.setTransform(brush.getTransform());
+        sky(ctx);
+        ocean(ctx);
+        teams.forEach(team => island(ctx, team));
+        draw();
+      }
+
+      function surface() {
+        brush.strokeStyle = '#e1fbe0';
+        brush.lineWidth = 3;
+        brush.lineCap = 'round';
+        brush.beginPath();
+        for (let x = width * shore + 1; x <= width * (1 - shore) - 1; x += 2) {
+          brush.lineTo(x, waterline + Math.sin(x / 17 + sceneTime * 2.7) * 2.1);
+        }
+        brush.stroke();
+
+        brush.strokeStyle = '#c6f6e09c';
+        brush.lineWidth = 2;
+        for (let i = 0; i < 7; i += 1) {
+          const x = width * (.34 + i * .046) + Math.sin(sceneTime * 1.4 + i) * 6;
+          const y = 209 + (i % 3) * 7;
+          brush.beginPath();
+          brush.moveTo(x, y);
+          brush.quadraticCurveTo(x + 9, y - 2, x + 19, y);
+          brush.stroke();
+        }
+      }
+
+      function fish(x, y, size) {
+        brush.save();
+        brush.translate(x, y);
+        brush.scale(size, size);
+        brush.fillStyle = '#a4d2c7';
+        brush.beginPath();
+        brush.moveTo(-8, 0);
+        brush.lineTo(-20, -7);
+        brush.lineTo(-20, 7);
+        brush.fill();
+        ellipse(brush, 0, 0, 13, 7, '#a4d2c7');
+        ellipse(brush, 6, -1, 1.6, 1.6, '#386873');
+        brush.restore();
+      }
+
+      function drawDuck(player) {
+        const { team } = player;
+        const spot = position(player);
+        const underWater = player.depth >= sheltered;
+        const raising = player.attackTime !== null && player.attackTime < windup;
+        const swinging = player.attackTime !== null && !raising;
+        const bob = Math.sin(sceneTime * 3.5 + team.direction) * 1.4;
+        brush.save();
+        brush.translate(spot.x, spot.y + bob);
+        brush.scale(spot.scale * team.direction, spot.scale);
+        if (underWater) brush.rotate(.22 * (player.targetDepth ? 1 : -1));
+
+        if (!player.depth) ellipse(brush, -4, 27, 38, 6, '#97714344');
+        if (underWater) {
+          ellipse(brush, 0, -5, 52, 46, '#d0fcf230');
+          const bubble = (sceneTime * 38) % 26;
+          brush.strokeStyle = '#d3f8ec';
+          brush.lineWidth = 2;
+          brush.beginPath();
+          brush.arc(35, -25 - bubble, 4, 0, Math.PI * 2);
+          brush.arc(46, -14 - bubble * .75, 2.5, 0, Math.PI * 2);
+          brush.stroke();
+        }
+
+        ellipse(brush, -14, 24, 15, 5, '#d68946');
+        ellipse(brush, 12, 23, 14, 5, '#e69748');
+        brush.fillStyle = team.body;
+        brush.beginPath();
+        brush.moveTo(-29, 1);
+        brush.quadraticCurveTo(-52, -19, -48, -1);
+        brush.quadraticCurveTo(-48, 23, -15, 23);
+        brush.lineTo(8, 23);
+        brush.quadraticCurveTo(34, 22, 34, 0);
+        brush.quadraticCurveTo(12, -22, -29, 1);
+        brush.fill();
+        ellipse(brush, 15, -23, 28, 28, team.body);
+        ellipse(brush, 3, -47, 4, 11, team.body, -.5);
+        ellipse(brush, 12, -48, 4, 10, team.body, .27);
+        ellipse(brush, -17, 7, 22, 10, team.wing, .20);
+
+        brush.fillStyle = team.scarf;
+        brush.beginPath();
+        brush.moveTo(-10, -13);
+        brush.quadraticCurveTo(14, -6, 39, -12);
+        brush.lineTo(36, -3);
+        brush.quadraticCurveTo(12, 5, -12, -5);
+        brush.lineTo(-23, 2);
+        brush.lineTo(-24, -8);
+        brush.lineTo(-15, -13);
+        brush.fill();
+
+        ellipse(brush, 42, -21, 14, 7, '#ef9b4f', -.12);
+        ellipse(brush, 41, -24, 13, 4, '#ffbd62', -.12);
+        ellipse(brush, 25, -32, 5.7, 7, '#16373a');
+        ellipse(brush, 27, -35, 2, 2, '#fffdf5');
+        ellipse(brush, 18, -21, 7, 3.5, '#e88b76', -.05);
+
+        if (player.hitFlash) {
+          ellipse(brush, 12, -17, 31, 34, '#fff9dd54');
+        }
+
+        if (!underWater) {
+          const gripY = raising ? -15 : 6;
+          const gripX = swinging ? 39 : 25;
+          ellipse(brush, gripX - 6, gripY + 3, 12, 8, team.wing, -.32);
+          brush.strokeStyle = '#684735';
+          brush.lineWidth = 5;
+          brush.lineCap = 'round';
+          brush.beginPath();
+          brush.moveTo(gripX - 2, gripY + 7);
+          brush.lineTo(gripX + 5, gripY - 7);
+          brush.stroke();
+          if (!swinging) {
+            brush.strokeStyle = team.lash;
+            brush.lineWidth = 3;
+            brush.beginPath();
+            brush.moveTo(gripX + 5, gripY - 7);
+            if (raising) {
+              brush.bezierCurveTo(16, -73, -39, -58, -25, -22);
+            } else {
+              brush.quadraticCurveTo(47, 9, 44, 20);
+              brush.quadraticCurveTo(40, 32, 28, 26);
+            }
+            brush.stroke();
+          }
+        }
+
+        if (raising) {
+          brush.strokeStyle = '#9b562e';
+          brush.lineWidth = 3.5;
+          brush.lineCap = 'round';
+          brush.beginPath();
+          brush.moveTo(37, -59);
+          brush.lineTo(40, -69);
+          brush.moveTo(47, -54);
+          brush.lineTo(55, -61);
+          brush.stroke();
+        }
+        brush.restore();
+      }
+
+      function drawWhip(player, target) {
+        if (player.attackTime === null || player.attackTime < windup) return;
+        const from = position(player);
+        const to = position(target);
+        const direction = player.team.direction;
+        const elapsed = (player.attackTime - windup) / strike;
+        const reach = 1 - elapsed * .55;
+        const startX = from.x + direction * 44;
+        const endX = to.x - direction * 16;
+        const span = (endX - startX) * reach;
+        const middleY = 75 + direction * 14;
+        const endY = target.depth >= sheltered ? waterline - 6 : to.y - 19;
+
+        brush.save();
+        brush.globalAlpha = 1 - elapsed * .82;
+        brush.lineCap = 'round';
+        brush.beginPath();
+        brush.moveTo(startX, from.y - 2);
+        brush.bezierCurveTo(startX + span * .26, middleY, startX + span * .77, middleY, startX + span, endY);
+        brush.strokeStyle = '#ffefb5';
+        brush.lineWidth = 9;
+        brush.stroke();
+        brush.strokeStyle = player.team.lash;
+        brush.lineWidth = 4;
+        brush.stroke();
+        brush.restore();
+      }
+
+      function drawRipples() {
+        brush.lineWidth = 2.5;
+        brush.lineCap = 'round';
+        for (const ripple of ripples) {
+          const spread = 7 + ripple.time * 66;
+          const x = ripple.x * width;
+          brush.globalAlpha = 1 - ripple.time / .56;
+          brush.strokeStyle = ripple.inWater ? '#dcffef' : ripple.color;
+          brush.beginPath();
+          if (ripple.inWater) {
+            brush.ellipse(x, ripple.y + 3, spread, spread * .21, 0, 0, Math.PI * 2);
+          }
+          for (let i = -1; i <= 1; i += 1) {
+            const y = ripple.y - spread * (.69 - .15 * Math.abs(i));
+            brush.moveTo(x + i * spread * .68, y);
+            brush.lineTo(x + i * spread, y - 6);
+          }
+          brush.stroke();
+        }
+        brush.globalAlpha = 1;
+      }
+
+      function draw() {
+        brush.drawImage(scenery, 0, 0, width, height);
+        fish(width * .53 + Math.sin(sceneTime * .8) * width * .13, 306, .8);
+        fish(width * .46 + Math.sin(sceneTime * .8) * width * .13, 319, .56);
+        surface();
+        players.forEach(drawDuck);
+        players.forEach((player, index) => drawWhip(player, players[1 - index]));
+        drawRipples();
+      }
+
+      const keys = {
+        KeyF: [0, 'whip'], KeyS: [0, 'dive'], KeyW: [0, 'rise'],
+        Enter: [1, 'whip'], ArrowDown: [1, 'dive'], ArrowUp: [1, 'rise'],
+      };
+
+      window.addEventListener('keydown', event => {
+        const binding = keys[event.code];
+        if (!binding || phase !== 'playing' || (event.code === 'Enter' && event.target instanceof HTMLButtonElement)) return;
+        event.preventDefault();
+        const [index, action] = binding;
+        if (!event.repeat) useAction(players[index], action, event.code);
+      });
+
+      window.addEventListener('keyup', event => {
+        const binding = keys[event.code];
+        if (binding) players[binding[0]].holds.delete(event.code);
+      });
+
+      function releaseInputs() {
+        players.forEach(player => player.holds.clear());
+        buttons.forEach(button => { delete button.dataset.held; });
+      }
+
+      window.addEventListener('blur', releaseInputs);
+      for (const button of buttons) {
+        const index = Number(button.closest('.pad').dataset.player);
+        const { action } = button.dataset;
+        button.addEventListener('pointerdown', event => {
+          if (button.disabled || event.button !== 0) return;
+          event.preventDefault();
+          button.setPointerCapture(event.pointerId);
+          button.dataset.held = 'true';
+          useAction(players[index], action, event.pointerId);
+        });
+        const release = event => {
+          players[index].holds.delete(event.pointerId);
+          delete button.dataset.held;
+        };
+        button.addEventListener('pointerup', release);
+        button.addEventListener('pointercancel', release);
+        button.addEventListener('lostpointercapture', release);
+        button.addEventListener('click', event => {
+          if (!event.detail) useAction(players[index], action);
+        });
+      }
+
+      function frame(time) {
+        const dt = Math.min(.045, (time - (previousTime || time)) / 1000);
+        previousTime = time;
+        if (phase === 'playing') update(dt);
+        if (phase !== 'finished') sceneTime += dt;
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      start.addEventListener('click', startRound);
+      players = teams.map(makePlayer);
+      resize();
+      new ResizeObserver(resize).observe(board);
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

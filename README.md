@@ -7,3 +7,4 @@
 - `xiao-yaya-daily/xiao-yaya-daily.html`：小丫丫换衣、买菜、自动安排晚饭和拜访小浣熊家的日常小游戏。
 - `triangle-bead-pop/triangle-bead-pop.html`：转动每次落下的三角珠珠，让 6 颗或更多同色珠珠连在一起消除。
 - `forest-ocean-duel/forest-ocean-duel.html`：两位玩家控制林间四宝和海洋三宝移动、冲锋与合体的同屏对战游戏。
+- `duck-ocean-duel/duck-ocean-duel.html`：两只小鸭隔海甩鞭对战，可以跳海躲避，潜得越深越要留心氧气。
