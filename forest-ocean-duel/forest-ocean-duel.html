@@ -490,6 +490,7 @@
           particles.length = 0;
           waves.length = 0;
           territoryLine = WORLD.width / 2;
+          shake = 0;
           gameOver = false;
           running = true;
           startScreen.classList.add('hidden');
@@ -843,7 +844,7 @@
         function draw(time) {
           ctx.save();
           ctx.clearRect(0, 0, WORLD.width, WORLD.height);
-          if (shake > 0) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+          if (running && shake > 0) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
           drawArena(time);
           drawWaves(time);
           players.forEach(player => drawMagic(player, time));
